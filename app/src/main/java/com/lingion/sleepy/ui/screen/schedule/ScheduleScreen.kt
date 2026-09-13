@@ -75,11 +75,6 @@ import com.lingion.sleepy.util.DateUtils
 import com.lingion.sleepy.util.HolidayManager
 import com.lingion.sleepy.util.TimeTableUtils
 
-private enum class ViewMode(val labelRes: Int) {
-    Full(R.string.view_full),
-    Cards(R.string.view_cards)
-}
-
 @Composable
 fun ScheduleScreen(
     onGoImport: () -> Unit = {},
@@ -88,561 +83,99 @@ fun ScheduleScreen(
     viewModel: ScheduleViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsState()
-    val context = androidx.compose.ui.platform.LocalContext.current
-    var viewMode by remember { mutableStateOf(if (AppPrefs.getStartView(context) == "cards") ViewMode.Cards else ViewMode.Full) }
+    val context = LocalContext.current
+    val display = com.lingion.sleepy.ui.theme.LocalWedoDisplay.current
     var selectedCourse by remember { mutableStateOf<CourseEntity?>(null) }
-    // v7.10.5 会话级置顶 override — 网格 onPickTop 与详情弹窗 radio 共用真相源。
-    // radio 点击 → 这里瞬时换层(同帧) + AppPrefs 持久化(跨会话),两条通道一次写齐。
+    var actionCourse by remember { mutableStateOf<CourseEntity?>(null) }
     var topOverrides by remember { mutableStateOf(mapOf<String, Long>()) }
-    fun setTopOverride(key: String, courseId: Long?) {
-        topOverrides = if (courseId == null) topOverrides - key else topOverrides + (key to courseId)
-    }
-    // v7.10.16r 轮换态(issue#10, 评审 #1): 簇键 → 轮换步数,与 topOverrides 同级持有 —
-    // HorizontalPager 翻页/周切换不丢;纯会话级不落盘,离开课表页即重置。
     var rotationSteps by remember { mutableStateOf(mapOf<String, Int>()) }
-    val displayMode = remember { AppPrefs.getDisplayMode(context) }
-    val showDate = remember { AppPrefs.isShowDate(context) }
-    val visibleDays = remember { AppPrefs.getVisibleDays(context) }
-
-    val hasTable = state.tables.isNotEmpty()
-    val hasCourses = state.courses.isNotEmpty()
-
-    Column(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        if (!hasTable) {
-            // 真的没表：去创建
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
-            ) {
-                EmptyState(
-                    modifier = Modifier.align(Alignment.TopCenter),
-                    onGoImport = onGoImport,
-                    onManualAdd = onManualAdd
-                )
+    val visibleDays = AppPrefs.getVisibleDays(context).filter { it in 1..7 }.toSet().ifEmpty { (1..7).toSet() }
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    if (state.currentTable == null) {
+        Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(Icons.Outlined.CalendarMonth, null, Modifier.size(64.dp), tint = SleepyTheme.colors.primary)
+            Spacer(Modifier.height(20.dp))
+            Text("把这一周，安排得清清楚楚", style = MaterialTheme.typography.titleLarge, color = SleepyTheme.colors.onSurface)
+            Text("从教务系统、日历文件或手动添加开始", Modifier.padding(vertical = 12.dp),
+                style = MaterialTheme.typography.bodyMedium, color = SleepyTheme.colors.onSurfaceVariant)
+            Button(onGoImport) { Text("添加课表") }
+        }
+    } else androidx.compose.runtime.key(state.selectedTableId) {
+        val maxWeek = (state.currentTable?.maxWeek ?: 20).coerceAtLeast(1)
+        val pager = rememberPagerState(initialPage = (state.selectedWeek - 1).coerceIn(0, maxWeek - 1),
+            pageCount = { maxWeek })
+        val scope = androidx.compose.runtime.rememberCoroutineScope()
+        var requestJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+        fun selectWeek(week: Int) {
+            if (week !in 1..maxWeek) return
+            requestJob?.cancel()
+            requestJob = scope.launch {
+                if (display.motion) pager.animateScrollToPage(week - 1,
+                    animationSpec = androidx.compose.animation.core.spring(dampingRatio = .86f, stiffness = 380f))
+                else pager.scrollToPage(week - 1)
             }
-        } else if (!hasCourses) {
-            // 有表无课：直接打开加课弹窗（addEmptyCourse 内部若 selectedTableId 为空会自动建表）
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
-            ) {
-                NoCourseState(
-                    tableName = state.currentTable?.name ?: "",
-                    onAddCourse = onManualAdd,
-                    onImport = onGoImport
-                )
+        }
+        LaunchedEffect(pager) {
+            androidx.compose.runtime.snapshotFlow { pager.settledPage }.collect { page ->
+                viewModel.changeWeek(page + 1)
             }
-        } else {
-            // v7.10.7 顶栏分享 → 底部弹窗(格式选择)
-            var showShareSheet by remember { mutableStateOf(false) }
-            // v7.10.14 顶栏 logo → 课表切换弹窗
-            var showTableSwitcher by remember { mutableStateOf(false) }
-            val undoScope = androidx.compose.runtime.rememberCoroutineScope()
-            TopBar(
-                currentWeek = state.selectedWeek,
-                maxWeek = state.currentTable?.maxWeek ?: 20,
-                startDate = state.currentTable?.startDate ?: "",
-                onSwitchTable = { showTableSwitcher = true },
-                onUndo = {
-                    undoScope.launch {
-                        if (!viewModel.undoLastChange()) {
-                            android.widget.Toast.makeText(
-                                context, R.string.schedule_undo_none, android.widget.Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                    }
-                },
-                onPrevWeek = { viewModel.changeWeek(state.selectedWeek - 1) },
-                onNextWeek = { viewModel.changeWeek(state.selectedWeek + 1) },
-                onJumpToActual = {
-                    val start = state.currentTable?.startDate ?: return@TopBar
-                    viewModel.changeWeek(DateUtils.currentWeek(start))
-                },
-                onSelectWeek = { week -> viewModel.changeWeek(week) },
-                onAddCourse = onManualAdd,
-                onShare = { showShareSheet = true }
-            )
-
-            if (showShareSheet) {
-                state.currentTable?.let { table ->
-                    ShareScheduleSheet(
-                        table = table,
-                        courses = state.courses,
-                        onDismiss = { showShareSheet = false }
-                    )
-                }
-            }
-
-            if (showTableSwitcher) {
-                TableSwitcherDialog(
-                    tables = state.tables,
-                    selectedTableId = state.selectedTableId,
-                    onSelect = { id ->
-                        viewModel.selectTable(id)
-                        showTableSwitcher = false
-                    },
-                    onDismiss = { showTableSwitcher = false }
-                )
-            }
-
-            // Segmented Switcher
-            SegmentedSwitcher(
-                options = ViewMode.entries.map { it to stringResource(it.labelRes) },
-                selected = viewMode,
-                onSelect = { viewMode = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-
-            // 主体视图 — 左右滑动切换周次
-            val pagerMaxWeek = state.currentTable?.maxWeek ?: 20
-            val pagerState = rememberPagerState(
-                initialPage = (state.selectedWeek - 1).coerceIn(0, (pagerMaxWeek - 1).coerceAtLeast(0)),
-                pageCount = { pagerMaxWeek.coerceAtLeast(1) }
-            )
-
-            // 标记：是否正在由 ViewModel 驱动 Pager 滚动（防止双向同步打架）
-            var syncingFromState by remember { mutableStateOf(false) }
-
-            // Pager 滑动（用户手势）→ 更新 ViewModel
-            LaunchedEffect(pagerState.currentPage) {
-                if (!syncingFromState) {
-                    viewModel.changeWeek(pagerState.currentPage + 1)
-                }
-            }
-
-            // ViewModel 变化（TopBar 箭头/下拉菜单点击）→ 同步 Pager
-            LaunchedEffect(state.selectedWeek) {
-                val targetPage = (state.selectedWeek - 1).coerceIn(0, pagerMaxWeek - 1)
-                if (pagerState.currentPage != targetPage) {
-                    pagerState.scrollToPage(targetPage)
-                }
-            }
-
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier.fillMaxSize()
-            ) { page ->
-                // page 是 0-based 周索引，独立于 state.currentWeek 过滤课程
-                val weekCourses = state.courses.filter { it.inWeek(page + 1) }
-                    .let { list ->
-                        val tj = state.currentTable?.timeJson
-                        if (tj == null) list else list.map { c -> c.normalizeNode(tj) }
-                    }
-                // 计算本周哪些天是节假日/周末(灰显用)
-                val greyDays by produceState<Set<Int>>(emptySet(), page, state.currentTable?.startDate) {
-                    val start = state.currentTable?.startDate
-                    if (start.isNullOrBlank()) {
-                        value = emptySet()
-                    } else {
-                        val greySet = mutableSetOf<Int>()
-                        for (day in 1..7) {
-                            val date = DateUtils.dateOfWeek(start, page + 1, day)
-                            if (HolidayManager.shouldGrey(context, date)) greySet.add(day)
-                        }
-                        value = greySet
-                    }
-                }
-                when (viewMode) {
-                    ViewMode.Full -> FullWeekView(
-                        courses = weekCourses,
-                        visibleDays = visibleDays,
-                        displayMode = displayMode,
-                        timeJson = state.currentTable?.timeJson ?: "",
+        }
+        var lastSettled by remember { mutableStateOf(pager.settledPage) }
+        LaunchedEffect(pager.settledPage) {
+            if (lastSettled != pager.settledPage && display.haptics)
+                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+            lastSettled = pager.settledPage
+        }
+        Column(Modifier.fillMaxSize()) {
+            WedoWeekHeader(pager.currentPage + 1, maxWeek, ::selectWeek)
+            HorizontalPager(state = pager, modifier = Modifier.weight(1f)) { page ->
+                val active = state.courses.filter { it.inWeek(page + 1) }
+                    .map { it.normalizeNode(state.currentTable!!.timeJson) }
+                val ghosts = if (display.ghostCourses) state.courses.filterNot { it.inWeek(page + 1) }
+                    .distinctBy { listOf(it.groupId, it.day, it.startNode, it.step) }
+                    .map { it.normalizeNode(state.currentTable!!.timeJson) } else emptyList()
+                androidx.compose.runtime.CompositionLocalProvider(com.lingion.sleepy.ui.component.LocalWedoCourseLongClick provides { course -> actionCourse = course }) {
+                Box(Modifier.fillMaxSize()) {
+                    CardsGridView(
+                        courses = active, timeSlots = TimeTableUtils.timeSlotsFor(state.currentTable),
+                        visibleDays = visibleDays, showDate = true,
+                        startDate = state.currentTable!!.startDate, currentWeek = page + 1,
+                        today = if (page + 1 == state.currentWeek) DateUtils.todayDayOfWeek() else -1,
                         onCourseClick = { selectedCourse = it },
-                        greyDays = greyDays
-                    )
-                    ViewMode.Cards -> CardsGridView(
-                        courses = weekCourses,
-                        timeSlots = TimeTableUtils.timeSlotsFor(state.currentTable),
-                        visibleDays = visibleDays,
-                        showDate = showDate,
-                        startDate = state.currentTable?.startDate ?: "",
-                        currentWeek = page + 1,
-                        onCourseClick = { selectedCourse = it },
-                        greyDays = greyDays,
+                        onCourseLongClick = {
+                            actionCourse = it
+                            if (display.haptics) haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                        },
+                        wedo = true, ghostCourses = ghosts,
                         topOverrides = topOverrides,
-                        onSetTopOverride = ::setTopOverride,
+                        onSetTopOverride = { key, id -> topOverrides = if (id == null) topOverrides - key else topOverrides + (key to id) },
                         rotationSteps = rotationSteps,
-                        onRotationStep = { key, step ->
-                            rotationSteps = if (step <= 0) rotationSteps - key
-                            else rotationSteps + (key to step)
-                        }
+                        onRotationStep = { key, step -> rotationSteps = rotationSteps + (key to step) }
                     )
+                    if (active.isEmpty()) Text(
+                        if (state.courses.isEmpty()) "这张课表还没有课程 · 点击 + 添加" else "本周没有课程，好好享受自由时间",
+                        modifier = Modifier.align(Alignment.Center).padding(24.dp),
+                        color = SleepyTheme.colors.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                }
                 }
             }
         }
-
-        // 详情 Bottom Sheet
-        // v7.10.16q: allCourses 必须与网格同周域(state.selectedWeek 过滤) —
-        // 此前传全周课程, ICS 往返/换教师拆出的周次不相交同行(如周四 8-10 的
-        // 周1-4 与 周6-13 两行)被当成同时存在 → 幽灵图层 → 误弹"选择默认置顶"。
-        // 网格一直传的是 inWeek 过滤后的 weekCourses, 弹窗对齐同一语义。
-        CourseDetailSheet(
-            course = selectedCourse,
-            timeString = selectedCourse?.let { it.nodeString(LocalContext.current) },
-            allCourses = state.courses.filter { it.inWeek(state.selectedWeek) },
-            onDismiss = { selectedCourse = null },
-            onEdit = { course ->
-                selectedCourse = null
-                onEditCourse(course)
-            },
-            onDefaultTopChanged = { clusterKey, repId ->
-                // 勾选瞬间: 会话级换层(网格同帧刷新) + 持久化(跨会话默认)。
-                // v7.10.16r(评审 #4): 同簇轮换态一并清除 — 用户显式选默认置顶,
-                // 临时轮换让位,否则该簇轮换步数仍遮蔽 radio 的新决定。
-                rotationSteps = rotationSteps - clusterKey
-                setTopOverride(clusterKey, repId)
-                AppPrefs.putConflictDefaultTop(context, clusterKey, repId)
-            }
-        )
     }
-}
-
-/**
- * v7.10.14 顶栏 logo 点击弹出的课表切换弹窗 —
- * 列出全部课表, 当前行 primaryContainer 高亮 + 对勾, 点击即切换。
- */
-@Composable
-private fun TableSwitcherDialog(
-    tables: List<TimeTableEntity>,
-    selectedTableId: Long?,
-    onSelect: (Long) -> Unit,
-    onDismiss: () -> Unit
-) {
-    val colors = SleepyTheme.colors
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        titleContentColor = colors.onSurface,
-        textContentColor = colors.onSurfaceVariant,
-        title = { Text(stringResource(R.string.schedule_switch_table)) },
-        text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 360.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                tables.forEach { table ->
-                    val isCurrent = table.id == selectedTableId
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(SleepyTheme.shapes.small)
-                            .background(if (isCurrent) colors.primaryContainer else colors.surfaceContainer)
-                            .noRippleClickable { onSelect(table.id) }
-                            .padding(vertical = 10.dp, horizontal = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = table.name,
-                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                            color = if (isCurrent) colors.onPrimaryContainer else colors.onSurface,
-                            maxLines = 2,
-                            modifier = Modifier.weight(1f)
-                        )
-                        if (isCurrent) {
-                            Icon(
-                                imageVector = Icons.Outlined.Check,
-                                contentDescription = null,
-                                tint = colors.primary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {},
-        dismissButton = {}
+    CourseDetailSheet(
+        course = selectedCourse,
+        timeString = selectedCourse?.nodeString(context),
+        allCourses = state.courses.filter { it.inWeek(state.selectedWeek) },
+        onDismiss = { selectedCourse = null },
+        onEdit = { selectedCourse = null; onEditCourse(it) },
+        onDefaultTopChanged = { key, id ->
+            rotationSteps = rotationSteps - key
+            topOverrides = if (id == null) topOverrides - key else topOverrides + (key to id)
+            AppPrefs.putConflictDefaultTop(context, key, id)
+        }
     )
-}
-
-@Composable
-private fun TopBar(
-    currentWeek: Int,
-    maxWeek: Int,
-    startDate: String,
-    onSwitchTable: () -> Unit,
-    onUndo: () -> Unit,
-    onPrevWeek: () -> Unit,
-    onNextWeek: () -> Unit,
-    onJumpToActual: () -> Unit,
-    onSelectWeek: (Int) -> Unit,
-    onAddCourse: () -> Unit,
-    onShare: () -> Unit
-) {
-    val colors = SleepyTheme.colors
-    // 实时计算当前实际周（不依赖 state.currentWeek — 用户可能切到了别的周）
-    val actualWeek = remember(startDate) {
-        if (startDate.isBlank()) 1 else DateUtils.currentWeek(startDate)
-    }
-    var menuOpen by remember { mutableStateOf(false) }
-    val isOnActual = currentWeek == actualWeek
-    val semesterStatus = DateUtils.semesterStatus(startDate, maxWeek)
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(colors.surface)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // v7.10.12: 三件套改 Box 叠加实现屏幕正中 —
-        // 旧 weight(1f)+Center 是在"扣除右侧按钮后的剩余空间"里居中, 视觉偏左;
-        // Box 叠加让三件套对齐全宽正中, 加课/分享绝对定位右缘(用户 2026-09-02)。
-        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            // v7.10.14: 最左 logo — 点击弹课表切换弹窗, 右缘操作区(加课/分享)对称位
-            // v7.10.16: logo 右边第二个按钮 = 撤回 — 仅有可撤回快照时才显示(用户 2026-09-03)
-            Row(
-                modifier = Modifier.align(Alignment.CenterStart),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                WeekNavButton(
-                    icon = Icons.Outlined.CalendarMonth,
-                    contentDescriptionRes = R.string.schedule_switch_table,
-                    onClick = onSwitchTable
-                )
-                if (com.lingion.sleepy.data.undo.UndoManager.hasSnapshot) {
-                    Spacer(modifier = Modifier.width(6.dp))
-                    WeekNavButton(
-                        icon = Icons.AutoMirrored.Outlined.Undo,
-                        contentDescriptionRes = R.string.schedule_undo,
-                        onClick = onUndo
-                    )
-                }
-            }
-            // 翻页三件套(箭头+胶囊+箭头) — 箭头紧贴胶囊
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-            WeekNavButton(icon = Icons.Outlined.ChevronLeft, onClick = onPrevWeek)
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            // 第 N 周 标签 — 点击行为根据是否在当前实际周而不同
-            // 学期外: 标签带上周数(学期未开始 · 第 3 周), 翻周时数字跟着变, 用户才知道自己看到第几周
-            Box {
-                val statusRes = when (semesterStatus) {
-                    DateUtils.SemesterStatus.BEFORE_START -> R.string.semester_not_started
-                    DateUtils.SemesterStatus.AFTER_END -> R.string.semester_ended
-                    else -> 0
-                }
-                Text(
-                    text = if (statusRes == 0)
-                        stringResource(R.string.schedule_current_week, currentWeek)
-                    else "${stringResource(statusRes)} · ${stringResource(R.string.schedule_week_prefix, currentWeek)}",
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-                    color = if (isOnActual) colors.onPrimaryContainer else colors.primary,
-                    modifier = Modifier
-                        .clip(SleepyTheme.shapes.medium)
-                        .background(if (isOnActual) colors.primaryContainer else colors.primaryContainer.copy(alpha = SleepyTheme.Alpha.inactive))
-                        .noRippleClickable {
-                            if (isOnActual) {
-                                // 在当前实际周 → 弹下拉菜单
-                                menuOpen = true
-                            } else {
-                                // 不在当前实际周 → 一键跳回
-                                onJumpToActual()
-                            }
-                        }
-                        .padding(horizontal = 14.dp, vertical = 4.dp)
-                )
-
-                // Material3 DropdownMenu — FlowRow 标签式选周
-                @OptIn(ExperimentalLayoutApi::class)
-                DropdownMenu(
-                    expanded = menuOpen,
-                    onDismissRequest = { menuOpen = false },
-                    modifier = Modifier.width(280.dp),
-                    // 菜单浮在 surfaceContainer 背景上, 用 Highest 拉开对比(默认 High 与背景几乎同色=隐形)
-                    containerColor = colors.surfaceContainerHighest
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text(
-                            text = stringResource(R.string.schedule_jump_week),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = colors.onSurfaceVariant,
-                            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
-                        )
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            (1..maxWeek).forEach { w ->
-                                val isCurrent = w == currentWeek
-                                Box(
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            if (isCurrent) colors.primary
-                                            else colors.surfaceContainerHigh
-                                        )
-                                        .noRippleClickable {
-                                            onSelectWeek(w)
-                                            menuOpen = false
-                                        },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = w.toString(),
-                                        style = MaterialTheme.typography.labelLarge.copy(
-                                            fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal
-                                        ),
-                                        color = if (isCurrent) colors.onPrimary else colors.onSurface
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            WeekNavButton(icon = Icons.Outlined.ChevronRight, onClick = onNextWeek)
-        }
-
-            // 右侧操作区: 加课 + 分享 — 与翻页箭头同款圆形底, Box 右缘绝对定位
-            Row(
-                modifier = Modifier.align(Alignment.CenterEnd),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                WeekNavButton(
-                    icon = Icons.Outlined.Add,
-                    contentDescriptionRes = R.string.schedule_add_course,
-                    onClick = onAddCourse
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                WeekNavButton(
-                    icon = Icons.Outlined.IosShare,
-                    contentDescriptionRes = R.string.schedule_share_table,
-                    onClick = onShare
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun WeekNavButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    onClick: () -> Unit,
-    contentDescriptionRes: Int? = null
-) {
-    val colors = SleepyTheme.colors
-    Box(
-        modifier = Modifier
-            .size(32.dp)
-            .clip(CircleShape)
-            .background(colors.surfaceContainerHigh)
-            .noRippleClickable(onClick)
-            .padding(6.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescriptionRes?.let { stringResource(it) },
-            tint = colors.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-private fun NoCourseState(
-    tableName: String,
-    onAddCourse: () -> Unit,
-    onImport: () -> Unit
-) {
-    val colors = SleepyTheme.colors
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(SleepyTheme.shapes.extraLarge)
-            .background(colors.surfaceContainer)
-            .padding(horizontal = 22.dp, vertical = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text(
-            text = stringResource(R.string.schedule_empty_name, tableName),
-            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
-            color = colors.onSurface
-        )
-        Text(
-            text = stringResource(R.string.schedule_empty_name_hint),
-            style = MaterialTheme.typography.bodyMedium,
-            color = colors.onSurfaceVariant
-        )
-        Button(
-            onClick = onAddCourse,
-            modifier = Modifier.fillMaxWidth().height(SleepyTheme.Buttons.ctaHeight),
-            shape = SleepyTheme.Buttons.shape,
-            colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
-        ) {
-            Text(stringResource(R.string.schedule_manual_first), color = colors.onPrimary)
-        }
-        Button(
-            onClick = onImport,
-            modifier = Modifier.fillMaxWidth().height(SleepyTheme.Buttons.ctaHeight),
-            shape = SleepyTheme.Buttons.shape,
-            colors = ButtonDefaults.buttonColors(containerColor = colors.secondaryContainer)
-        ) {
-            Text(stringResource(R.string.schedule_go_manage), color = colors.onSecondaryContainer)
-        }
-    }
-}
-
-@Composable
-private fun EmptyState(
-    modifier: Modifier = Modifier,
-    onGoImport: () -> Unit = {},
-    onManualAdd: () -> Unit = {}
-) {
-    val colors = SleepyTheme.colors
-    Column(
-        modifier = modifier
-            .padding(horizontal = 22.dp)
-            .clip(SleepyTheme.shapes.extraLarge)
-            .background(colors.surfaceContainer)
-            .padding(horizontal = 22.dp, vertical = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text(
-            text = stringResource(R.string.schedule_empty),
-            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
-            color = colors.onSurface
-        )
-        Text(
-            text = stringResource(R.string.schedule_empty_hint),
-            style = MaterialTheme.typography.bodyMedium,
-            color = colors.onSurfaceVariant
-        )
-        Button(
-            onClick = onGoImport,
-            modifier = Modifier.fillMaxWidth().height(SleepyTheme.Buttons.ctaHeight),
-            shape = SleepyTheme.Buttons.shape,
-            colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
-        ) {
-            Text(stringResource(R.string.schedule_go_manage), color = colors.onPrimary)
-        }
-        Button(
-            onClick = onManualAdd,
-            modifier = Modifier.fillMaxWidth().height(SleepyTheme.Buttons.ctaHeight),
-            shape = SleepyTheme.Buttons.shape,
-            colors = ButtonDefaults.buttonColors(containerColor = colors.secondaryContainer)
-        ) {
-            Text(stringResource(R.string.schedule_manual_first), color = colors.onSecondaryContainer)
-        }
+    actionCourse?.let { course ->
+        WedoCourseActions(course, onDismiss = { actionCourse = null },
+            onEdit = { actionCourse = null; onEditCourse(course) }, viewModel = viewModel)
     }
 }

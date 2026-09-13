@@ -5,10 +5,23 @@ local.properties
 
 # Android
 *.apk
-!Sleepy_v1.0_arm64-debug.apk
 *.iml
 .idea/
 captures/
+
+# wedo: credentials and education-system capture artifacts must never be committed
+.env
+.env.*
+*.jks
+*.keystore
+*.key
+*.pem
+*.har
+cookies.json
+session.json
+credentials.json
+keystore.properties
+test/fixtures/jlju/private/
 
 # IDE
 .vscode/

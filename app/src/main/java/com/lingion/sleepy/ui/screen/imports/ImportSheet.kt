@@ -29,6 +29,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Description
@@ -101,12 +102,19 @@ fun ImportSheet(
     onDismiss: () -> Unit,
     onJwImportRequested: () -> Unit,
     onImported: () -> Unit,
-    viewModel: ScheduleViewModel = viewModel()
+    viewModel: ScheduleViewModel = viewModel(),
+    onManualAdd: (() -> Unit)? = null
 ) {
     val state by viewModel.state.collectAsState()
     val colors = SleepyTheme.colors
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val haptics = com.lingion.sleepy.ui.theme.LocalWedoDisplay.current.haptics
+    val importedWithFeedback: () -> Unit = {
+        if (haptics) haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+        onImported()
+    }
 
     var textExpanded by remember { mutableStateOf(false) }
     var inputText by remember { mutableStateOf("") }
@@ -195,6 +203,7 @@ fun ImportSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
+        containerColor = colors.surface,
     ) {
         BoxWithConstraints {
         Column(
@@ -205,7 +214,7 @@ fun ImportSheet(
         ) {
             // 标题
             Text(
-                text = stringResource(R.string.import_title),
+                text = "添加课表",
                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
                 color = colors.onSurface,
                 modifier = Modifier.padding(bottom = 4.dp)
@@ -225,6 +234,13 @@ fun ImportSheet(
                     onDismiss()
                     onJwImportRequested()
                 }
+            )
+
+            ImportMethodRow(
+                icon = Icons.Outlined.CalendarMonth,
+                label = "从 WakeUp 迁移",
+                subtitle = "先在 WakeUp 选择“导出为日历文件”",
+                onClick = { filePicker.launch(arrayOf("text/calendar", "text/x-vcalendar", "*/*")) }
             )
 
             // 行 2：从文本导入（可折叠）
@@ -290,11 +306,14 @@ fun ImportSheet(
                 icon = Icons.Outlined.FileUpload,
                 label = stringResource(R.string.import_file),
                 onClick = {
-                    // OpenDocument() 接受 MIME 数组, 让 picker 只显示 json / 文本文件
-                    filePicker.launch(arrayOf("application/json", "text/plain", "text/csv", "text/html", "*/*"))
+                    // 保留通用文件入口；JSON 仅代表本应用/其他工具的备份数据，不宣称 WakeUp JSON。
+                    filePicker.launch(arrayOf("application/json", "text/calendar", "text/plain", "text/csv", "text/html", "*/*"))
                 }
             )
 
+            onManualAdd?.let { add ->
+                ImportMethodRow(Icons.Outlined.Description, "手动添加课程", onClick = add)
+            }
             Spacer(modifier = Modifier.height(20.dp))
 
             // 支持的导入类型
@@ -312,18 +331,8 @@ fun ImportSheet(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 FormatRow(
-                    name = stringResource(R.string.format_wakeup_share),
-                    desc = stringResource(R.string.format_wakeup_desc),
-                    onDetail = { detailFormat = ImportFormat.WAKEUP_SHARE }
-                )
-                FormatRow(
-                    name = stringResource(R.string.format_wakeup_json),
-                    desc = stringResource(R.string.format_json_desc),
-                    onDetail = { detailFormat = ImportFormat.WAKEUP_JSON }
-                )
-                FormatRow(
                     name = stringResource(R.string.format_ics),
-                    desc = stringResource(R.string.format_ics_desc),
+                    desc = "可用于 WakeUp“导出为日历文件”",
                     onDetail = { detailFormat = ImportFormat.ICS }
                 )
                 FormatRow(
@@ -416,7 +425,7 @@ fun ImportSheet(
                                 requiredNodeCount = preview!!.parseResult.nodesPerDay
                             ),
                             context = context,
-                            onImported = onImported
+                            onImported = importedWithFeedback
                         ) { msg -> errorMsg = msg }
                         preview = null
                         pendingMode = null
@@ -453,7 +462,7 @@ fun ImportSheet(
                                 confirmedTableName = confirmedTableName,
                                 confirmedTimeJson = confirmedTimeJson,
                                 context = context,
-                                onImported = onImported
+                                onImported = importedWithFeedback
                             ) { msg -> errorMsg = msg }
                             preview = null
                             pendingMode = null
@@ -472,6 +481,7 @@ fun ImportSheet(
 private fun ImportMethodRow(
     icon: ImageVector,
     label: String,
+    subtitle: String? = null,
     trailing: ImageVector? = null,
     onClick: () -> Unit
 ) {
@@ -498,14 +508,16 @@ private fun ImportMethodRow(
                 modifier = Modifier.size(20.dp)
             )
         }
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-            color = colors.onSurface,
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = 14.dp)
-        )
+        Column(modifier = Modifier.weight(1f).padding(start = 14.dp)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                color = colors.onSurface
+            )
+            subtitle?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+            }
+        }
         if (trailing != null) {
             Icon(
                 imageVector = trailing,
@@ -556,9 +568,9 @@ private fun FormatRow(name: String, desc: String, onDetail: () -> Unit) {
     }
 }
 
-/** 导入格式标识 — 对应"支持格式"列表的 6 行, 详情弹窗按它取 strings */
+/** 导入格式标识 — 仅列出当前可由本地文件稳定复现的格式。 */
 private enum class ImportFormat {
-    WAKEUP_SHARE, WAKEUP_JSON, ICS, CSV, HTML, PLAIN
+    ICS, CSV, HTML, PLAIN
 }
 
 /**
@@ -576,32 +588,24 @@ private fun FormatDetailDialog(format: ImportFormat, onDismiss: () -> Unit) {
     val context = LocalContext.current
 
     val titleRes = when (format) {
-        ImportFormat.WAKEUP_SHARE -> R.string.format_wakeup_share
-        ImportFormat.WAKEUP_JSON -> R.string.format_wakeup_json
         ImportFormat.ICS -> R.string.format_ics
         ImportFormat.CSV -> R.string.format_csv
         ImportFormat.HTML -> R.string.format_html
         ImportFormat.PLAIN -> R.string.format_plain
     }
     val whenRes = when (format) {
-        ImportFormat.WAKEUP_SHARE -> R.string.format_wakeup_share_when
-        ImportFormat.WAKEUP_JSON -> R.string.format_wakeup_json_when
         ImportFormat.ICS -> R.string.format_ics_when
         ImportFormat.CSV -> R.string.format_csv_when
         ImportFormat.HTML -> R.string.format_html_when
         ImportFormat.PLAIN -> R.string.format_plain_when
     }
     val specRes = when (format) {
-        ImportFormat.WAKEUP_SHARE -> R.array.format_wakeup_share_spec
-        ImportFormat.WAKEUP_JSON -> R.array.format_wakeup_json_spec
         ImportFormat.ICS -> R.array.format_ics_spec
         ImportFormat.CSV -> R.array.format_csv_spec
         ImportFormat.HTML -> R.array.format_html_spec
         ImportFormat.PLAIN -> R.array.format_plain_spec
     }
     val exampleRes = when (format) {
-        ImportFormat.WAKEUP_SHARE -> R.string.format_wakeup_share_example
-        ImportFormat.WAKEUP_JSON -> R.string.format_wakeup_json_example
         ImportFormat.ICS -> R.string.format_ics_example
         ImportFormat.CSV -> R.string.format_csv_example
         ImportFormat.HTML -> R.string.format_html_example

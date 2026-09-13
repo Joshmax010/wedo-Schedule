@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Sleepy Horario</string>
+    <string name="app_name">wedo Horario</string>
     <string name="widget_today_label">Clases de hoy</string>
     <string name="widget_week_list_label">Esta semana (lista)</string>
     <string name="widget_week_grid_label">Esta semana (cuadrícula)</string>
@@ -489,8 +489,8 @@ Agradecimientos por universidad (una tarjeta por universidad, expandir para ver 
     <string name="export_failed">Error al exportar, reintenta</string>
     <string name="export_ics_subtitle">Formato iCalendar estándar, importable al calendario del sistema / Google / Apple Calendar</string>
     <string name="export_ics_title">Calendario ICS</string>
-    <string name="export_json_subtitle">Estructura completa del horario, importable directamente por WakeUp y apps similares</string>
-    <string name="export_json_title">JSON compatible con WakeUp</string>
+    <string name="export_json_subtitle">Estructura completa que puede volver a importarse en wedo</string>
+    <string name="export_json_title">Copia JSON de wedo</string>
     <string name="export_no_table">No hay horario disponible para exportar</string>
     <string name="export_pick_table">Elige un horario para exportar</string>
     <string name="export_current_table_badge">Horario actual</string>

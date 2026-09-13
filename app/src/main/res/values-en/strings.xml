@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Sleepy Schedule</string>
+    <string name="app_name">wedo Schedule</string>
     <string name="widget_today_label">Today\'s Classes</string>
     <string name="widget_today_small_label">Today\'s Classes · Small</string>
     <string name="widget_week_list_label">This Week (List)</string>
@@ -494,8 +494,8 @@ Per-school attribution (one card per school, expand to see details) — Hefei Un
     <string name="export_failed">Export failed, please retry</string>
     <string name="export_ics_subtitle">Standard iCalendar format, importable to system calendar / Google / Apple Calendar</string>
     <string name="export_ics_title">ICS Calendar</string>
-    <string name="export_json_subtitle">Full schedule structure, directly importable by WakeUp and similar apps</string>
-    <string name="export_json_title">WakeUp-compatible JSON</string>
+    <string name="export_json_subtitle">Full schedule structure that can be imported back into wedo</string>
+    <string name="export_json_title">wedo JSON backup</string>
     <string name="export_no_table">No schedule available to export</string>
     <string name="export_pick_table">Choose a timetable to export</string>
     <string name="export_current_table_badge">Current timetable</string>

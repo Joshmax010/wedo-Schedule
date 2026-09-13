@@ -20,7 +20,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.School
-import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -59,19 +58,6 @@ import com.lingion.sleepy.ui.theme.noRippleClickable
 import com.lingion.sleepy.util.PinyinMatcher
 import kotlinx.coroutines.launch
 
-private fun looksLikeUrl(s: String): Boolean {
-    val t = s.trim()
-    if (t.startsWith("http://") || t.startsWith("https://")) return true
-    if (t.matches(Regex("""[a-zA-Z0-9][-a-zA-Z0-9]{0,62}\.[a-zA-Z]{2,}([/:].*)?"""))) return true
-    if (t.matches(Regex("""\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?(/.*)?"""))) return true
-    return false
-}
-
-private fun normalizeUrl(s: String): String {
-    val t = s.trim()
-    return if (t.startsWith("http://") || t.startsWith("https://")) t else "https://$t"
-}
-
 /** 学校首字母分组 */
 private data class SchoolSection(
     val letter: String,
@@ -90,7 +76,7 @@ private fun schoolSortKey(s: JwSchoolInfo): String {
         "★"
     }
     // sortKeyFull 由 pypinyin 预生成，如 "haerbingongchengdaxue"
-    // 缺失时 fallback 到 name（自定义 URL 场景）
+    // 缺失时 fallback 到 name
     return "$firstLetter|${s.sortKeyFull.ifBlank { s.name }}"
 }
 
@@ -138,11 +124,6 @@ fun SchoolSelectScreen(
             val matched = schools.filter { PinyinMatcher.match(it.name, it.sortKey, query, it.aliases) }
             matched.sortedByDescending { it.aliases.any { a -> a.lowercase() == q } }
         }
-    }
-
-    val isUrl = remember(query) { looksLikeUrl(query) }
-    val urlProtocol = remember(query, isUrl) {
-        if (isUrl) viewModel.detectProtocolFromUrl(query) else null
     }
 
     // 按字母分组（仅无搜索时显示分组+索引栏）
@@ -241,27 +222,8 @@ fun SchoolSelectScreen(
                 }
             }
 
-            if (isUrl) {
-                UrlDirectRow(
-                    url = query.trim(),
-                    protocolType = urlProtocol,
-                    onClick = {
-                        val school = JwSchoolInfo(
-                            sortKey = "",
-                            name = "自定义教务",
-                            url = normalizeUrl(query.trim()),
-                            type = urlProtocol,
-                            status = JwSchoolInfo.STATUS_SUPPORTED
-                        )
-                        onSchoolSelected(school)
-                    }
-                )
-            }
-
-            if (filtered.isEmpty() && !isUrl) {
+            if (filtered.isEmpty()) {
                 EmptyState(schools.isEmpty())
-            } else if (isUrl && filtered.isEmpty()) {
-                // URL only, no school list
             } else {
                 Row(
                     modifier = Modifier.fillMaxSize(),
@@ -494,61 +456,6 @@ private fun SchoolStatusBadge(school: JwSchoolInfo) {
             style = MaterialTheme.typography.labelSmall,
             color = fg
         )
-    }
-}
-
-@Composable
-private fun UrlDirectRow(url: String, protocolType: String?, onClick: () -> Unit) {
-    val colors = SleepyTheme.colors
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .noRippleClickable(onClick)
-            .padding(vertical = 14.dp, horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(SleepyTheme.shapes.small)
-                .background(colors.primary),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Link,
-                contentDescription = null,
-                tint = colors.onPrimary,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-        Spacer(modifier = Modifier.size(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.url_direct_login),
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                color = colors.primary
-            )
-            Text(
-                text = url,
-                style = MaterialTheme.typography.bodySmall,
-                color = colors.onSurfaceVariant,
-                maxLines = 1
-            )
-            val protoName = JwProtocol.displayName(if (protocolType.isNullOrBlank()) "" else protocolType)
-            if (protocolType != null) {
-                Text(
-                    text = "${stringResource(R.string.url_detected)} $protoName",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = colors.primary
-                )
-            } else {
-                Text(
-                    text = stringResource(R.string.url_auto_detect),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = colors.onSurfaceVariant
-                )
-            }
-        }
     }
 }
 

@@ -1,6 +1,11 @@
 package com.lingion.sleepy.ui.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import com.lingion.sleepy.ui.theme.LocalWedoDisplay
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -38,6 +43,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.LineHeightStyle
@@ -96,6 +102,9 @@ data class TimeSlot(
 fun CardsGridView(
     courses: List<CourseEntity>,
     timeSlots: List<TimeSlot>,
+    wedo: Boolean = false,
+    ghostCourses: List<CourseEntity> = emptyList(),
+    onCourseLongClick: (CourseEntity) -> Unit = {},
     visibleDays: Set<Int> = (1..7).toSet(),
     showDate: Boolean = false,
     startDate: String = "",
@@ -134,16 +143,17 @@ fun CardsGridView(
 
     // issue#8 网格整体缩放: 0.7~1.3, 字号/行高/间距/圆角/内边距等比联动
     // (12节连堂课表缩到 0.7 可一屏放下; 只影响本 Cards 视图, 小组件与列表视图不受影响)
-    val scale = AppPrefs.getGridScale(androidx.compose.ui.platform.LocalContext.current)
+    val display = LocalWedoDisplay.current
+    val scale = if (wedo) 1f else AppPrefs.getGridScale(androidx.compose.ui.platform.LocalContext.current)
     val cornerRatio = AppPrefs.getGridCornerRatio(androidx.compose.ui.platform.LocalContext.current)
     val d = { v: Float -> (v * scale).dp }
 
     // 布局常量（全 dp, 乘 scale）
     val headH = d(52f)
-    val timeW = d(68f)
-    val slotH = d(52f)
+    val timeW = d(if (wedo) 36f else 68f)
+    val slotH = if (wedo) when (display.density) { "compact" -> 48.dp; "spacious" -> 82.dp; else -> 64.dp } else d(52f)
     val gapH = d(4f)
-    val gapW = d(5f)
+    val gapW = d(if (wedo) 2f else 5f)
     val rowH = slotH + gapH
 
     val gridBgShape = SleepyTheme.shapes.large
@@ -151,8 +161,8 @@ fun CardsGridView(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.surfaceContainerHigh, gridBgShape)
-            .padding(d(8f))
+            .background(if (wedo) Color.Transparent else colors.surfaceContainerHigh, gridBgShape)
+            .padding(if (wedo) 5.dp else d(8f))
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             // 算出每列宽度 (dp)
@@ -169,7 +179,7 @@ fun CardsGridView(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .verticalScroll(scrollState)
+                    .then(if (wedo) Modifier.fillMaxHeight() else Modifier.verticalScroll(scrollState))
             ) {
                 // ---- 表头：自然 Compose Row ----
                 Row(
@@ -200,8 +210,14 @@ fun CardsGridView(
 
                 Spacer(modifier = Modifier.height(gapH))
 
+                Column(Modifier.fillMaxWidth().then(if (wedo) Modifier.weight(1f).testTag("week-grid-scroll-$currentWeek").verticalScroll(scrollState) else Modifier)) {
                 // ---- Grid 主体：固定高度 Box，内部全用 Modifier.offset 绝对定位 ----
-                Box(modifier = Modifier.fillMaxWidth().height(gridH)) {
+                Box(modifier = Modifier.fillMaxWidth().height(gridH).drawBehind {
+                    if (wedo) {
+                        for (i in 0..timeSlots.size) drawLine(colors.outlineVariant.copy(alpha = .32f), Offset(timeW.toPx(), (rowH * i).toPx()), Offset(size.width, (rowH * i).toPx()), 1f)
+                        for (i in 0..dayCount) { val x = (timeW + gapW + (colW + gapW) * i).toPx(); drawLine(colors.outlineVariant.copy(alpha = .18f), Offset(x, 0f), Offset(x, size.height), 1f) }
+                    }
+                }) {
                     // 时间栏：每个节次一个 Row，用 offset 定位到正确 y
                     for ((i, slot) in timeSlots.withIndex()) {
                         Row(
@@ -214,6 +230,7 @@ fun CardsGridView(
                         ) {
                             SingleTimeHeadCell(
                                 slot = slot,
+                                wedo = wedo,
                                 scale = scale,
                                 modifier = Modifier.width(timeW).fillMaxHeight(),
                                 cornerRatio = cornerRatio
@@ -225,6 +242,19 @@ fun CardsGridView(
                         }
                     }
 
+                    // Ghost records are painted below active cards and never join conflict detection.
+                    if (wedo) for (course in ghostCourses) {
+                        val index = slotIndexOf(course.startNode)
+                        val dayIndex = sortedDays.indexOf(course.day)
+                        if (index < 0 || dayIndex < 0) continue
+                        Box(Modifier.offset(x = timeW + gapW + (colW + gapW) * dayIndex, y = rowH * index)
+                            .width(colW).height(rowH * course.step.coerceIn(1, timeSlots.size - index) - gapH)
+                            .padding(2.dp).clip(RoundedCornerShape(10.dp))
+                            .background(colors.surfaceVariant.copy(alpha = .35f))) {
+                            Text("非本周\n" + course.courseName, Modifier.padding(4.dp),
+                                color = colors.onSurfaceVariant, fontSize = 10.sp, maxLines = 3)
+                        }
+                    }
                     // 课程卡片：用 offset 绝对定位 — 冲突簇整簇走 ConflictClusterCard,
                     // 非簇课保持原 CourseOverlayCard 单卡路径(回归保护)
                     val context = LocalContext.current
@@ -324,19 +354,31 @@ fun CardsGridView(
                             isGrey = course.day in greyDays,
                             scale = scale,
                             cornerRatio = cornerRatio,
+                            wedo = wedo,
+                            onLongClick = { onCourseLongClick(course) },
                             groupRows = courses.filter { it.groupId == course.groupId }
                         )
                     }
                 }
                 if (navExtra > 0.dp) Spacer(modifier = Modifier.height(navExtra))
+                }
             }
         }
     }
 }
 
 @Composable
-private fun SingleTimeHeadCell(slot: TimeSlot, scale: Float = 1f, modifier: Modifier = Modifier, cornerRatio: Float = 1f) {
+private fun SingleTimeHeadCell(slot: TimeSlot, scale: Float = 1f, modifier: Modifier = Modifier, cornerRatio: Float = 1f, wedo: Boolean = false) {
     val colors = SleepyTheme.colors
+    if (wedo) {
+        Column(modifier.padding(top = 6.dp), horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(slot.label, color = colors.onSurface, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Text(slot.displayStart, color = colors.onSurfaceVariant, fontSize = 9.sp, maxLines = 1)
+            Text(slot.displayEnd, color = colors.onSurfaceVariant, fontSize = 9.sp, maxLines = 1)
+        }
+        return
+    }
     val sd = { v: Float -> (v * scale).dp }
     val shape = RoundedCornerShape(sd(12f * cornerRatio))
     Box(
@@ -382,8 +424,14 @@ private fun CourseOverlayCard(
     isGrey: Boolean = false,
     scale: Float = 1f,
     cornerRatio: Float = 1f,
-    groupRows: List<CourseEntity> = listOf(course)
+    groupRows: List<CourseEntity> = listOf(course),
+    wedo: Boolean = false,
+    onLongClick: () -> Unit = {}
 ) {
+    if (wedo) {
+        WedoCourseCard(course, modifier, onClick = onClick, onLongClick = onLongClick)
+        return
+    }
     val palette = SleepyTheme.palette
     val colors = SleepyTheme.colors
     val context = androidx.compose.ui.platform.LocalContext.current

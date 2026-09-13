@@ -15,7 +15,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -51,10 +50,6 @@ import com.lingion.sleepy.ui.theme.SleepyTheme
 import com.lingion.sleepy.ui.theme.noRippleClickable
 import com.lingion.sleepy.util.AppPrefs
 import com.lingion.sleepy.util.DateUtils
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 /**
@@ -66,8 +61,6 @@ import kotlin.math.roundToInt
 @Composable
 fun GeneralSettingsScreen(
     onBack: () -> Unit,
-    onOpenHoliday: () -> Unit = {},
-    onOpenWidgetManagement: () -> Unit = {},
     navDock: Boolean = false,
     onNavDockChange: (Boolean) -> Unit = {}
 ) {
@@ -103,16 +96,10 @@ fun GeneralSettingsScreen(
     var showDate by remember { mutableStateOf(AppPrefs.isShowDate(context)) }
     var startView by remember { mutableStateOf(AppPrefs.getStartView(context)) }
     var visibleDays by remember { mutableStateOf(AppPrefs.getVisibleDays(context)) }
-    var vertPunct by remember { mutableStateOf(AppPrefs.isVertPunctReplace(context)) }
-    var widgetColorless by remember { mutableStateOf(AppPrefs.isWidgetColorless(context)) }
     var courseColorless by remember { mutableStateOf(AppPrefs.isCourseColorless(context)) }
-    var widgetSeparator by remember { mutableStateOf(AppPrefs.isWidgetSeparator(context)) }
 
-    // 显示项变更后立即刷小组件(管线自 AppearanceScreen 迁移保留)
-    val widgetScope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Default) }
-    fun refreshWidgets() {
-        widgetScope.launch { com.lingion.sleepy.widget.WidgetUpdater.notifyDataChanged(context) }
-    }
+    // Kept as a no-op to minimize the upstream UI diff; wedo v1 has no widgets.
+    fun refreshWidgets() = Unit
 
     Scaffold(
         modifier = Modifier.fillMaxSize().background(colors.background),
@@ -468,110 +455,10 @@ fun GeneralSettingsScreen(
                 }
             }
 
-            // 节假日课程灰显: 点击进入二级页
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(SleepyTheme.shapes.large)
-                        .background(colors.surfaceContainer)
-                        .noRippleClickable(onOpenHoliday)
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        // 仅标题(用户 2026-09-03 指令: 入口说明文字去掉)
-                        Text(
-                            text = stringResource(R.string.settings_holiday_title),
-                            style = MaterialTheme.typography.titleSmall,
-                            color = colors.onSurface
-                        )
-                    }
-                    Icon(
-                        Icons.Outlined.ChevronRight,
-                        contentDescription = null,
-                        tint = colors.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
             // ── 分隔线 ──
             item { HorizontalDivider(color = colors.outlineVariant.copy(alpha = SleepyTheme.Alpha.hairline)) }
 
-            // ── 分组② 小组件 ──
-            item {
-                SectionHeader(title = stringResource(R.string.appearance_section_widget))
-            }
-
-            item {
-                SettingsCard(title = stringResource(R.string.settings_widget), expanded = "widget" in expandedSections, onToggle = { toggleSection("widget") }) {
-                    SettingToggleRow(
-                        label = stringResource(R.string.settings_widget_colorless),
-                        subtitle = stringResource(R.string.settings_widget_colorless_sub),
-                        checked = widgetColorless,
-                        onCheckedChange = {
-                            widgetColorless = it
-                            AppPrefs.setWidgetColorless(context, it)
-                            refreshWidgets()
-                        }
-                    )
-                    HorizontalDivider(color = colors.outlineVariant.copy(alpha = SleepyTheme.Alpha.hairline))
-                    SettingToggleRow(
-                        label = stringResource(R.string.settings_widget_separator),
-                        subtitle = stringResource(R.string.settings_widget_separator_sub),
-                        checked = widgetSeparator,
-                        onCheckedChange = {
-                            widgetSeparator = it
-                            AppPrefs.setWidgetSeparator(context, it)
-                            refreshWidgets()
-                        }
-                    )
-                    HorizontalDivider(color = colors.outlineVariant.copy(alpha = SleepyTheme.Alpha.hairline))
-                    SettingToggleRow(
-                        label = stringResource(R.string.settings_vert_punct),
-                        subtitle = stringResource(R.string.settings_vert_punct_sub),
-                        checked = vertPunct,
-                        onCheckedChange = {
-                            vertPunct = it
-                            AppPrefs.setVertPunctReplace(context, it)
-                            refreshWidgets()
-                        }
-                    )
-                }
-            }
-
-            // 管理桌面小组件: 跳二级页列出已放置的小组件(模板: 节假日课程灰显入口行)
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(SleepyTheme.shapes.large)
-                        .background(colors.surfaceContainer)
-                        .noRippleClickable(onOpenWidgetManagement)
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.widget_manage_entry),
-                            style = MaterialTheme.typography.titleSmall,
-                            color = colors.onSurface
-                        )
-                    }
-                    Icon(
-                        Icons.Outlined.ChevronRight,
-                        contentDescription = null,
-                        tint = colors.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            // ── 分隔线 ──
-            item { HorizontalDivider(color = colors.outlineVariant.copy(alpha = SleepyTheme.Alpha.hairline)) }
-
-            // ── 分组③ 画面 ──
+            // ── 分组② 画面 ──
             item {
                 SectionHeader(title = stringResource(R.string.settings_section_display))
             }

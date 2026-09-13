@@ -48,17 +48,10 @@ class JwImportViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun loadSchools() {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val app = getApplication<Application>()
-                val text = app.assets.open("schools.json")
-                    .bufferedReader().use { it.readText() }
-                val list = parseSchoolsJson(text)
-                _schools.value = list
-            } catch (e: Exception) {
-                _importState.value = ImportState.Error("加载学校列表失败: ${e.message}")
-            }
-        }
+        // wedo v1 is intentionally single-school. Keep the upstream catalogue and
+        // parsers in the source tree for compatibility, but do not expose unverified
+        // schools or guessed URLs in the product UI.
+        _schools.value = defaultWedoSchools()
     }
 
     /**
@@ -136,6 +129,21 @@ class JwImportViewModel(application: Application) : AndroidViewModel(application
     }
 
     companion object {
+        /** Public product catalogue. JLJU values come from reviewed Phase 3 evidence. */
+        @JvmStatic
+        internal fun defaultWedoSchools(): List<JwSchoolInfo> = listOf(
+            JwSchoolInfo(
+                sortKey = "J",
+                sortKeyFull = "jilinjianzhudaxue",
+                name = "吉林建筑大学",
+                url = "https://jwxt.jlju.edu.cn/sso/hnyyxyiotlogin",
+                type = JwProtocol.TYPE_ZF_NEW,
+                status = JwSchoolInfo.STATUS_SUPPORTED,
+                aliases = listOf("吉建大", "JLJU"),
+                enableFetch = true,
+            )
+        )
+
         /**
          * T12: 解析 schools.json 文本为学校列表。
          * companion static 使纯 JVM 单测无需构造 Android ViewModel。

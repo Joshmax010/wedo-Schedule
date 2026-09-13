@@ -79,8 +79,9 @@ object HolidayManager {
     /** 判断某日期是否应该灰显（根据用户设置，含用户范围化覆盖） */
     suspend fun shouldGrey(ctx: Context, date: LocalDate): Boolean {
         val ranges = AppPrefs.getHolidayRanges(ctx)
-        val networkEntries = getYearEntries(ctx, date.year)
-        val merged = HolidayRangeOps.mergeSegments(networkEntries, ranges)
+        // wedo v1 does not contact a third-party holiday CDN. Local overrides and
+        // weekend rules remain available without any network transmission.
+        val merged = HolidayRangeOps.mergeSegments(emptyList(), ranges)
         val (holidays, workdays) = HolidayRangeOps.toSets(merged.active)
         val workdaysForWeekend = if (AppPrefs.isHolidayGreyWeekend(ctx) && AppPrefs.isHolidayIgnoreWorkday(ctx)) {
             workdays

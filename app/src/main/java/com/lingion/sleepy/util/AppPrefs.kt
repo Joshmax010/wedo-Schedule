@@ -69,7 +69,7 @@ object AppPrefs {
     const val KEY_WEEK_HIDE_EMPTY_DAYS = "week_hide_empty_days" // bool default false — 周视图隐藏无课日(仅两栏下生效, issue#8)
     const val KEY_UPDATE_CHECK_ENABLED = "update_check_enabled" // bool default true — 启动检查 GitHub releases latest
     const val KEY_HIGH_REFRESH = "high_refresh_rate" // bool default true — 窗口 preferredDisplayModeId 钉屏幕最高刷率(流畅优先); 关=跟随系统省电调度
-    const val KEY_NAV_DOCK = "nav_dock" // bool default false — 底栏形态: false=贴底(通栏), true=悬浮药丸(Dock, 底边留距)
+    const val KEY_NAV_DOCK = "nav_dock" // bool default true — wedo 默认悬浮 Dock，可切换贴底模式
     const val KEY_THEME_MODE = "theme_mode"  // light/dark/system
     const val THEME_MODE_LIGHT = "light"
     const val THEME_MODE_DARK = "dark"
@@ -116,8 +116,8 @@ object AppPrefs {
     // ===== 主题色 =====
 
     fun getThemeKey(ctx: Context): String =
-        sp(ctx).getString(KEY_THEME, com.lingion.sleepy.ui.theme.ThemePresets.KEY_DEFAULT)
-            ?: com.lingion.sleepy.ui.theme.ThemePresets.KEY_DEFAULT
+        sp(ctx).getString(KEY_THEME, com.lingion.sleepy.ui.theme.ThemePresets.KEY_OCEAN)
+            ?: com.lingion.sleepy.ui.theme.ThemePresets.KEY_OCEAN
 
     fun setThemeKey(ctx: Context, key: String) {
         sp(ctx).edit().putString(KEY_THEME, key).apply()
@@ -126,8 +126,8 @@ object AppPrefs {
     fun themeKeyFlow(ctx: Context): Flow<String> = callbackFlow {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { sp, k ->
             if (k == KEY_THEME) {
-                val v = sp.getString(KEY_THEME, com.lingion.sleepy.ui.theme.ThemePresets.KEY_DEFAULT)
-                    ?: com.lingion.sleepy.ui.theme.ThemePresets.KEY_DEFAULT
+                val v = sp.getString(KEY_THEME, com.lingion.sleepy.ui.theme.ThemePresets.KEY_OCEAN)
+                    ?: com.lingion.sleepy.ui.theme.ThemePresets.KEY_OCEAN
                 trySend(v)
             }
         }
@@ -234,9 +234,9 @@ object AppPrefs {
         sp(ctx).edit().putBoolean(KEY_HIGH_REFRESH, value).apply()
     }
 
-    /** 底栏形态: false=贴底(默认), true=悬浮药丸 Dock */
+    /** 底栏形态: true=悬浮药丸 Dock（wedo 默认）, false=无障碍贴底模式。 */
     fun isNavDock(ctx: Context): Boolean =
-        sp(ctx).getBoolean(KEY_NAV_DOCK, false)
+        sp(ctx).getBoolean(KEY_NAV_DOCK, true)
 
     fun setNavDock(ctx: Context, value: Boolean) {
         sp(ctx).edit().putBoolean(KEY_NAV_DOCK, value).apply()
@@ -255,7 +255,7 @@ object AppPrefs {
     // ===== 冲突课程显示样式：叠层 / 折角 / 竖轨 =====
 
     fun getConflictStyle(ctx: Context): String =
-        sp(ctx).getString(KEY_CONFLICT_STYLE, "rail") ?: "rail"
+        sp(ctx).getString(KEY_CONFLICT_STYLE, "stack") ?: "stack"
 
     fun setConflictStyle(ctx: Context, value: String) {
         require(value == "stack" || value == "fold" || value == "rail")

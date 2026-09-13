@@ -206,9 +206,9 @@ class JwImportActivity : ComponentActivity() {
                                             Log.d("JwImport", "importAsNewTable tableId=$tableId courses=${parsedCourses.size}")
                                             statusMsg = getString(R.string.jw_import_success, parsedCourses.size)
                                             importFinished = true
-                                        } catch (e: Exception) {
-                                            Log.e("JwImport", "import failed", e)
-                                            errorMsg = getString(R.string.jw_parse_failed, e.message ?: "")
+                                        } catch (_: Exception) {
+                                            Log.e("JwImport", "import failed code=E_LOCAL_STORAGE")
+                                            errorMsg = getString(R.string.jw_parse_failed, "E_LOCAL_STORAGE")
                                             statusMsg = null
                                         }
                                     }
@@ -301,17 +301,19 @@ class JwImportActivity : ComponentActivity() {
                                             configTimeJson = ""
                                             stage = Stage.ConfigureConfirm
                                             statusMsg = null
-                                        } catch (e: Exception) {
-                                            Log.e("JwImport", "parseHtml failed", e)
-                                            errorMsg = getString(R.string.jw_parse_failed, e.message ?: "") + getString(R.string.jw_parse_failed_hint)
+                                        } catch (_: Exception) {
+                                            // Parser exceptions can contain response fragments. Keep logs and UI
+                                            // diagnostic-only instead of reflecting exception messages.
+                                            Log.e("JwImport", "parse failed code=E_PARSE_FORMAT")
+                                            errorMsg = getString(R.string.jw_parse_failed, "E_PARSE_FORMAT") + getString(R.string.jw_parse_failed_hint)
                                             statusMsg = null
                                         }
                                     }
                                 },
-                                onCaptureError = { status, hint ->
-                                    Log.w("JwImport", "capture failed status=$status hint=$hint")
+                                onCaptureError = { status, _ ->
+                                    Log.w("JwImport", "capture failed status=$status")
                                     errorMsg = when (status) {
-                                        FrameCaptureStatus.CROSS_DOMAIN_IFRAME_BLOCKED -> getString(R.string.jw_err_cross_domain_iframe, hint)
+                                        FrameCaptureStatus.CROSS_DOMAIN_IFRAME_BLOCKED -> getString(R.string.jw_err_cross_domain_iframe, "E_CROSS_ORIGIN")
                                         FrameCaptureStatus.CONTAINER_EMPTY_AFTER_DELAY -> getString(R.string.jw_err_container_empty_after_delay)
                                         FrameCaptureStatus.IFRAME_NAV_PENDING          -> getString(R.string.jw_err_iframe_nav_pending)
                                         FrameCaptureStatus.WRONG_PAGE                  -> getString(R.string.jw_err_wrong_page)

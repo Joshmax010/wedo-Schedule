@@ -1,6 +1,8 @@
 package com.lingion.sleepy.ui.component
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -84,9 +86,16 @@ fun CourseDetailSheet(
         ModalBottomSheet(
             onDismissRequest = onDismiss,
             sheetState = sheetState,
+            containerColor = SleepyTheme.colors.surface,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
-            Column(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wedoGlass(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = 24.dp)
+            ) {
                 // Header
                 SheetHeader(
                     title = course.courseName.ifBlank { stringResource(R.string.course_detail_title) }

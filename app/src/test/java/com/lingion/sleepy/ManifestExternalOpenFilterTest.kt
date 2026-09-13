@@ -65,7 +65,7 @@ class ManifestExternalOpenFilterTest {
 
     @Test
     fun json_and_plain_still_registered() {
-        assertTrue("application/json 不得丢(WakeUp JSON 导出)", hasMime("application/json"))
+        assertTrue("application/json 不得丢（通用 JSON 备份）", hasMime("application/json"))
         assertTrue("text/plain 不得丢(WakeUp 分享文本/纯文本课表)", hasMime("text/plain"))
     }
 

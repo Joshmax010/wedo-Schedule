@@ -9,7 +9,6 @@ import com.lingion.sleepy.SleepyApp
 import androidx.room.withTransaction
 import com.lingion.sleepy.util.AppPrefs
 import com.lingion.sleepy.util.ConflictLayoutEngine
-import com.lingion.sleepy.widget.WidgetUpdater
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -89,15 +88,7 @@ class ScheduleRepository(private val db: AppDatabase) {
 
     suspend fun deleteTable(id: Long) {
         captureForUndo()
-        // 删除前先取该表全部课程 id：tableDao.deleteById 靠外键 CASCADE 级联删课程，
-        //   删完后这些 id 已不在库里，scheduleAll → cancelAll 按"现存课程"枚举 cancel 不到它们，
-        //   当天已排的课程级课前闹钟（RC_BEFORE_CLASS_BASE+cid）会残留到点继续响。
-        //   因此必须在删除前捕获 id 列表，删除后对这些"孤儿 id"显式取消闹钟。
-        val orphanCourseIds = courseDao.getByTable(id).map { it.id }
         tableDao.deleteById(id)
-        if (orphanCourseIds.isNotEmpty()) {
-            SleepyApp.get().notificationScheduler.cancelCourseAlarms(orphanCourseIds)
-        }
         onDataChanged()
     }
 
@@ -281,19 +272,8 @@ class ScheduleRepository(private val db: AppDatabase) {
         }
     }
 
-    /**
-     * 数据变更后：刷新所有 widget，并在提醒开启时重排通知（含流体云）。
-     * 修复：之前只刷 widget 不重排通知，导致编辑课表后课前提醒/流体云仍按旧时间。
-     */
-    private suspend fun onDataChanged() {
-        val app = SleepyApp.get()
-        WidgetUpdater.notifyDataChanged(app)
-        try {
-            app.notificationScheduler.scheduleAll()
-        } catch (_: Throwable) {
-            // 提醒未开启或调度失败不应影响写操作本身
-        }
-    }
+    /** Hook retained for upstream call-site compatibility; wedo v1 has no widgets/reminders. */
+    private suspend fun onDataChanged() = Unit
 
     private fun assignGroupIds(courses: List<CourseEntity>): List<CourseEntity> {
         val nameToGroupId = mutableMapOf<String, String>()

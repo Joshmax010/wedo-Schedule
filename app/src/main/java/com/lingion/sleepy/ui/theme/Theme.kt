@@ -445,7 +445,7 @@ fun SleepyThemeProvider(
         )
         Triple(wc, if (darkTheme) DarkCoursePalette else LightCoursePalette, m3Dynamic)
     } else {
-        val wc = if (darkTheme) preset.dark else preset.light
+        val wc = wedoColors(if (darkTheme) preset.dark else preset.light, darkTheme, themeKey == ThemePresets.KEY_OCEAN)
         val m3 = if (darkTheme) {
             darkColorScheme(
                 primary = wc.primary, onPrimary = wc.onPrimary, primaryContainer = wc.primaryContainer, onPrimaryContainer = wc.onPrimaryContainer,

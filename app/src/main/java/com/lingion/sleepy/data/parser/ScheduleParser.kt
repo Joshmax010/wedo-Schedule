@@ -200,7 +200,7 @@ object ScheduleParser {
                     '－', '—', '―', '﹣' -> '-'
                     '～', '～' -> '~'
                     '　' -> ' '
-                    '﻿' -> ' '   // BOM
+                    '\uFEFF' -> ' '   // BOM
                     else -> c
                 }
             )

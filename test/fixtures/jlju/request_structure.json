@@ -1,0 +1,72 @@
+{
+  "schoolId": "jlju",
+  "capturedAt": "2026-09-11T15:02:46.7630000Z",
+  "timetableIndex": {
+    "method": "GET",
+    "host": "jwxt.jlju.edu.cn",
+    "path": "/jwglxt/kbcx/xskbcx_cxXskbcxIndex.html",
+    "queryParameterNames": [
+      "gnmkdm",
+      "layout"
+    ],
+    "formParameterNames": [],
+    "contentType": "",
+    "responseMimeType": "text/html",
+    "observedStatus": 200
+  },
+  "schedule": {
+    "method": "POST",
+    "host": "jwxt.jlju.edu.cn",
+    "path": "/jwglxt/kbcx/xskbcx_cxXsgrkb.html",
+    "queryParameterNames": [
+      "gnmkdm",
+      "sf_request_type"
+    ],
+    "formParameterNames": [
+      "xnm",
+      "xqm",
+      "kzlx",
+      "xsdm",
+      "kclbdm",
+      "kclxdm"
+    ],
+    "contentType": "application/x-www-form-urlencoded;charset=UTF-8",
+    "responseMimeType": "application/json",
+    "observedStatus": 200
+  },
+  "calendarDays": {
+    "method": "POST",
+    "host": "jwxt.jlju.edu.cn",
+    "path": "/jwglxt/kbcx/xskbcx_cxRsd.html",
+    "queryParameterNames": [
+      "gnmkdm",
+      "sf_request_type"
+    ],
+    "formParameterNames": [
+      "xnm",
+      "xqm",
+      "xqh_id"
+    ],
+    "contentType": "application/x-www-form-urlencoded;charset=UTF-8",
+    "responseMimeType": "application/json",
+    "observedStatus": 200
+  },
+  "sections": {
+    "method": "POST",
+    "host": "jwxt.jlju.edu.cn",
+    "path": "/jwglxt/kbcx/xskbcx_cxRjc.html",
+    "queryParameterNames": [
+      "gnmkdm",
+      "sf_request_type"
+    ],
+    "formParameterNames": [
+      "xnm",
+      "xqm",
+      "xqh_id"
+    ],
+    "contentType": "application/x-www-form-urlencoded;charset=UTF-8",
+    "responseMimeType": "application/json",
+    "observedStatus": 200
+  },
+  "sensitiveHeaderValuesIncluded": false
+}

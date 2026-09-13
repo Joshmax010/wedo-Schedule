@@ -73,8 +73,8 @@ import java.util.Locale
 
 /**
  * 导出课表页 — 把当前课表导出为：
- * 1. WakeUp 兼容 JSON（文件下载 + 分享）
- * 2. WakeUp 分享文本（系统分享面板）
+ * 1. wedo JSON 备份（文件下载 + 分享，可重新导入 wedo）
+ * 2. wedo 分享文本（系统分享面板）
  * 3. ICS 日历（文件下载 + 分享）
  */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)

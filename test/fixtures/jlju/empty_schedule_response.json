@@ -1,0 +1,10 @@
+{
+  "_fixture": {
+    "school": "吉林建筑大学",
+    "source": "verified-local-har",
+    "captureKind": "empty-schedule",
+    "sanitized": true,
+    "recordCount": 0
+  },
+  "kbList": []
+}

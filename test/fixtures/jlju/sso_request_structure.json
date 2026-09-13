@@ -1,0 +1,49 @@
+{
+  "_fixture": {
+    "school": "吉林建筑大学",
+    "source": "verified-local-har-and-cookie-free-request",
+    "captureKind": "sso-structure",
+    "sanitized": true
+  },
+  "portalServiceCatalogue": {
+    "method": "GET",
+    "host": "portal.jlju.edu.cn",
+    "path": "/portal-api/v2/service/showAll",
+    "serviceName": "教务管理系统",
+    "serviceUrl": "https://jwxt.jlju.edu.cn/sso/hnyyxyiotlogin"
+  },
+  "cookieFreeRedirects": [
+    {
+      "method": "GET",
+      "host": "jwxt.jlju.edu.cn",
+      "path": "/sso/hnyyxyiotlogin",
+      "status": 302,
+      "redirectHost": "lxr.jlju.edu.cn",
+      "redirectPath": "/controller/v1/public/verify",
+      "redirectQueryParameterNames": ["t"]
+    },
+    {
+      "method": "GET",
+      "host": "lxr.jlju.edu.cn",
+      "path": "/controller/v1/public/verify",
+      "status": 302,
+      "redirectHost": "lxr.jlju.edu.cn",
+      "redirectPath": "/portal/shortcut.html",
+      "redirectQueryParameterNames": ["dest", "appUrl", "t"]
+    },
+    {
+      "method": "GET",
+      "host": "lxr.jlju.edu.cn",
+      "path": "/portal/shortcut.html",
+      "status": 200,
+      "responseType": "text/html",
+      "pageKind": "javascript-loading-page"
+    }
+  ],
+  "observedAuthenticationHosts": [
+    "lxr.jlju.edu.cn",
+    "cas.jlju.edu.cn"
+  ],
+  "teachingDataHost": "jwxt.jlju.edu.cn",
+  "containsCredentialValues": false
+}

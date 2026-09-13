@@ -10,20 +10,22 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.lingion.sleepy"
+        applicationId = "com.wedo.schedule"
         minSdk = 26
         targetSdk = 37
-        versionCode = 53
-        versionName = "1.0.52"
+        versionCode = 1
+        versionName = "0.1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
         androidResources {
-            localeFilters += listOf("zh-rCN", "zh-rTW", "en", "ja", "es")
+            localeFilters += listOf("zh-rCN")
         }
     }
 
     buildTypes {
         debug {
             isMinifyEnabled = false
+            applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
         }
         release {
@@ -34,7 +36,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
+            // Release artifacts are intentionally unsigned here. CI or a maintainer
+            // must inject the private release key outside the repository.
         }
     }
 
@@ -64,6 +67,12 @@ android {
             isIncludeAndroidResources = true
             isReturnDefaultValues = true
         }
+    }
+
+    lint {
+        // wedo v1 ships only Simplified Chinese resources. Upstream locale files
+        // stay in-tree for future work but are excluded from the packaged locales.
+        disable += "MissingTranslation"
     }
 
     splits {
@@ -126,7 +135,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
-    // Kotlinx Serialization (JSON parsing for WakeUp JSON)
+    // Kotlinx Serialization (legacy and generic schedule JSON parsing)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
     // jsoup (HTML parsing for 教务直连 import)
@@ -151,4 +160,8 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+}
+
+tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+    systemProperty("wedo.project.root", rootProject.projectDir.absolutePath)
 }

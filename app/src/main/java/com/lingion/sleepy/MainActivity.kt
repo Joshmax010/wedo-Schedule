@@ -1,5 +1,7 @@
 package com.lingion.sleepy
 
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.dp
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -47,17 +49,13 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.ui.platform.LocalDensity
 import com.lingion.sleepy.ui.component.PillNavItemSpec
 import com.lingion.sleepy.ui.screen.manage.ManagementPage
-import com.lingion.sleepy.ui.screen.widget.WidgetManagementScreen
-import com.lingion.sleepy.ui.screen.widget.WidgetEditScreen
 import com.lingion.sleepy.ui.screen.mine.AllTablesScreen
 import com.lingion.sleepy.ui.screen.mine.AppearanceScreen
 import com.lingion.sleepy.ui.screen.mine.MineScreen
 import com.lingion.sleepy.ui.screen.mine.EditTableScreen
 import com.lingion.sleepy.ui.screen.mine.GeneralSettingsScreen
-import com.lingion.sleepy.ui.screen.mine.HolidaySettingsScreen
 import com.lingion.sleepy.ui.screen.mine.ExportScreen
-import com.lingion.sleepy.ui.screen.mine.ReminderScreen
-import com.lingion.sleepy.ui.screen.mine.AboutScreen
+import com.lingion.sleepy.ui.screen.mine.WedoAboutScreen
 import com.lingion.sleepy.ui.screen.mine.LicenseScreen
 import com.lingion.sleepy.ui.screen.schedule.ScheduleScreen
 import com.lingion.sleepy.ui.screen.today.TodayScreen
@@ -97,39 +95,52 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
-        com.lingion.sleepy.util.UpdateManager.cleanOldApk(this)
         enableEdgeToEdge()
         // 高刷新率(流畅优先): 按开关把窗口钉到屏幕最高刷率, 不表态会被省电逻辑限 60Hz
         com.lingion.sleepy.util.HighRefreshRate.apply(this, com.lingion.sleepy.util.AppPrefs.isHighRefresh(this))
         handleDeepLinkIntent(intent)
-        // 启动时检查更新: 用户可在「关于」最底 Toggle 关闭
-        com.lingion.sleepy.util.UpdateNotifier.maybeCheckOnStart(this, lifecycleScope)
         setContent {
             val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
             var themeMode by remember { mutableStateOf(AppPrefs.getThemeMode(this@MainActivity)) }
             var dark by remember { mutableStateOf(AppPrefs.isDarkMode(this@MainActivity, systemDark)) }
+            val privacyPreferences = remember {
+                getSharedPreferences("wedo_privacy", Context.MODE_PRIVATE)
+            }
+            var privacyAccepted by remember {
+                mutableStateOf(privacyPreferences.getBoolean("accepted_v1", false))
+            }
+            androidx.compose.runtime.LaunchedEffect(systemDark) { dark = AppPrefs.isDarkMode(this@MainActivity, systemDark) }
             fun applyTheme() { dark = AppPrefs.isDarkMode(this@MainActivity, systemDark) }
             val deepLinkCourse by editingCourseFlow.collectAsState()
             val themeKey by AppPrefs.themeKeyFlow(this@MainActivity).collectAsState(initial = AppPrefs.getThemeKey(this@MainActivity))
             SleepyThemeProvider(darkTheme = dark, themeKey = themeKey) {
-                AppRoot(
-                    themeMode = themeMode,
-                    onThemeModeChange = { mode ->
-                        AppPrefs.setThemeMode(this@MainActivity, mode)
-                        themeMode = mode
-                        applyTheme()
-                        // 手动切主题时联动刷新 widget(广播 APPWIDGET_UPDATE)
-                        lifecycleScope.launch {
-                            com.lingion.sleepy.widget.WidgetUpdater.notifyDataChanged(this@MainActivity)
-                        }
-                    },
-                    deepLinkCourse = deepLinkCourse,
-                    onDeepLinkConsumed = { editingCourseFromIntent.value = null },
-                    pendingImportText = pendingImportText,
-                    consumePendingImportText = { MainActivity.pendingImportText = null }
-                )
+                com.lingion.sleepy.ui.theme.WedoDisplayProvider {
+                if (privacyAccepted) {
+                    AppRoot(
+                        themeMode = themeMode,
+                        onThemeModeChange = { mode ->
+                            AppPrefs.setThemeMode(this@MainActivity, mode)
+                            themeMode = mode
+                            applyTheme()
+                        },
+                        deepLinkCourse = deepLinkCourse,
+                        onDeepLinkConsumed = { editingCourseFromIntent.value = null },
+                        pendingImportText = pendingImportText,
+                        consumePendingImportText = { MainActivity.pendingImportText = null }
+                    )
+                } else {
+                    WedoPrivacyConsent(
+                        onAccept = {
+                            privacyPreferences.edit().putBoolean("accepted_v1", true).apply()
+                            privacyAccepted = true
+                        },
+                        onReject = { finish() },
+                    )
+                }
             }
         }
+    }
+
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -163,13 +174,12 @@ class MainActivity : ComponentActivity() {
 
 private enum class Tab(val labelRes: Int, val icon: ImageVector) {
     Schedule(R.string.tab_schedule, Icons.Outlined.CalendarMonth),
-    Today(R.string.tab_today, Icons.Outlined.Today),
     Manage(R.string.tab_manage, Icons.Outlined.Settings),
     Mine(R.string.tab_mine, Icons.Outlined.Person)
 }
 
 private enum class OverlayScreen {
-    AddCourse, AllTables, EditTable, Theme, General, Holiday, Export, Reminder, About, License, WidgetManagement, WidgetEdit
+    AddCourse, AllTables, EditTable, Theme, General, Export, About, License
 }
 
 @Composable
@@ -208,8 +218,8 @@ private fun AppRoot(
     var editTableId by rememberSaveable { mutableStateOf<Long?>(null) }
     var pendingNewTableId by rememberSaveable { mutableStateOf<Long?>(null) }
     var previousDefaultTableId by rememberSaveable { mutableStateOf<Long?>(null) }
-    var widgetEditId by rememberSaveable { mutableStateOf<Int?>(null) }
     var autoImportTriggered by remember { mutableStateOf(false) }
+    var showAddSheet by remember { mutableStateOf(false) }
     // 底栏形态(贴底/悬浮 Dock): AppRoot 持真值 — 设置页改, 底栏即时切
     val context = LocalContext.current
     var navDock by remember { mutableStateOf(AppPrefs.isNavDock(context)) }
@@ -220,7 +230,7 @@ private fun AppRoot(
         if (deepLinkCourse != null) { editingCourse = deepLinkCourse; onDeepLinkConsumed() }
     }
     androidx.compose.runtime.LaunchedEffect(pendingImportText) {
-        if (!autoImportTriggered && pendingImportText != null) { autoImportTriggered = true; currentTab = Tab.Manage }
+        if (!autoImportTriggered && pendingImportText != null) { autoImportTriggered = true; showAddSheet = true }
     }
 
     // 返回键: 只处理"有 overlay 在栈上"或"编辑课程"两种拦截; 主页面留给双击退出
@@ -284,137 +294,91 @@ private fun AppRoot(
     if (topOverlay() == OverlayScreen.General) {
         GeneralSettingsScreen(
             onBack = { popOverlay() },
-            onOpenHoliday = { pushOverlay(OverlayScreen.Holiday) },
-            onOpenWidgetManagement = { pushOverlay(OverlayScreen.WidgetManagement) },
             navDock = navDock,
             onNavDockChange = { navDock = it }
         )
-        return
-    }
-    if (topOverlay() == OverlayScreen.Holiday) {
-        HolidaySettingsScreen(onBack = { popOverlay() })
         return
     }
     if (topOverlay() == OverlayScreen.Export) {
         ExportScreen(onBack = { popOverlay() })
         return
     }
-    if (topOverlay() == OverlayScreen.Reminder) {
-        ReminderScreen(onBack = { popOverlay() })
-        return
-    }
     if (topOverlay() == OverlayScreen.About) {
-        AboutScreen(onBack = { popOverlay() }, onOpenLicense = { pushOverlay(OverlayScreen.License) })
+        WedoAboutScreen(onBack = { popOverlay() }, onOpenLicense = { pushOverlay(OverlayScreen.License) })
         return
     }
     if (topOverlay() == OverlayScreen.License) {
         LicenseScreen(onBack = { popOverlay() })
         return
     }
-    // widgetEditId 持久化(Int): 旋转/进程恢复后仍能定位具体 widget —
-    // Int 可 Bundle 化, 与上面 editTableId/pendingNewTableId 同款处理。
-    if (topOverlay() == OverlayScreen.WidgetManagement) {
-        WidgetManagementScreen(
-            onBack = { popOverlay() },
-            onSelect = { widgetId -> widgetEditId = widgetId; pushOverlay(OverlayScreen.WidgetEdit) }
-        )
-        return
-    }
-    if (topOverlay() == OverlayScreen.WidgetEdit) {
-        WidgetEditScreen(
-            widgetId = widgetEditId ?: -1,
-            onBack = { popOverlay(); widgetEditId = null }
-        )
-        return
-    }
-
-    // 底栏双形态(用户 2026-09-04 定版):
-    // 贴底 = Scaffold bottomBar 占位(原样, 内容止于栏上沿);
-    // Dock = iOS/Mac 语义悬浮药丸 — 内容 fillMaxSize 通到屏幕底, Dock 悬浮于内容
-    // 上一层(FAB 式 overlay), 各页滚动容器经 LocalNavExtraBottomPadding 拿 Dock 总高
-    // 加滚动余量, 保证最后一项能滚到 Dock 上方完全可见。
-    val navItems = Tab.entries.map { com.lingion.sleepy.ui.component.PillNavItemSpec(it.icon, stringResource(it.labelRes)) }
-
-    // Dock 滚动余量: 理论估算兜底(首帧前), overlay 实测高(dockOverlayPx)到位后覆盖 —
-    // 猜值必小于真值(手势条 inset 因机型而异), 实测保证「最后一项能滚到 Dock 上方」
-    var dockExtraDp by remember { mutableStateOf(NavDockSpec.capsuleHeight + NavDockSpec.bottomFloat) }
-
-    if (!navDock) {
-        androidx.compose.material3.Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            containerColor = SleepyTheme.colors.background,
-            bottomBar = {
-                PillNavigationBar(
-                    items = navItems,
-                    selectedIndex = currentTab.ordinal,
-                    onSelect = { currentTab = Tab.entries[it] },
-                    dock = false
-                )
+    var collapsed by remember { mutableStateOf(false) }
+    val display = com.lingion.sleepy.ui.theme.LocalWedoDisplay.current
+    androidx.compose.runtime.LaunchedEffect(currentTab) { collapsed = false }
+    val scrollConnection = remember {
+        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+            override fun onPostScroll(
+                consumed: androidx.compose.ui.geometry.Offset,
+                available: androidx.compose.ui.geometry.Offset,
+                source: androidx.compose.ui.input.nestedscroll.NestedScrollSource
+            ): androidx.compose.ui.geometry.Offset {
+                if (consumed.y < -2f) collapsed = true
+                if (consumed.y > 2f || available.y > 2f) collapsed = false
+                return androidx.compose.ui.geometry.Offset.Zero
             }
-        ) { padding ->
-            Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+        }
+    }
+    com.lingion.sleepy.ui.component.WedoBackground(Modifier.fillMaxSize()) {
+        androidx.compose.runtime.CompositionLocalProvider(
+            com.lingion.sleepy.ui.component.LocalNavExtraBottomPadding provides 84.dp,
+            com.lingion.sleepy.ui.theme.LocalWedoCollapsed provides collapsed
+        ) {
+            Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars).nestedScroll(scrollConnection)) {
                 MainTabs(
-                    currentTab = currentTab,
-                    setCurrentTab = { currentTab = it },
-                    pushOverlay = ::pushOverlay,
-                    editingCourse = { editingCourse = it },
+                    currentTab = currentTab, setCurrentTab = { currentTab = it },
+                    pushOverlay = ::pushOverlay, editingCourse = { editingCourse = it },
+                    onAdd = { showAddSheet = true },
                     onCreateNewTable = {
                         mainScope.launch {
                             val previousId = mainVm.state.value.currentTable?.id
                             val newId = mainVm.createEmptyTable(commitSelection = false)
-                            previousDefaultTableId = previousId; pendingNewTableId = newId; editTableId = newId; pushOverlay(OverlayScreen.EditTable)
+                            previousDefaultTableId = previousId; pendingNewTableId = newId
+                            editTableId = newId; pushOverlay(OverlayScreen.EditTable)
                         }
                     }
                 )
             }
         }
-    } else {
-        // Dock 模式: 无 bottomBar 占位 — 内容通底; Dock 悬浮层 Align.BottomCenter 叠加
-        // 顶部: 裸 Box 没有 Scaffold 的 contentWindowInsets, 必须显式补 statusBars inset
-        // (此前丢失 → 课表顶栏顶进摄像头挖孔区); 底部不加 — 内容延伸到最底是 Dock 语义
-        androidx.compose.foundation.layout.Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(SleepyTheme.colors.background)
-                .windowInsetsPadding(WindowInsets.statusBars)
+        androidx.compose.animation.AnimatedVisibility(
+            visible = !collapsed || !navDock,
+            modifier = Modifier.align(Alignment.BottomCenter),
+            enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically(
+                animationSpec = if (display.motion) androidx.compose.animation.core.spring(dampingRatio = .76f)
+                    else androidx.compose.animation.core.snap(), initialOffsetY = { it }),
+            exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutVertically(
+                animationSpec = if (display.motion) androidx.compose.animation.core.spring(dampingRatio = .9f)
+                    else androidx.compose.animation.core.snap(), targetOffsetY = { it })
         ) {
-            androidx.compose.runtime.CompositionLocalProvider(
-                com.lingion.sleepy.ui.component.LocalNavExtraBottomPadding provides dockExtraDp
-            ) {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    MainTabs(
-                        currentTab = currentTab,
-                        setCurrentTab = { currentTab = it },
-                        pushOverlay = ::pushOverlay,
-                        editingCourse = { editingCourse = it },
-                        onCreateNewTable = {
-                            mainScope.launch {
-                                val previousId = mainVm.state.value.currentTable?.id
-                                val newId = mainVm.createEmptyTable(commitSelection = false)
-                                previousDefaultTableId = previousId; pendingNewTableId = newId; editTableId = newId; pushOverlay(OverlayScreen.EditTable)
-                            }
-                        }
-                    )
-                }
-            }
-            var dockOverlayPx by remember { mutableStateOf(0) }
-            val densityForDock = LocalDensity.current
-            if (dockOverlayPx > 0) {
-                dockExtraDp = with(densityForDock) { dockOverlayPx.toDp() }
-            }
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .onGloballyPositioned { c -> dockOverlayPx = c.size.height }
-            ) {
-                PillNavigationBar(
-                    items = navItems,
-                    selectedIndex = currentTab.ordinal,
-                    onSelect = { currentTab = Tab.entries[it] },
-                    dock = true
-                )
-            }
+            com.lingion.sleepy.ui.component.WedoDock(
+                settings = currentTab != Tab.Schedule,
+                onSchedule = { currentTab = Tab.Schedule },
+                onAdd = { showAddSheet = true },
+                onSettings = { currentTab = Tab.Mine }
+            )
         }
+    }
+    if (showAddSheet) {
+        com.lingion.sleepy.ui.screen.imports.ImportSheet(
+            sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            onDismiss = { showAddSheet = false },
+            onJwImportRequested = {
+                showAddSheet = false
+                currentTab = Tab.Schedule
+                context.startActivity(Intent(context, com.lingion.sleepy.ui.screen.imports.JwImportActivity::class.java))
+            },
+            onImported = { showAddSheet = false; currentTab = Tab.Schedule },
+            onManualAdd = { showAddSheet = false; pushOverlay(OverlayScreen.AddCourse) },
+            viewModel = mainVm
+        )
     }
 }
 
@@ -424,21 +388,24 @@ private fun MainTabs(
     setCurrentTab: (Tab) -> Unit,
     pushOverlay: (OverlayScreen) -> Unit,
     editingCourse: (CourseEntity?) -> Unit,
-    onCreateNewTable: () -> Unit
+    onCreateNewTable: () -> Unit,
+    onAdd: () -> Unit
 ) {
     when (currentTab) {
-        Tab.Schedule -> ScheduleScreen(onGoImport = { setCurrentTab(Tab.Manage) }, onManualAdd = { pushOverlay(OverlayScreen.AddCourse) }, onEditCourse = { course -> editingCourse(course) })
-        Tab.Today -> TodayScreen(onEditCourse = { course -> editingCourse(course) })
+        Tab.Schedule -> ScheduleScreen(onGoImport = onAdd,
+            onManualAdd = { pushOverlay(OverlayScreen.AddCourse) }, onEditCourse = { editingCourse(it) })
         Tab.Manage -> {
             val ctx = LocalContext.current
-            ManagementPage(autoShowImportSheet = MainActivity.pendingImportText != null, onJwImportRequested = { ctx.startActivity(Intent(ctx, com.lingion.sleepy.ui.screen.imports.JwImportActivity::class.java)) }, onCreateNewTableRequested = onCreateNewTable, onManualAdd = { pushOverlay(OverlayScreen.AddCourse) }, onEditCurrentTable = { pushOverlay(OverlayScreen.EditTable) }, onImported = { setCurrentTab(Tab.Schedule) })
+            ManagementPage(onJwImportRequested = { ctx.startActivity(Intent(ctx, com.lingion.sleepy.ui.screen.imports.JwImportActivity::class.java)) },
+                onCreateNewTableRequested = onCreateNewTable, onManualAdd = { pushOverlay(OverlayScreen.AddCourse) },
+                onEditCurrentTable = { pushOverlay(OverlayScreen.EditTable) }, onImported = { setCurrentTab(Tab.Schedule) })
         }
-        Tab.Mine -> MineScreen(
+        Tab.Mine -> com.lingion.sleepy.ui.screen.mine.WedoSettingsScreen(
+            onManage = { setCurrentTab(Tab.Manage) },
             onOpenAllTables = { pushOverlay(OverlayScreen.AllTables) },
             onOpenAppearance = { pushOverlay(OverlayScreen.Theme) },
             onOpenGeneral = { pushOverlay(OverlayScreen.General) },
             onOpenExport = { pushOverlay(OverlayScreen.Export) },
-            onOpenReminder = { pushOverlay(OverlayScreen.Reminder) },
             onOpenAbout = { pushOverlay(OverlayScreen.About) })
     }
 }

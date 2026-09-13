@@ -5,22 +5,10 @@
     <!-- Permissions: 仅课程表所需 -->
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
-
     <application
         android:name=".SleepyApp"
-        android:allowBackup="true"
+        android:allowBackup="false"
+        android:usesCleartextTraffic="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
@@ -82,9 +70,9 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="content" />
                 <data android:scheme="file" />
-                <!-- WakeUp JSON 导出 -->
+                <!-- 本应用与其他工具的通用 JSON 备份 -->
                 <data android:mimeType="application/json" />
-                <!-- WakeUp 分享文本 / 纯文本课表 -->
+                <!-- wedo/其他工具的纯文本课表；不代表 WakeUp 在线分享口令 -->
                 <data android:mimeType="text/plain" />
                 <!-- 教务系统 HTML 表格 (issue #6 主诉) -->
                 <data android:mimeType="text/html" />
@@ -104,6 +92,7 @@
         <!-- App Widget Receivers -->
         <receiver
             android:name=".widget.TodayWidgetReceiver"
+            android:enabled="false"
             android:exported="true"
             android:label="@string/widget_today_label">
             <intent-filter>
@@ -116,6 +105,7 @@
 
         <receiver
             android:name=".widget.TodaySmallWidgetReceiver"
+            android:enabled="false"
             android:exported="true"
             android:label="@string/widget_today_small_label">
             <intent-filter>
@@ -128,6 +118,7 @@
 
         <receiver
             android:name=".widget.WeekListWidgetReceiver"
+            android:enabled="false"
             android:exported="true"
             android:label="@string/widget_week_list_label">
             <intent-filter>
@@ -140,6 +131,7 @@
 
         <receiver
             android:name=".widget.WeekListSmallWidgetReceiver"
+            android:enabled="false"
             android:exported="true"
             android:label="@string/widget_week_list_small_label">
             <intent-filter>
@@ -152,6 +144,7 @@
 
         <receiver
             android:name=".widget.WeekViewWidgetReceiver"
+            android:enabled="false"
             android:exported="true"
             android:label="@string/widget_week_view_label">
             <intent-filter>
@@ -164,6 +157,7 @@
 
         <receiver
             android:name=".widget.WeekViewSmallWidgetReceiver"
+            android:enabled="false"
             android:exported="true"
             android:label="@string/widget_week_view_small_label">
             <intent-filter>
@@ -176,6 +170,7 @@
 
         <receiver
             android:name=".widget.WeekGridWidgetProvider"
+            android:enabled="false"
             android:exported="true"
             android:label="@string/widget_week_grid_label">
             <intent-filter>
@@ -188,6 +183,7 @@
 
         <receiver
             android:name=".widget.WeekGridSmallWidgetProvider"
+            android:enabled="false"
             android:exported="true"
             android:label="@string/widget_week_grid_small_label">
             <intent-filter>
@@ -200,6 +196,7 @@
 
         <receiver
             android:name=".widget.TwoDayWidgetReceiver"
+            android:enabled="false"
             android:exported="true"
             android:label="@string/widget_twoday_label">
             <intent-filter>
@@ -212,6 +209,7 @@
 
         <receiver
             android:name=".widget.TwoDaySmallWidgetReceiver"
+            android:enabled="false"
             android:exported="true"
             android:label="@string/widget_twoday_small_label">
             <intent-filter>
@@ -225,6 +223,7 @@
         <!-- Daily boot receiver: reschedule notifications -->
         <receiver
             android:name=".widget.notification.BootReceiver"
+            android:enabled="false"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
@@ -235,16 +234,19 @@
         <!-- Daily course notification receiver (alarm target) -->
         <receiver
             android:name=".widget.notification.DailyNotifyReceiver"
+            android:enabled="false"
             android:exported="false" />
 
         <!-- Before-class midnight scheduler -->
         <receiver
             android:name=".widget.notification.BeforeClassScheduleReceiver"
+            android:enabled="false"
             android:exported="false" />
 
         <!-- Individual before-class notification -->
         <receiver
             android:name=".widget.notification.BeforeClassNotifyReceiver"
+            android:enabled="false"
             android:exported="true" />
 
         <!-- 教务直连导入 Activity (v1.0.8 新增) -->
@@ -257,6 +259,7 @@
         <!-- WeekGridWidget 预览 Activity (debug only, 用于在 emulator 截图验证) -->
         <activity
             android:name=".widget.WeekGridPreviewActivity"
+            android:enabled="false"
             android:exported="true"
             android:label="Widget 预览"
             android:theme="@style/Theme.Sleepy" />
@@ -264,6 +267,7 @@
         <!-- Native launcher entry for editing an existing widget -->
         <activity
             android:name=".widget.WidgetConfigureActivity"
+            android:enabled="false"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.Sleepy" />
@@ -271,6 +275,7 @@
         <!-- Pin widget to home (adb automation) -->
         <activity
             android:name=".widget.PinWidgetActivity"
+            android:enabled="false"
             android:exported="true"
             android:label="Pin Widget"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
@@ -279,6 +284,7 @@
         <!-- 真实 widget bitmap 渲染验证 (debug only, 渲染 RemoteViews Canvas bitmap 用于截图) -->
         <activity
             android:name=".widget.WidgetRenderActivity"
+            android:enabled="false"
             android:exported="true"
             android:label="Widget Render"
             android:theme="@style/Theme.Sleepy" />
@@ -289,12 +295,14 @@
         <!-- Fluid cloud foreground service carrier -->
         <service
             android:name=".widget.notification.FluidCloudService"
+            android:enabled="false"
             android:exported="false"
             android:foregroundServiceType="specialUse" />
 
         <!-- 可滚动 widget (v1.0.36): 条带 RemoteViewsService, Launcher 绑定拉行 -->
         <service
             android:name=".widget.ScrollStripService"
+            android:enabled="false"
             android:exported="true"
             android:permission="android.permission.BIND_REMOTEVIEWS" />
 

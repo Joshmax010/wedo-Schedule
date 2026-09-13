@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Sleepy 课程表</string>
+    <string name="app_name">wedo课程表</string>
     <string name="widget_today_label">今日课程</string>
     <string name="widget_today_small_label">今日课程 · 小</string>
     <string name="widget_week_list_label">本周课表（列表）</string>
@@ -296,8 +296,8 @@
     <string name="export_pick_table">选择要导出的课表</string>
     <string name="export_current_table_badge">当前课表</string>
     <string name="export_start_date">开学 %1$s</string>
-    <string name="export_json_title">WakeUp 兼容 JSON</string>
-    <string name="export_json_subtitle">完整课表结构，可被 WakeUp 课表等同类 App 直接导入</string>
+    <string name="export_json_title">wedo JSON 备份</string>
+    <string name="export_json_subtitle">完整课表结构，可在 wedo 中重新导入</string>
     <string name="export_share_title">分享文本</string>
     <string name="export_share_subtitle">短文本格式，可粘贴到任何聊天工具</string>
     <string name="export_ics_title">ICS 日历</string>

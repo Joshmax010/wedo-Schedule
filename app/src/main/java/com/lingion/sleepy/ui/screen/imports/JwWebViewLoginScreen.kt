@@ -1,6 +1,7 @@
 package com.lingion.sleepy.ui.screen.imports
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.util.Log
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
@@ -65,13 +66,25 @@ import kotlinx.coroutines.launch
 private const val FETCH_TIMEOUT_MS = 20_000L
 
 /**
+ * Authentication and bridge hosts are evidence-based allowlists. Authentication
+ * hosts may render login UI but never receive the native JavaScript bridge.
+ */
+private val VERIFIED_AUTH_HOSTS: Set<String> = setOf(
+    "lxr.jlju.edu.cn",
+    "cas.jlju.edu.cn",
+)
+private val VERIFIED_JS_BRIDGE_HOSTS: Set<String> = setOf(
+    "jwxt.jlju.edu.cn",
+)
+
+/**
  * 教务 WebView 登录页
  *
- * 实现细节（参考 dIT8Zv/WakeupSchedule_BUPT (Apache-2.0) WebViewLoginFragment.kt）：
- *   - 用 `loadUrl("javascript:...")` 触发 JS（不是 evaluateJavascript）—— wakeup 用了 6 年的稳定方案
- *   - `addJavascriptInterface(InJavaScriptLocalObj, "local_obj")` 把回调暴露给 JS
- *   - JS 把 HTML 通过 `window.local_obj.showSource(html)` 回调回 Kotlin
- *   - 抓的是 `document.documentElement.outerHTML`（innerHTML 不够，frame/iframe 内容也合并）
+ * 实现细节：
+ *   - 登录页不注册原生 Bridge，也不读取账号密码输入框。
+ *   - 顶层页面落到证据确认的教务主机后，才以随机接口名安装 Bridge 并重载一次。
+ *   - 可信顶层页面只在需要导入时执行同源 fetch；离开教务主机立即移除 Bridge。
+ *   - 非 fetch 协议抓取 `document.documentElement.outerHTML`，frame/iframe 内容按安全规则合并。
  *
  * 流程：WebView 加载学校 URL → 用户输账号密码 + 验证码 → 导航到课表页 → 点"导入此页" → JS 抓 HTML → 回调 → 落库
  */
@@ -95,7 +108,6 @@ fun JwWebViewLoginScreen(
     val fetchFailedNoResponseMsg = stringResource(R.string.jw_fetch_failed_no_response)
     val fetchFormatErrorMsg = stringResource(R.string.jw_fetch_format_error)
     val fetchFailedFmt = stringResource(R.string.jw_fetch_failed)
-    val pageNotLoadedMsg = stringResource(R.string.jw_page_not_loaded)
     val fetchTimeoutMsg = stringResource(R.string.jw_fetch_timeout)
     val fetchNoCoursesMsg = stringResource(R.string.jw_fetch_no_courses)
 
@@ -131,11 +143,10 @@ fun JwWebViewLoginScreen(
                     onHtmlCaptured(data, school, periods)
                 }
             } else {
-                val err = obj.optString("err", "")
-                scope.launch { snackbar.showSnackbar(fetchFailedFmt.format(err.ifBlank { pageNotLoadedMsg })) }
+                scope.launch { snackbar.showSnackbar(fetchFailedFmt.format("E_FETCH_RESPONSE")) }
             }
-        } catch (e: Exception) {
-            Log.e("JwWebView", "parse wisedu result failed", e)
+        } catch (_: Exception) {
+            Log.e("JwWebView", "fetch result invalid code=E_FETCH_FORMAT")
             scope.launch { snackbar.showSnackbar(fetchFormatErrorMsg) }
         }
     }
@@ -144,14 +155,14 @@ fun JwWebViewLoginScreen(
     // 桥回调永远不来, 用户只见「正在抓取」无限 pending。20s 无回调即报超时。
     fun evaluateFetchWithTimeout(wv: WebView, js: String) {
         var answered = false
-        val beginToken = logToken.incrementAndGet()
+        val attemptId = logToken.incrementAndGet()
         wv.evaluateJavascript(js) {
             answered = true
-            Log.d("JwWebView", "fetch js done token=$beginToken")
+            Log.d("JwWebView", "fetch js done attempt=$attemptId")
         }
         wv.postDelayed({
             if (!answered) {
-                Log.w("JwWebView", "fetch js timeout token=$beginToken")
+                Log.w("JwWebView", "fetch js timeout attempt=$attemptId")
                 scope.launch { snackbar.showSnackbar(fetchTimeoutMsg) }
             }
         }, FETCH_TIMEOUT_MS)
@@ -202,8 +213,8 @@ fun JwWebViewLoginScreen(
                         scope.launch { snackbar.showSnackbar(webviewNotReadyMsg) }
                         return@CaptureBar
                     }
-                    val url = wv.url ?: ""
-                    Log.d("JwWebView", "capture tapped, current url=$url")
+                    val currentHost = wv.url?.toUri()?.host.orEmpty()
+                    Log.d("JwWebView", "capture tapped host=$currentHost")
                     scope.launch { snackbar.showSnackbar(fetchingMsg) }
                     // wisedu (金智 jwapp)：课表数据在 JSON API 不在页面 HTML，改用 fetch 拿 JSON（结果走 JS 桥回调）
                     if (school.type == JwProtocol.TYPE_WISEDU) {
@@ -337,22 +348,26 @@ private fun JwWebView(
     AndroidView(
         modifier = Modifier.fillMaxSize(),
         factory = { context ->
-            val schoolHost = url.toUri().host.orEmpty()
+            val schoolHost = url.toUri().host.orEmpty().lowercase()
+            val bridgeName = "__wedoBridge_${java.util.UUID.randomUUID().toString().replace("-", "")}"
+            val bridge = WiseduBridge(onWiseduResult)
+            var bridgeInstalled = false
             WebView(context).apply {
                 layoutParams = ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
-                // wisedu (金智) 协议：注册 JS 桥，async fetch 课表 JSON 完成后回调
-                addJavascriptInterface(WiseduBridge(onWiseduResult), "__sleepyBridge")
                 settings.apply {
                     javaScriptEnabled = true
-                    javaScriptCanOpenWindowsAutomatically = true
+                    javaScriptCanOpenWindowsAutomatically = false
                     domStorageEnabled = true
                     useWideViewPort = true
                     loadWithOverviewMode = true
-                    mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                    mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
                     cacheMode = WebSettings.LOAD_DEFAULT
+                    allowFileAccess = false
+                    allowContentAccess = false
+                    setGeolocationEnabled(false)
                     setSupportZoom(true)
                     builtInZoomControls = true
                     displayZoomControls = false
@@ -363,26 +378,71 @@ private fun JwWebView(
                     override fun onProgressChanged(view: WebView?, newProgress: Int) {
                         onProgressChange(newProgress)
                     }
-                    override fun onConsoleMessage(msg: android.webkit.ConsoleMessage?): Boolean {
-                        Log.d("JwWebView", "console[${msg?.messageLevel()}]: ${msg?.message()}")
-                        return true
-                    }
+                    override fun onConsoleMessage(msg: android.webkit.ConsoleMessage?): Boolean = true
                 }
                 webViewClient = object : android.webkit.WebViewClient() {
+                    private fun removeBridge(view: WebView) {
+                        if (bridgeInstalled) {
+                            view.removeJavascriptInterface(bridgeName)
+                            bridgeInstalled = false
+                        }
+                    }
+
+                    override fun shouldOverrideUrlLoading(
+                        view: WebView,
+                        request: android.webkit.WebResourceRequest,
+                    ): Boolean {
+                        val target = request.url
+                        val targetHost = target.host.orEmpty().lowercase()
+                        val allowed = target.scheme == "https" &&
+                            (targetHost == schoolHost || targetHost in VERIFIED_AUTH_HOSTS)
+                        if (allowed && targetHost !in VERIFIED_JS_BRIDGE_HOSTS) {
+                            removeBridge(view)
+                        }
+                        if (!allowed && target.scheme in setOf("http", "https")) {
+                            runCatching {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, target))
+                            }
+                        }
+                        return !allowed
+                    }
+
+                    override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
+                        val startedHost = url?.toUri()?.host.orEmpty().lowercase()
+                        if (startedHost !in VERIFIED_JS_BRIDGE_HOSTS) {
+                            removeBridge(view)
+                        }
+                    }
+
                     override fun onReceivedSslError(
                         view: WebView,
                         handler: android.webkit.SslErrorHandler,
                         error: android.net.http.SslError
                     ) {
-                        // 中间人防护: 不再无条件 proceed (曾放行任意自签证书劫持课表账号),
-                        // 改为按主域名白名单豁免 — 部分高校教务确用自签/私有 CA, 仅对
-                        // 学校 URL 的注册域放行, 其余一律 cancel。
-                        val host = view.url?.toUri()?.host.orEmpty()
-                        val allowed = SslBypassRegistry.isAllowed(host, schoolHost)
-                        if (allowed) handler.proceed() else handler.cancel()
+                        // Credentials must never be sent through a connection whose
+                        // certificate Android rejected. There are no school exceptions.
+                        handler.cancel()
                     }
                     override fun onPageFinished(view: WebView?, url: String?) {
-                        Log.d("JwWebView", "onPageFinished url=$url")
+                        val finishedHost = url?.toUri()?.host.orEmpty().lowercase()
+                        Log.d("JwWebView", "page finished host=$finishedHost")
+                        if (view == null || finishedHost !in VERIFIED_JS_BRIDGE_HOSTS) return
+
+                        // addJavascriptInterface takes effect on the next document load.
+                        // Install it only after the top-level page has landed on the
+                        // verified teaching host, then reload once. A random interface
+                        // name is aliased only in the trusted top frame, so login pages
+                        // and unrelated frames never receive the stable bridge name.
+                        if (!bridgeInstalled) {
+                            view.addJavascriptInterface(bridge, bridgeName)
+                            bridgeInstalled = true
+                            view.reload()
+                            return
+                        }
+                        view.evaluateJavascript(
+                            "window.__sleepyBridge = window['$bridgeName'];",
+                            null,
+                        )
                     }
                 }
                 loadUrl(url)
@@ -1309,11 +1369,11 @@ private fun captureOnce(wv: WebView, onResult: (FrameCaptureResult) -> Unit) {
                     org.json.JSONTokener(raw).nextValue().toString()
                 else raw
                 onResult(FrameTraversalTree.selectBestFrame(FrameSnapshotList.fromJson(unquoted)))
-            } catch (e: Exception) {
-                Log.e("JwWebView", "parse frame snapshot failed", e)
+            } catch (_: Exception) {
+                Log.e("JwWebView", "frame snapshot invalid code=E_CAPTURE_FORMAT")
                 onResult(FrameCaptureResult(null, "", emptyList(),
                     status = FrameCaptureStatus.UNKNOWN,
-                    diagnosticHint = "解析抓取结果失败: ${e.message}"))
+                    diagnosticHint = "E_CAPTURE_FORMAT"))
             }
         })
 }

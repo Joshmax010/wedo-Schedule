@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Sleepy 課表</string>
+    <string name="app_name">wedo課表</string>
     <string name="widget_today_label">今日課程</string>
     <string name="widget_week_list_label">本週課表（列表）</string>
     <string name="widget_week_grid_label">本週課表（網格）</string>
@@ -489,8 +489,8 @@
     <string name="export_failed">匯出失敗，請重試</string>
     <string name="export_ics_subtitle">標準 iCalendar 格式，可匯入系統日曆 / Google / Apple Calendar</string>
     <string name="export_ics_title">ICS 日曆</string>
-    <string name="export_json_subtitle">完整課表結構，可被 WakeUp 課表等同類 App 直接匯入</string>
-    <string name="export_json_title">WakeUp 相容 JSON</string>
+    <string name="export_json_subtitle">完整課表結構，可在 wedo 中重新匯入</string>
+    <string name="export_json_title">wedo JSON 備份</string>
     <string name="export_no_table">暫無可匯出的課表</string>
     <string name="export_pick_table">選擇要匯出的課表</string>
     <string name="export_current_table_badge">當前課表</string>

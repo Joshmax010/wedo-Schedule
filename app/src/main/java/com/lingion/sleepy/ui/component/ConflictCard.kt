@@ -866,84 +866,11 @@ private fun ConflictCourseCard(
     shape: Shape = SleepyTheme.shapes.medium,
     groupRows: List<CourseEntity> = listOf(course)
 ) {
-    val palette = SleepyTheme.palette
-    val colors = SleepyTheme.colors
-    val context = LocalContext.current
-    // issue#22: 同名课程多地点 — 用 groupRows 传同 groupId 全行,支持 AUTO/CUSTOM 模式取色
-    val bg = CourseColorUtil.pickCourseColorComposeWithGroupRows(
-        row = course,
-        groupRows = groupRows,
-        isDark = CourseColorUtil.isPaletteDark(palette),
-        neutralColor = colors.surfaceVariant,
-        colorless = AppPrefs.isCourseColorless(context)
-    )
-    val fg = CourseColorUtil.textColorOn(bg, CourseColorUtil.isPaletteDark(palette), colors.onSurface)
-    val effectiveBg = if (isGrey) bg.copy(alpha = SleepyTheme.Alpha.inactive) else bg
-    val effectiveFg = if (isGrey) fg.copy(alpha = SleepyTheme.Alpha.inactive) else fg
-    val holidayStyle = AppPrefs.getHolidayStyle(context)
-    val textDecoration = if (isGrey && holidayStyle == "strikethrough") TextDecoration.LineThrough else null
-    val subInfo = AppPrefs.getGridSubInfo(context)
-    val subText = when (subInfo) {
-        "room" -> course.room
-        "teacher" -> course.teacher
-        else -> ""
-    }
-
-    Box(
-        modifier = modifier
-            .padding(2.dp)
-            .clip(shape)
-            .background(effectiveBg)
-            .border(CARD_BORDER_DP.dp, conflictBorderColor(effectiveBg), shape)
-            .noRippleClickable(onClick)
-            .padding(4.dp)
-    ) {
-        if (subText.isBlank()) {
-            Text(
-                text = course.courseName,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 10.sp,
-                    lineHeight = 13.sp,
-                    textDecoration = textDecoration
-                ),
-                color = effectiveFg,
-                maxLines = 6,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.align(Alignment.Center)
-            )
-        } else {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.SpaceBetween,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = course.courseName,
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 10.sp,
-                            lineHeight = 13.sp,
-                            textDecoration = textDecoration
-                        ),
-                        color = effectiveFg,
-                        maxLines = 6,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                Text(
-                    text = subText,
-                    style = SleepyTextStyle.micro().copy(textDecoration = textDecoration),
-                    color = effectiveFg.copy(alpha = SleepyTheme.Alpha.highContent),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-    }
+    val longClick = LocalWedoCourseLongClick.current
+    WedoCourseCard(course, modifier, conflict = true, shape = shape,
+        onClick = onClick, onLongClick = { longClick(course) })
 }
+
 
 /**
  * v7.8.4 修订: VerticalRailName 已删除。

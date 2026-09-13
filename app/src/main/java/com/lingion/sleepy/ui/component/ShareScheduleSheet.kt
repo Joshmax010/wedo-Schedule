@@ -35,7 +35,7 @@ import kotlinx.coroutines.launch
 
 /**
  * 顶栏分享按钮的格式选择底部弹窗(v7.10.7) — 从下而上弹出,沿用导出页三种格式:
- * WakeUp JSON / WakeUp 分享文本 / ICS 日历。条目视觉与导出操作全部复用
+ * wedo JSON 备份 / wedo 分享文本 / ICS 日历。条目视觉与导出操作全部复用
  * ExportScreen 的现成实现,选中即走系统分享,弹窗保持展开(与导出页行为一致,
  * 由用户返回键/点外部关闭)。
  */
