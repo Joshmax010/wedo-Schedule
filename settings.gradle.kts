@@ -27,5 +27,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "WakeUpPure"
+rootProject.name = "wedoSchedule"
 include(":app")
