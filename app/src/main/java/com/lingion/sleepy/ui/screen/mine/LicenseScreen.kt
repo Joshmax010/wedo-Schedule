@@ -22,7 +22,6 @@ import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -37,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.lingion.sleepy.ui.theme.WedoAppleType
 import com.lingion.sleepy.R
 import com.lingion.sleepy.ui.theme.SleepyTheme
 
@@ -90,13 +90,13 @@ fun LicenseScreen(onBack: () -> Unit) {
                 LicenseCard {
                     Text(
                         text = stringResource(R.string.license_gpl_section),
-                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                        style = WedoAppleType.body().copy(fontWeight = FontWeight.SemiBold),
                         color = colors.onSurface
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = stringResource(R.string.license_gpl_body),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = WedoAppleType.subheadline(),
                         color = colors.onSurfaceVariant
                     )
                 }
@@ -115,13 +115,13 @@ fun LicenseScreen(onBack: () -> Unit) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = stringResource(R.string.license_attribution_section),
-                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                                style = WedoAppleType.body().copy(fontWeight = FontWeight.SemiBold),
                                 color = colors.onSurface
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = stringResource(R.string.license_attribution_note),
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = WedoAppleType.subheadline(),
                                 color = colors.onSurfaceVariant
                             )
                         }
@@ -137,7 +137,7 @@ fun LicenseScreen(onBack: () -> Unit) {
                         Column(modifier = Modifier.padding(top = 8.dp)) {
                             Text(
                                 text = stringResource(R.string.about_license_body),
-                                style = MaterialTheme.typography.bodySmall,
+                                style = WedoAppleType.footnote(),
                                 color = colors.onSurfaceVariant
                             )
                         }
@@ -181,7 +181,7 @@ fun LicenseScreen(onBack: () -> Unit) {
                             entry.usage.split("\n").forEach { line ->
                                 Text(
                                     text = line,
-                                    style = MaterialTheme.typography.bodySmall,
+                                    style = WedoAppleType.footnote(),
                                     color = colors.onSurfaceVariant,
                                     modifier = Modifier.padding(vertical = 2.dp)
                                 )
@@ -215,14 +215,14 @@ private fun AttributionCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                    style = WedoAppleType.headline().copy(fontWeight = FontWeight.SemiBold),
                     color = colors.onSurface
                 )
                 if (!subtitle.isNullOrBlank()) {
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = WedoAppleType.footnote(),
                         color = colors.primary
                     )
                 }
@@ -241,7 +241,7 @@ private fun AttributionCard(
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = description,
-                style = MaterialTheme.typography.bodyMedium,
+                style = WedoAppleType.subheadline(),
                 color = colors.onSurfaceVariant
             )
         }
@@ -259,7 +259,7 @@ private fun SectionHeader(text: String) {
     val colors = SleepyTheme.colors
     Text(
         text = text,
-        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+        style = WedoAppleType.headline().copy(fontWeight = FontWeight.SemiBold),
         color = colors.primary,
         modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp)
     )

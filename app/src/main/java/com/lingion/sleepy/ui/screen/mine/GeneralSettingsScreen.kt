@@ -19,7 +19,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -38,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.lingion.sleepy.ui.theme.WedoAppleType
 import com.lingion.sleepy.R
 import com.lingion.sleepy.ui.component.DisplayModeOption
 import com.lingion.sleepy.ui.component.SectionHeader
@@ -167,11 +167,11 @@ fun GeneralSettingsScreen(
             // 主页显示(issue#8): 网格/周视图各一个缩放 70%~130% + 圆角 0%~200%(5% 吸附) + 周视图两栏开关
             item {
                 SettingsCard(title = stringResource(R.string.settings_pill), expanded = "gridScale" in expandedSections, onToggle = { toggleSection("gridScale") }) {
-                    Text(text = stringResource(R.string.settings_pill_scale), style = MaterialTheme.typography.bodyLarge, color = colors.onSurface, modifier = Modifier.padding(bottom = 8.dp))
+                    Text(text = stringResource(R.string.settings_pill_scale), style = WedoAppleType.body(), color = colors.onSurface, modifier = Modifier.padding(bottom = 8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
                             text = "${(gridScale * 100).roundToInt()}%",
-                            style = MaterialTheme.typography.labelLarge,
+                            style = WedoAppleType.callout(),
                             color = colors.primary,
                             modifier = Modifier.widthIn(min = 52.dp)
                         )
@@ -192,11 +192,11 @@ fun GeneralSettingsScreen(
                         )
                     }
                     HorizontalDivider(color = colors.outlineVariant.copy(alpha = SleepyTheme.Alpha.hairline))
-                    Text(text = stringResource(R.string.settings_pill_week_scale), style = MaterialTheme.typography.bodyLarge, color = colors.onSurface, modifier = Modifier.padding(bottom = 8.dp))
+                    Text(text = stringResource(R.string.settings_pill_week_scale), style = WedoAppleType.body(), color = colors.onSurface, modifier = Modifier.padding(bottom = 8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
                             text = "${(weekScale * 100).roundToInt()}%",
-                            style = MaterialTheme.typography.labelLarge,
+                            style = WedoAppleType.callout(),
                             color = colors.primary,
                             modifier = Modifier.widthIn(min = 52.dp)
                         )
@@ -217,11 +217,11 @@ fun GeneralSettingsScreen(
                         )
                     }
                     HorizontalDivider(color = colors.outlineVariant.copy(alpha = SleepyTheme.Alpha.hairline))
-                    Text(text = stringResource(R.string.settings_pill_corner), style = MaterialTheme.typography.bodyLarge, color = colors.onSurface, modifier = Modifier.padding(bottom = 4.dp))
+                    Text(text = stringResource(R.string.settings_pill_corner), style = WedoAppleType.body(), color = colors.onSurface, modifier = Modifier.padding(bottom = 4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
                             text = "${(gridCorner * 100).roundToInt()}%",
-                            style = MaterialTheme.typography.labelLarge,
+                            style = WedoAppleType.callout(),
                             color = colors.primary,
                             modifier = Modifier.widthIn(min = 52.dp)
                         )
@@ -307,11 +307,11 @@ fun GeneralSettingsScreen(
                     // 折角幅度拖杆(v7.10.16o): 仅折角样式下显示 —— 其他样式没有折角符号
                     if (conflictStyle == "fold") {
                         HorizontalDivider(color = colors.outlineVariant.copy(alpha = SleepyTheme.Alpha.hairline))
-                        Text(text = stringResource(R.string.settings_conflict_fold_size), style = MaterialTheme.typography.bodyLarge, color = colors.onSurface, modifier = Modifier.padding(bottom = 8.dp))
+                        Text(text = stringResource(R.string.settings_conflict_fold_size), style = WedoAppleType.body(), color = colors.onSurface, modifier = Modifier.padding(bottom = 8.dp))
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(
                                 text = "${conflictFoldSize.roundToInt()}dp",
-                                style = MaterialTheme.typography.labelLarge,
+                                style = WedoAppleType.callout(),
                                 color = colors.primary,
                                 modifier = Modifier.widthIn(min = 52.dp)
                             )
@@ -333,11 +333,11 @@ fun GeneralSettingsScreen(
                     // 叠层偏移量(用户 2026-09-04 拆分): 仅叠层样式下显示, 独立配置
                     if (conflictStyle == "stack") {
                         HorizontalDivider(color = colors.outlineVariant.copy(alpha = SleepyTheme.Alpha.hairline))
-                        Text(text = stringResource(R.string.settings_conflict_stack_inset), style = MaterialTheme.typography.bodyLarge, color = colors.onSurface, modifier = Modifier.padding(bottom = 8.dp))
+                        Text(text = stringResource(R.string.settings_conflict_stack_inset), style = WedoAppleType.body(), color = colors.onSurface, modifier = Modifier.padding(bottom = 8.dp))
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(
                                 text = "${conflictStackInset.roundToInt()}dp",
-                                style = MaterialTheme.typography.labelLarge,
+                                style = WedoAppleType.callout(),
                                 color = colors.primary,
                                 modifier = Modifier.widthIn(min = 52.dp)
                             )
@@ -359,11 +359,11 @@ fun GeneralSettingsScreen(
                     // 右缘让宽(同上拆分): 仅侧边竖轨样式下显示, 与叠层互不影响
                     if (conflictStyle == "rail") {
                         HorizontalDivider(color = colors.outlineVariant.copy(alpha = SleepyTheme.Alpha.hairline))
-                        Text(text = stringResource(R.string.settings_conflict_rail_inset), style = MaterialTheme.typography.bodyLarge, color = colors.onSurface, modifier = Modifier.padding(bottom = 8.dp))
+                        Text(text = stringResource(R.string.settings_conflict_rail_inset), style = WedoAppleType.body(), color = colors.onSurface, modifier = Modifier.padding(bottom = 8.dp))
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(
                                 text = "${conflictRailInset.roundToInt()}dp",
-                                style = MaterialTheme.typography.labelLarge,
+                                style = WedoAppleType.callout(),
                                 color = colors.primary,
                                 modifier = Modifier.widthIn(min = 52.dp)
                             )
@@ -388,7 +388,7 @@ fun GeneralSettingsScreen(
             // 显示星期: 周一~周日多选
             item {
                 SettingsCard(title = stringResource(R.string.settings_visible_days), expanded = "visibleDays" in expandedSections, onToggle = { toggleSection("visibleDays") }) {
-                    Text(text = stringResource(R.string.settings_visible_days_sub), style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, modifier = Modifier.padding(bottom = 8.dp))
+                    Text(text = stringResource(R.string.settings_visible_days_sub), style = WedoAppleType.footnote(), color = colors.onSurfaceVariant, modifier = Modifier.padding(bottom = 8.dp))
                     (1..7).forEach { day ->
                         val checked = day in visibleDays
                         Row(
@@ -399,7 +399,7 @@ fun GeneralSettingsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = DateUtils.localizedDay(day, context), style = MaterialTheme.typography.bodyLarge, color = colors.onSurface)
+                            Text(text = DateUtils.localizedDay(day, context), style = WedoAppleType.body(), color = colors.onSurface)
                             WedoToggle(checked = checked, onCheckedChange = { on ->
                                 val n = if (on) visibleDays + day else visibleDays - day
                                 if (n.isNotEmpty()) { visibleDays = n; AppPrefs.setVisibleDays(context, n); refreshWidgets() }
@@ -439,7 +439,7 @@ fun GeneralSettingsScreen(
                 ) {
                     Text(
                         text = stringResource(R.string.settings_course_colorless),
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                        style = WedoAppleType.headline().copy(fontWeight = FontWeight.SemiBold),
                         color = colors.onSurface,
                         modifier = Modifier.weight(1f)
                     )
@@ -469,7 +469,7 @@ fun GeneralSettingsScreen(
                 ) {
                     Text(
                         text = stringResource(R.string.settings_high_refresh),
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                        style = WedoAppleType.headline().copy(fontWeight = FontWeight.SemiBold),
                         color = colors.onSurface,
                         modifier = Modifier.weight(1f)
                     )
@@ -514,7 +514,7 @@ fun GeneralSettingsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = label, style = MaterialTheme.typography.bodyLarge, color = if (selected) colors.primary else colors.onSurface)
+                            Text(text = label, style = WedoAppleType.body(), color = if (selected) colors.primary else colors.onSurface)
                             if (selected) Icon(Icons.Outlined.Check, null, tint = colors.primary, modifier = Modifier.size(20.dp))
                         }
                         if (code != languages.last().first) HorizontalDivider(color = colors.outlineVariant.copy(alpha = SleepyTheme.Alpha.hairline))

@@ -22,7 +22,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -57,6 +56,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
+import com.lingion.sleepy.ui.theme.WedoAppleType
 import com.lingion.sleepy.R
 import com.lingion.sleepy.data.entity.CourseEntity
 import com.lingion.sleepy.ui.theme.SleepyTheme
@@ -907,7 +907,7 @@ private fun ConflictBadge(hiddenCount: Int, onClick: () -> Unit, modifier: Modif
     ) {
         Text(
             text = "+$hiddenCount",
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = BADGE_FONT_SP.sp),
+            style = WedoAppleType.caption2().copy(fontSize = BADGE_FONT_SP.sp),
             color = colors.onSurface,
             maxLines = 1
         )
@@ -958,7 +958,7 @@ private fun ConflictCoursePickerDialog(
                     ) {
                         Text(
                             text = course.courseName,
-                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                            style = WedoAppleType.subheadline().copy(fontWeight = FontWeight.Medium),
                             color = if (isTopLayer) colors.onPrimaryContainer else colors.onSurface,
                             maxLines = 2,
                             modifier = Modifier.weight(1f)

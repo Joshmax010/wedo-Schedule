@@ -28,7 +28,6 @@ import androidx.compose.material.icons.outlined.School
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -57,6 +56,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.lingion.sleepy.ui.theme.WedoAppleType
 import com.lingion.sleepy.R
 import com.lingion.sleepy.SleepyApp
 import com.lingion.sleepy.ui.component.WedoToggle
@@ -192,12 +192,12 @@ fun ReminderScreen(onBack: () -> Unit) {
                             Column {
                                 Text(
                                     text = stringResource(R.string.reminder_master_title),
-                                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                                    style = WedoAppleType.body().copy(fontWeight = FontWeight.SemiBold),
                                     color = colors.onSurface
                                 )
                                 Text(
                                     text = stringResource(R.string.reminder_master_sub),
-                                    style = MaterialTheme.typography.bodySmall,
+                                    style = WedoAppleType.footnote(),
                                     color = colors.onSurfaceVariant
                                 )
                             }
@@ -226,12 +226,12 @@ fun ReminderScreen(onBack: () -> Unit) {
                                 Column {
                                     Text(
                                         text = stringResource(R.string.reminder_daily_title),
-                                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                                        style = WedoAppleType.body().copy(fontWeight = FontWeight.SemiBold),
                                         color = colors.onSurface
                                     )
                                     Text(
                                         text = stringResource(R.string.reminder_daily_sub),
-                                        style = MaterialTheme.typography.bodySmall,
+                                        style = WedoAppleType.footnote(),
                                         color = colors.onSurfaceVariant
                                     )
                                 }
@@ -259,19 +259,19 @@ fun ReminderScreen(onBack: () -> Unit) {
                             ) {
                                 Text(
                                     text = stringResource(R.string.reminder_daily_time_label),
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    style = WedoAppleType.subheadline(),
                                     color = colors.onSurface
                                 )
                                 Text(
                                     text = dailyTime,
-                                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                                    style = WedoAppleType.body().copy(fontWeight = FontWeight.Medium),
                                     color = colors.primary
                                 )
                             }
                             SubDivider()
                             Text(
                                 text = stringResource(R.string.reminder_daily_preview),
-                                style = MaterialTheme.typography.bodySmall,
+                                style = WedoAppleType.footnote(),
                                 color = colors.onSurfaceVariant,
                                 modifier = Modifier.padding(start = 52.dp, top = 8.dp, bottom = 8.dp, end = 4.dp)
                             )
@@ -293,12 +293,12 @@ fun ReminderScreen(onBack: () -> Unit) {
                                 Column {
                                     Text(
                                         text = stringResource(R.string.reminder_before_class_title),
-                                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                                        style = WedoAppleType.body().copy(fontWeight = FontWeight.SemiBold),
                                         color = colors.onSurface
                                     )
                                     Text(
                                         text = stringResource(R.string.reminder_before_class_sub),
-                                        style = MaterialTheme.typography.bodySmall,
+                                        style = WedoAppleType.footnote(),
                                         color = colors.onSurfaceVariant
                                     )
                                 }
@@ -324,7 +324,7 @@ fun ReminderScreen(onBack: () -> Unit) {
                             ) {
                                 Text(
                                     text = stringResource(R.string.reminder_before_minutes_label),
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    style = WedoAppleType.subheadline(),
                                     color = colors.onSurface
                                 )
                                 Spacer(modifier = Modifier.weight(1f))
@@ -346,7 +346,7 @@ fun ReminderScreen(onBack: () -> Unit) {
                                     suffix = {
                                         Text(
                                             text = stringResource(R.string.reminder_before_minutes_unit),
-                                            style = MaterialTheme.typography.bodyMedium,
+                                            style = WedoAppleType.subheadline(),
                                             color = colors.onSurfaceVariant
                                         )
                                     },
@@ -356,7 +356,7 @@ fun ReminderScreen(onBack: () -> Unit) {
                             SubDivider()
                             Text(
                                 text = stringResource(R.string.reminder_before_class_preview),
-                                style = MaterialTheme.typography.bodySmall,
+                                style = WedoAppleType.footnote(),
                                 color = colors.onSurfaceVariant,
                                 modifier = Modifier.padding(start = 52.dp, top = 8.dp, bottom = 8.dp, end = 4.dp)
                             )
@@ -387,7 +387,7 @@ fun ReminderScreen(onBack: () -> Unit) {
                                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp)) {
                                     Text(
                                         text = stringResource(R.string.reminder_fluid_fields),
-                                        style = MaterialTheme.typography.bodyMedium,
+                                        style = WedoAppleType.subheadline(),
                                         color = colors.onSurface
                                     )
                                     Spacer(modifier = Modifier.height(6.dp))
@@ -441,7 +441,7 @@ fun ReminderScreen(onBack: () -> Unit) {
                                     }
                                     Text(
                                         text = stringResource(R.string.reminder_fluid_note),
-                                        style = MaterialTheme.typography.bodySmall,
+                                        style = WedoAppleType.footnote(),
                                         color = colors.onSurfaceVariant,
                                         modifier = Modifier.padding(top = 6.dp)
                                     )
@@ -501,8 +501,8 @@ private fun ReminderToggleRow(title: String, subtitle: String, checked: Boolean,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold), color = colors.onSurface)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+            Text(title, style = WedoAppleType.subheadline().copy(fontWeight = FontWeight.SemiBold), color = colors.onSurface)
+            Text(subtitle, style = WedoAppleType.footnote(), color = colors.onSurfaceVariant)
         }
         // 开关本体用共享 WedoToggle，保证与全 app 三个主开关同一观感
         WedoToggle(checked = checked, onCheckedChange = onCheckedChange)

@@ -1,5 +1,6 @@
 package com.lingion.sleepy.ui.screen.edit
 
+import com.lingion.sleepy.ui.theme.WedoAppleType
 import com.lingion.sleepy.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -34,7 +35,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -376,12 +376,12 @@ fun AddCourseScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     pendingConflictDetails.take(6).forEach { line ->
-                        Text(text = "• $line", style = MaterialTheme.typography.bodySmall)
+                        Text(text = "• $line", style = WedoAppleType.footnote())
                     }
                     if (pendingConflictDetails.size > 6) {
                         Text(
                             text = stringResource(R.string.more_unexpanded, pendingConflictDetails.size - 6),
-                            style = MaterialTheme.typography.labelSmall
+                            style = WedoAppleType.caption2()
                         )
                     }
                 }
@@ -554,12 +554,12 @@ fun AddCourseScreen(
                 ) {
                     Text(
                         text = stringResource(R.string.meeting_slots),
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        style = WedoAppleType.headline().copy(fontWeight = FontWeight.SemiBold),
                         color = colors.onSurface
                     )
                     Text(
                         text = stringResource(R.string.meeting_slots_sub),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = WedoAppleType.footnote(),
                         color = colors.onSurfaceVariant
                     )
                 }
@@ -878,20 +878,20 @@ private fun ValidationCard(issues: List<ValidationIssue>) {
     ) {
         Text(
             text = stringResource(R.string.fix_issues_first),
-            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+            style = WedoAppleType.headline().copy(fontWeight = FontWeight.SemiBold),
             color = colors.onErrorContainer
         )
         issues.take(4).forEach { issue ->
             Text(
                 text = "• ${issue.message}",
-                style = MaterialTheme.typography.bodySmall,
+                style = WedoAppleType.footnote(),
                 color = colors.onErrorContainer
             )
         }
         if (issues.size > 4) {
             Text(
                 text = stringResource(R.string.more_unexpanded, issues.size - 4),
-                style = MaterialTheme.typography.labelSmall,
+                style = WedoAppleType.caption2(),
                 color = colors.onErrorContainer
             )
         }
@@ -916,12 +916,12 @@ private fun CardSection(
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                style = WedoAppleType.headline().copy(fontWeight = FontWeight.SemiBold),
                 color = colors.onSurface
             )
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
+                style = WedoAppleType.footnote(),
                 color = colors.onSurfaceVariant
             )
         }
@@ -946,12 +946,12 @@ private fun SwitchRow(
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.bodyMedium,
+                style = WedoAppleType.subheadline(),
                 color = colors.onSurface
             )
             Text(
                 text = sub,
-                style = MaterialTheme.typography.labelSmall,
+                style = WedoAppleType.caption2(),
                 color = colors.onSurfaceVariant
             )
         }
@@ -997,7 +997,7 @@ private fun MeetingBlockEditor(
                     block.startNode + block.step - 1,
                     maxStd
                 ),
-                style = MaterialTheme.typography.labelSmall,
+                style = WedoAppleType.caption2(),
                 color = colors.onErrorContainer
             )
         }
@@ -1009,12 +1009,12 @@ private fun MeetingBlockEditor(
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                    style = WedoAppleType.headline().copy(fontWeight = FontWeight.SemiBold),
                     color = colors.onSurface
                 )
                 Text(
                     text = if (block.days.isEmpty()) stringResource(R.string.select_at_least_one_day) else stringResource(R.string.selected_days, block.days.sorted().joinToString(" / ") { DateUtils.localizedDay(it, context) }),
-                    style = MaterialTheme.typography.labelSmall,
+                    style = WedoAppleType.caption2(),
                     color = colors.onSurfaceVariant
                 )
             }
@@ -1067,7 +1067,7 @@ private fun MeetingBlockEditor(
                     } else {
                         stringResource(R.string.edge_node_label, block.selectedEdgeNode)
                     },
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = WedoAppleType.subheadline(),
                     color = colors.onSurface,
                     modifier = Modifier.weight(1f)
                 )
@@ -1268,7 +1268,7 @@ private fun MeetingBlockEditor(
                 issues.forEach { issue ->
                     Text(
                         text = issue,
-                        style = MaterialTheme.typography.labelSmall,
+                        style = WedoAppleType.caption2(),
                         color = colors.error
                     )
                 }
@@ -1318,7 +1318,7 @@ private fun EdgeCandidatePickerDialog(
                             } else {
                                 stringResource(R.string.irregular_node_new, c.node)
                             },
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = WedoAppleType.subheadline(),
                             color = if (c.exists) colors.onSecondaryContainer else colors.onSurface
                         )
                     }
@@ -1431,13 +1431,13 @@ private fun ColorSection(block: MeetingBlockDraft) {
         ) {
             Text(
                 text = stringResource(R.string.course_color),
-                style = MaterialTheme.typography.labelLarge,
+                style = WedoAppleType.callout(),
                 color = colors.onSurfaceVariant
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = if (useDifferent) stringResource(R.string.color_use_different) else stringResource(R.string.color_follow_group),
-                    style = MaterialTheme.typography.labelSmall,
+                    style = WedoAppleType.caption2(),
                     color = colors.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -1478,7 +1478,7 @@ private fun ColorSection(block: MeetingBlockDraft) {
                 if (block.colorModeState == com.lingion.sleepy.data.entity.CourseColorMode.CUSTOM && block.colorState.isNotBlank()) {
                     Text(
                         text = block.colorState,
-                        style = MaterialTheme.typography.labelSmall,
+                        style = WedoAppleType.caption2(),
                         color = colors.onSurfaceVariant
                     )
                 }
@@ -1524,7 +1524,7 @@ private fun MultiDayPicker(
                     ) {
                         Text(
                             text = DateUtils.localizedDay(day, LocalContext.current),
-                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium),
+                            style = WedoAppleType.callout().copy(fontWeight = FontWeight.Medium),
                             color = if (selected) colors.onPrimary else colors.onSurface
                         )
                     }
@@ -1713,7 +1713,7 @@ private fun ColorPickerDialog(
                     )
                     Text(
                         text = currentHex,
-                        style = MaterialTheme.typography.labelLarge,
+                        style = WedoAppleType.callout(),
                         color = colors.onSurfaceVariant
                     )
                 }

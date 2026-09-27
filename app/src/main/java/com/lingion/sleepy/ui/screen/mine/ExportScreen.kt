@@ -30,12 +30,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.heightIn
+import com.lingion.sleepy.ui.theme.WedoAppleType
 import com.lingion.sleepy.data.entity.CourseEntity
 import com.lingion.sleepy.SleepyApp
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -160,7 +160,7 @@ fun ExportScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = table.name,
-                            style = MaterialTheme.typography.titleMedium,
+                            style = WedoAppleType.headline(),
                             fontWeight = FontWeight.Bold,
                             color = colors.onPrimaryContainer,
                             modifier = Modifier.weight(1f)
@@ -174,7 +174,7 @@ fun ExportScreen(
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "${ctx.getString(R.string.export_course_count, courses.size)} · ${ctx.getString(R.string.export_start_date, table.startDate)}",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = WedoAppleType.subheadline(),
                         color = colors.onPrimaryContainer
                     )
                 }
@@ -298,14 +298,14 @@ fun ExportScreen(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = t.name,
-                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                                    style = WedoAppleType.subheadline().copy(fontWeight = FontWeight.Medium),
                                     color = if (isSelected) colors.onPrimaryContainer else colors.onSurface,
                                     maxLines = 2
                                 )
                                 if (t.id == state.selectedTableId) {
                                     Text(
                                         text = stringResource(R.string.export_current_table_badge),
-                                        style = MaterialTheme.typography.labelSmall,
+                                        style = WedoAppleType.caption2(),
                                         color = if (isSelected) colors.onPrimaryContainer else colors.onSurfaceVariant
                                     )
                                 }
@@ -361,9 +361,9 @@ internal fun ExportItem(
         }
         Spacer(modifier = Modifier.size(16.dp))
         Column(modifier = Modifier.fillMaxWidth()) {
-            Text(text = title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium, color = colors.onSurface)
+            Text(text = title, style = WedoAppleType.headline(), fontWeight = FontWeight.Medium, color = colors.onSurface)
             Spacer(modifier = Modifier.height(2.dp))
-            Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+            Text(text = subtitle, style = WedoAppleType.footnote(), color = colors.onSurfaceVariant)
         }
     }
 }

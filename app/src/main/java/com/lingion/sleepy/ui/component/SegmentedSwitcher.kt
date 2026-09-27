@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -36,6 +35,7 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import com.lingion.sleepy.ui.theme.WedoAppleType
 import com.lingion.sleepy.ui.theme.SleepyTheme
 import kotlin.math.roundToInt
 
@@ -144,7 +144,7 @@ fun <T> SegmentedSwitcher(
                             // 字形只在文本/字重变化时重排, 缓存结果避免每帧重算字符矩形
                             charRectsCache[index] = result.charRects()
                         },
-                        style = MaterialTheme.typography.labelLarge.copy(
+                        style = WedoAppleType.callout().copy(
                             fontWeight = if (index == selectedIndex) FontWeight.SemiBold else FontWeight.Medium
                         ),
                         color = segmentLabelColor(

@@ -28,7 +28,6 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TextField
 import androidx.compose.material3.Text
@@ -51,6 +50,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.lingion.sleepy.ui.theme.WedoAppleType
 import com.lingion.sleepy.R
 import com.lingion.sleepy.ui.component.DatePickerField
 import com.lingion.sleepy.ui.component.SectionHeader
@@ -195,7 +195,7 @@ fun HolidaySettingsScreen(onBack: () -> Unit) {
                     }
                     Text(
                         text = year.toString(),
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        style = WedoAppleType.headline().copy(fontWeight = FontWeight.SemiBold),
                         color = colors.onSurface,
                         modifier = Modifier.padding(horizontal = 16.dp)
                     )
@@ -221,13 +221,13 @@ fun HolidaySettingsScreen(onBack: () -> Unit) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = stringResource(R.string.holiday_data_source),
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                            style = WedoAppleType.headline().copy(fontWeight = FontWeight.SemiBold),
                             color = colors.onSurface
                         )
                         Spacer(Modifier.width(10.dp))
                         Text(
                             text = stringResource(R.string.holiday_source_label),
-                            style = MaterialTheme.typography.bodySmall,
+                            style = WedoAppleType.footnote(),
                             color = colors.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -255,14 +255,14 @@ fun HolidaySettingsScreen(onBack: () -> Unit) {
                     if (state is HolidayUiState.Failed) {
                         Text(
                             stringResource(R.string.holiday_data_failed),
-                            style = MaterialTheme.typography.bodySmall,
+                            style = WedoAppleType.footnote(),
                             color = colors.error,
                             modifier = Modifier.padding(top = 4.dp, bottom = 6.dp)
                         )
                     } else if (state is HolidayUiState.Empty) {
                         Text(
                             stringResource(R.string.holiday_data_empty),
-                            style = MaterialTheme.typography.bodySmall,
+                            style = WedoAppleType.footnote(),
                             color = colors.onSurfaceVariant,
                             modifier = Modifier.padding(top = 4.dp, bottom = 6.dp)
                         )
@@ -448,7 +448,7 @@ private fun HolidayRangeListCard(
             ) {
                 Text(
                     text = segment.name.ifBlank { DateUtils.shortDateSlash(segment.startDate) },
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = WedoAppleType.body(),
                     color = colors.onSurface,
                     modifier = Modifier.weight(1f)
                 )
@@ -459,7 +459,7 @@ private fun HolidayRangeListCard(
                             .background(colors.onSurfaceVariant.copy(alpha = SleepyTheme.Alpha.tinted))
                             .padding(horizontal = 8.dp, vertical = 2.dp)
                     ) {
-                        Text(stringResource(R.string.holiday_custom_badge), style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
+                        Text(stringResource(R.string.holiday_custom_badge), style = WedoAppleType.caption2(), color = colors.onSurfaceVariant)
                     }
                     Spacer(Modifier.width(12.dp))
                 }
@@ -470,11 +470,11 @@ private fun HolidayRangeListCard(
                             .background(colors.primary.copy(alpha = SleepyTheme.Alpha.tinted))
                             .padding(horizontal = 8.dp, vertical = 2.dp)
                     ) {
-                        Text(stringResource(R.string.holiday_workday_badge), style = MaterialTheme.typography.labelSmall, color = colors.primary)
+                        Text(stringResource(R.string.holiday_workday_badge), style = WedoAppleType.caption2(), color = colors.primary)
                     }
                     Spacer(Modifier.width(12.dp))
                 }
-                Text(segmentDateLabel(segment), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
+                Text(segmentDateLabel(segment), style = WedoAppleType.subheadline(), color = colors.onSurfaceVariant)
             }
             if (index != segments.lastIndex) HorizontalDivider(color = colors.outlineVariant.copy(alpha = SleepyTheme.Alpha.hairline))
         }
@@ -504,11 +504,11 @@ private fun HolidayRemovedCard(
             ) {
                 Text(
                     text = segment.name.ifBlank { DateUtils.shortDateSlash(segment.startDate) },
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = WedoAppleType.body(),
                     color = colors.onSurfaceVariant,
                     modifier = Modifier.weight(1f)
                 )
-                Text(segmentDateLabel(segment), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
+                Text(segmentDateLabel(segment), style = WedoAppleType.subheadline(), color = colors.onSurfaceVariant)
                 Spacer(Modifier.width(12.dp))
                 // 恢复用 secondaryContainer 色块 — 与删除/刷新同风格, 禁悬空文字按钮
                 Button(
@@ -592,7 +592,7 @@ private fun HolidayRangeEditDialog(
                 if (!datesValid && (startText.isNotBlank() || endText.isNotBlank())) {
                     Text(
                         stringResource(R.string.holiday_date_invalid),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = WedoAppleType.footnote(),
                         color = colors.error
                     )
                 }

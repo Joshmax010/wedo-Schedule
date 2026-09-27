@@ -21,7 +21,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -38,6 +37,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.lingion.sleepy.ui.theme.WedoAppleType
 import com.lingion.sleepy.SleepyApp
 import com.lingion.sleepy.data.entity.CourseEntity
 import com.lingion.sleepy.data.jw.JwCourse
@@ -127,7 +127,7 @@ class JwImportActivity : ComponentActivity() {
                                     Spacer(Modifier.height(4.dp))
                                     Text(
                                         text = "${parsedCourses.size} ${getString(R.string.import_courses)}",
-                                        style = MaterialTheme.typography.bodySmall,
+                                        style = WedoAppleType.footnote(),
                                         color = colors.onSurfaceVariant
                                     )
                                 }
@@ -158,7 +158,7 @@ class JwImportActivity : ComponentActivity() {
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                     if (confirmError != null) {
-                                        Text(text = confirmError!!, color = colors.error, style = MaterialTheme.typography.bodySmall)
+                                        Text(text = confirmError!!, color = colors.error, style = WedoAppleType.footnote())
                                     }
                                     TimeSlotEditor(
                                         rows = configRows,

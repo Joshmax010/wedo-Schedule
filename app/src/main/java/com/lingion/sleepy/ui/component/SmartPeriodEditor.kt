@@ -21,7 +21,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,6 +37,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lingion.sleepy.ui.theme.WedoAppleType
 import com.lingion.sleepy.data.entity.BreakOption
 import com.lingion.sleepy.data.entity.SmartPeriodConfig
 import com.lingion.sleepy.R
@@ -72,7 +72,7 @@ fun SmartPeriodEditor(
         // ===== 输入区 =====
         Text(
             stringResource(R.string.edit_period_input),
-            style = MaterialTheme.typography.titleSmall,
+            style = WedoAppleType.headline(),
             fontWeight = FontWeight.Medium,
             color = colors.onSurface,
             modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
@@ -132,7 +132,7 @@ fun SmartPeriodEditor(
         if (config.breaks.isNotEmpty()) {
             Text(
                 stringResource(R.string.break_assign_hint),
-                style = MaterialTheme.typography.titleSmall,
+                style = WedoAppleType.headline(),
                 fontWeight = FontWeight.Medium,
                 color = colors.onSurface,
                 modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
@@ -184,7 +184,7 @@ fun SmartPeriodEditor(
         Spacer(Modifier.height(16.dp))
         Text(
             stringResource(R.string.preview),
-            style = MaterialTheme.typography.titleSmall,
+            style = WedoAppleType.headline(),
             fontWeight = FontWeight.Medium,
             color = colors.onSurface,
             modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
@@ -228,7 +228,7 @@ private fun BreakGroupSection(
             Spacer(Modifier.width(8.dp))
             Text(
                 breakOption.displayLabel(groupIdx),
-                style = MaterialTheme.typography.bodyMedium,
+                style = WedoAppleType.subheadline(),
                 fontWeight = FontWeight.Medium,
                 color = colors.onSurface,
                 modifier = Modifier.weight(1f)
@@ -280,7 +280,7 @@ private fun BreakGroupSection(
         } else {
             Text(
                 stringResource(R.string.break_min_two_periods),
-                style = MaterialTheme.typography.bodySmall,
+                style = WedoAppleType.footnote(),
                 color = colors.onSurfaceVariant,
                 modifier = Modifier.padding(vertical = 4.dp)
             )
@@ -309,7 +309,7 @@ private fun PositionCard(
     ) {
         Text(
             label,
-            style = MaterialTheme.typography.labelMedium,
+            style = WedoAppleType.caption1(),
             color = fg,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
         )
@@ -341,7 +341,7 @@ private fun PreviewList(
         rows.forEachIndexed { i, slot ->
             Text(
                 stringResource(R.string.period_time_range, slot.node, slot.start, slot.end),
-                style = MaterialTheme.typography.bodySmall,
+                style = WedoAppleType.footnote(),
                 color = colors.onSurface
             )
             if (i < transMins.size) {
@@ -352,7 +352,7 @@ private fun PreviewList(
                 }
                 Text(
                     text,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = WedoAppleType.footnote(),
                     color = color,
                     fontWeight = if (mins > 0) FontWeight.Medium else FontWeight.Normal
                 )

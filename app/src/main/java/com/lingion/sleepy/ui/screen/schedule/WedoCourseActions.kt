@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
+import com.lingion.sleepy.ui.theme.WedoAppleType
 import com.lingion.sleepy.SleepyApp
 import com.lingion.sleepy.data.entity.CourseEntity
 import com.lingion.sleepy.ui.theme.SleepyTheme
@@ -31,7 +32,7 @@ fun WedoCourseActions(course: CourseEntity, onDismiss: () -> Unit, onEdit: () ->
     }
     ModalBottomSheet(onDismissRequest = { if (!busy) onDismiss() }, containerColor = SleepyTheme.colors.surface) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(course.courseName, style = MaterialTheme.typography.titleLarge)
+            Text(course.courseName, style = WedoAppleType.title3())
             Text("课程颜色 · 同一门课统一使用", color = SleepyTheme.colors.onSurfaceVariant)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 listOf(0xFFAED8FF,0xFFC9B8F4,0xFFA9E7D4,0xFFF2B7CC,0xFFF5D493,0xFFADBDF3).forEach { argb ->

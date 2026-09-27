@@ -23,7 +23,6 @@ import androidx.compose.material.icons.outlined.School
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -49,6 +48,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.lingion.sleepy.ui.theme.WedoAppleType
 import com.lingion.sleepy.R
 import com.lingion.sleepy.data.jw.JwImportViewModel
 import com.lingion.sleepy.data.jw.JwProtocol
@@ -210,13 +210,13 @@ fun SchoolSelectScreen(
             ) {
                 Text(
                     text = stringResource(R.string.school_count_total, schools.size),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = WedoAppleType.footnote(),
                     color = colors.onSurfaceVariant
                 )
                 if (query.isNotBlank()) {
                     Text(
                         text = "匹配 ${filtered.size}",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = WedoAppleType.footnote(),
                         color = colors.primary
                     )
                 }
@@ -290,7 +290,7 @@ private fun SectionHeader(letter: String) {
     ) {
         Text(
             text = letter,
-            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+            style = WedoAppleType.headline().copy(fontWeight = FontWeight.Bold),
             color = colors.primary,
             modifier = Modifier
                 .clip(SleepyTheme.shapes.extraSmall)
@@ -347,8 +347,8 @@ private fun AlphabetIndexBar(
                 val isActive = letter == activeLetter
                 Text(
                     text = letter,
-                    style = if (isActive) MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
-                    else MaterialTheme.typography.labelSmall,
+                    style = if (isActive) WedoAppleType.caption2().copy(fontWeight = FontWeight.Bold)
+                    else WedoAppleType.caption2(),
                     color = if (isActive) colors.primary else colors.onSurfaceVariant,
                     modifier = Modifier
                         .clip(SleepyTheme.shapes.extraSmall)
@@ -396,14 +396,14 @@ private fun SchoolRow(school: JwSchoolInfo, onClick: () -> Unit) {
                 Spacer(modifier = Modifier.size(6.dp))
                 Text(
                     text = school.name,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                    style = WedoAppleType.body().copy(fontWeight = FontWeight.Medium),
                     color = if (isClickable) colors.onSurface else colors.onSurfaceVariant
                 )
             }
             if (!school.url.isBlank()) {
                 Text(
                     text = JwProtocol.displayName(school.type) + " · " + school.url.replace("https://", "").replace("http://", "").trimEnd('/'),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = WedoAppleType.footnote(),
                     color = colors.onSurfaceVariant,
                     maxLines = 1
                 )
@@ -453,7 +453,7 @@ private fun SchoolStatusBadge(school: JwSchoolInfo) {
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
+            style = WedoAppleType.caption2(),
             color = fg
         )
     }

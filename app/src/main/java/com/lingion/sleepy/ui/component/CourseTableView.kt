@@ -31,7 +31,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -513,7 +512,7 @@ private fun CourseOverlayCard(
             // 无副信息: 课程名整体居中(原行为)
             Text(
                 text = course.courseName,
-                style = MaterialTheme.typography.labelSmall.copy(
+                style = WedoAppleType.caption2().copy(
                     fontWeight = FontWeight.SemiBold,
                     fontSize = (10 * scale).sp,
                     lineHeight = (13 * scale).sp,
@@ -535,7 +534,7 @@ private fun CourseOverlayCard(
                 Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Text(
                         text = course.courseName,
-                        style = MaterialTheme.typography.labelSmall.copy(
+                        style = WedoAppleType.caption2().copy(
                             fontWeight = FontWeight.SemiBold,
                             fontSize = (10 * scale).sp,
                             lineHeight = (13 * scale).sp,
@@ -980,7 +979,7 @@ private fun DetailDayCard(
         ) {
             Text(
                 text = DateUtils.localizedDay(day, context) + if (isToday) stringResource(R.string.today_suffix) else "",
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                style = WedoAppleType.headline().copy(fontWeight = FontWeight.SemiBold),
                 color = if (isGrey) colors.onSurfaceVariant.copy(alpha = SleepyTheme.Alpha.inactive) else colors.onSurface
             )
         }
@@ -1180,7 +1179,7 @@ private fun LessonRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = course.courseName,
-                style = MaterialTheme.typography.labelMedium.copy(
+                style = WedoAppleType.caption1().copy(
                     fontWeight = FontWeight.SemiBold,
                     fontSize = (12 * effScale).sp,
                     lineHeight = (16 * effScale).sp,

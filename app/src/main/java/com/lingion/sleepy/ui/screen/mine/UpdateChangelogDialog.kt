@@ -12,7 +12,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -24,6 +23,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import com.lingion.sleepy.ui.theme.WedoAppleType
 import com.lingion.sleepy.R
 import com.lingion.sleepy.ui.theme.SleepyTheme
 import com.lingion.sleepy.util.MarkdownBlocks
@@ -85,7 +85,7 @@ fun UpdateChangelogDialog(
                             is UpdateUiState.Downloading -> stringResource(R.string.update_downloading, (state as UpdateUiState.Downloading).progress)
                             else -> stringResource(R.string.update_found_title, version)
                         },
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                        style = WedoAppleType.title3().copy(fontWeight = FontWeight.Bold)
                     )
                 },
                 text = {
@@ -94,7 +94,7 @@ fun UpdateChangelogDialog(
                             Text(
                                 stringResource(R.string.update_download_failed, failMsg),
                                 color = colors.error,
-                                style = MaterialTheme.typography.bodyMedium
+                                style = WedoAppleType.subheadline()
                             )
                             Spacer(Modifier.height(8.dp))
                         }
@@ -107,7 +107,7 @@ fun UpdateChangelogDialog(
                             Spacer(Modifier.height(4.dp))
                             Text(
                                 stringResource(R.string.update_downloading, progress),
-                                style = MaterialTheme.typography.bodySmall,
+                                style = WedoAppleType.footnote(),
                                 color = colors.onSurfaceVariant
                             )
                             Spacer(Modifier.height(8.dp))
@@ -165,17 +165,17 @@ fun UpdateChangelogDialog(
  */
 @Composable
 private fun MarkdownChangelog(markdown: String, textColor: androidx.compose.ui.graphics.Color, accentColor: androidx.compose.ui.graphics.Color) {
-    val body = MaterialTheme.typography.bodySmall
+    val body = WedoAppleType.footnote()
     Column {
         for (block in MarkdownBlocks.parse(markdown)) {
             when (block) {
                 is MarkdownBlocks.Block.Heading -> Text(
                     text = block.text,
                     style = when (block.level) {
-                        1 -> MaterialTheme.typography.titleLarge
-                        2 -> MaterialTheme.typography.titleMedium
-                        3 -> MaterialTheme.typography.titleSmall
-                        else -> MaterialTheme.typography.titleSmall
+                        1 -> WedoAppleType.title3()
+                        2 -> WedoAppleType.headline()
+                        3 -> WedoAppleType.headline()
+                        else -> WedoAppleType.headline()
                     }.copy(fontWeight = FontWeight.Bold, color = textColor),
                     modifier = Modifier.padding(top = 10.dp, bottom = 2.dp)
                 )

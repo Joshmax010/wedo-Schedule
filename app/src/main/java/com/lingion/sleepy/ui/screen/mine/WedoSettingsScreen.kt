@@ -83,7 +83,7 @@ fun WedoSettingsScreen(onManage: () -> Unit, onOpenAllTables: () -> Unit,
         }
         item {
             WedoSettingsGroup("隐私与关于") {
-                Text("课表保存在本机，离线也能查看。", style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
+                Text("课表保存在本机，离线也能查看。", style = WedoAppleType.subheadline(), color = colors.onSurfaceVariant)
                 SettingsItem(Icons.Outlined.Info, "关于 wedo · 隐私与开源许可", onOpenAbout)
             }
         }
@@ -121,7 +121,7 @@ private fun WedoSettingsGroup(title: String, content: @Composable ColumnScope.()
 private fun Choices(options: List<Pair<String, String>>, selected: String, onSelect: (String) -> Unit) {
     FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         options.forEach { (key, label) ->
-            FilterChip(selected == key, { onSelect(key) }, label = { Text(label, style = MaterialTheme.typography.labelMedium) })
+            FilterChip(selected == key, { onSelect(key) }, label = { Text(label, style = WedoAppleType.caption1()) })
         }
     }
 }

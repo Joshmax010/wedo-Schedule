@@ -10,7 +10,6 @@ import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -21,6 +20,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.lingion.sleepy.ui.theme.WedoAppleType
 import com.lingion.sleepy.R
 import com.lingion.sleepy.data.entity.CourseEntity
 import com.lingion.sleepy.data.entity.TimeTableEntity
@@ -59,7 +59,7 @@ fun ShareScheduleSheet(
         Column(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
             Text(
                 text = stringResource(R.string.share_sheet_title),
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                style = WedoAppleType.headline().copy(fontWeight = FontWeight.SemiBold),
                 color = colors.onSurface,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
             )

@@ -32,7 +32,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -55,6 +54,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import com.lingion.sleepy.ui.theme.WedoAppleType
 import com.lingion.sleepy.BuildConfig
 import com.lingion.sleepy.R
 import com.lingion.sleepy.ui.theme.SleepyTheme
@@ -223,13 +223,13 @@ fun AboutScreen(onBack: () -> Unit, onOpenLicense: () -> Unit = {}) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = stringResource(R.string.app_name),
-                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                    style = WedoAppleType.title1().copy(fontWeight = FontWeight.Bold),
                     color = colors.onSurface
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "v${BuildConfig.VERSION_NAME}",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = WedoAppleType.subheadline(),
                     color = colors.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(24.dp))
@@ -248,12 +248,12 @@ fun AboutScreen(onBack: () -> Unit, onOpenLicense: () -> Unit = {}) {
                     Column {
                         Text(
                             text = stringResource(R.string.about_version),
-                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                            style = WedoAppleType.body().copy(fontWeight = FontWeight.SemiBold),
                             color = colors.onSurface
                         )
                         Text(
                             text = stringResource(R.string.about_version_detail, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE),
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = WedoAppleType.subheadline(),
                             color = colors.onSurfaceVariant
                         )
                     }
@@ -276,12 +276,12 @@ fun AboutScreen(onBack: () -> Unit, onOpenLicense: () -> Unit = {}) {
                         Column {
                             Text(
                                 text = stringResource(R.string.about_update),
-                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                                style = WedoAppleType.body().copy(fontWeight = FontWeight.SemiBold),
                                 color = colors.onSurface
                             )
                             Text(
                                 text = stringResource(R.string.about_update_detail),
-                                style = MaterialTheme.typography.bodySmall,
+                                style = WedoAppleType.footnote(),
                                 color = colors.onSurfaceVariant
                             )
                         }
@@ -316,12 +316,12 @@ fun AboutScreen(onBack: () -> Unit, onOpenLicense: () -> Unit = {}) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = stringResource(R.string.about_author),
-                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                            style = WedoAppleType.body().copy(fontWeight = FontWeight.SemiBold),
                             color = colors.onSurface
                         )
                         Text(
                             text = stringResource(R.string.about_author_name),
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = WedoAppleType.subheadline(),
                             color = colors.onSurfaceVariant
                         )
                     }
@@ -354,12 +354,12 @@ fun AboutScreen(onBack: () -> Unit, onOpenLicense: () -> Unit = {}) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = stringResource(R.string.about_source),
-                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                            style = WedoAppleType.body().copy(fontWeight = FontWeight.SemiBold),
                             color = colors.onSurface
                         )
                         Text(
                             text = stringResource(R.string.about_source_url),
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = WedoAppleType.subheadline(),
                             color = colors.primary,
                             textDecoration = TextDecoration.Underline
                         )
@@ -392,12 +392,12 @@ fun AboutScreen(onBack: () -> Unit, onOpenLicense: () -> Unit = {}) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = stringResource(R.string.about_feedback),
-                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                            style = WedoAppleType.body().copy(fontWeight = FontWeight.SemiBold),
                             color = colors.onSurface
                         )
                         Text(
                             text = stringResource(R.string.about_feedback_detail),
-                            style = MaterialTheme.typography.bodySmall,
+                            style = WedoAppleType.footnote(),
                             color = colors.onSurfaceVariant
                         )
                     }
@@ -433,12 +433,12 @@ fun AboutScreen(onBack: () -> Unit, onOpenLicense: () -> Unit = {}) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = stringResource(R.string.about_license_title),
-                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                            style = WedoAppleType.body().copy(fontWeight = FontWeight.SemiBold),
                             color = colors.onSurface
                         )
                         Text(
                             text = stringResource(R.string.about_license_detail),
-                            style = MaterialTheme.typography.bodySmall,
+                            style = WedoAppleType.footnote(),
                             color = colors.onSurfaceVariant
                         )
                     }
@@ -462,12 +462,12 @@ fun AboutScreen(onBack: () -> Unit, onOpenLicense: () -> Unit = {}) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = stringResource(R.string.about_update_check),
-                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                            style = WedoAppleType.body().copy(fontWeight = FontWeight.SemiBold),
                             color = colors.onSurface
                         )
                         Text(
                             text = stringResource(R.string.about_update_check_detail),
-                            style = MaterialTheme.typography.bodySmall,
+                            style = WedoAppleType.footnote(),
                             color = colors.onSurfaceVariant
                         )
                     }
@@ -536,7 +536,7 @@ private fun UpdateBanner(version: String, onClick: () -> Unit) {
         Spacer(modifier = Modifier.width(10.dp))
         Text(
             text = stringResource(R.string.about_update_available, "v$version"),
-            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+            style = WedoAppleType.subheadline().copy(fontWeight = FontWeight.SemiBold),
             color = colors.primary,
             modifier = Modifier.weight(1f)
         )

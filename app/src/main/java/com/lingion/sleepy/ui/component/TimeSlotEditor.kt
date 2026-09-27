@@ -15,7 +15,6 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.RemoveCircleOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -29,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.lingion.sleepy.ui.theme.WedoAppleType
 import com.lingion.sleepy.R
 import com.lingion.sleepy.data.entity.SmartPeriodConfig
 import com.lingion.sleepy.ui.theme.SleepyTheme
@@ -119,7 +119,7 @@ private fun ManualTimeSlotEditor(
         ) {
             Text(
                 text = stringResource(R.string.n_periods, rows.size),
-                style = MaterialTheme.typography.bodySmall,
+                style = WedoAppleType.footnote(),
                 color = colors.onSurfaceVariant
             )
             TextButton(
@@ -179,7 +179,7 @@ private fun TimeSlotRowItem(
         Text(
             text = stringResource(R.string.course_node_format, row.node),
             modifier = Modifier.width(44.dp),
-            style = MaterialTheme.typography.bodyMedium,
+            style = WedoAppleType.subheadline(),
             color = colors.onSurface
         )
         TimePickerField(

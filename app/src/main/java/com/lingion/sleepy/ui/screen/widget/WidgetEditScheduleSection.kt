@@ -12,7 +12,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -22,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.lingion.sleepy.ui.theme.WedoAppleType
 import com.lingion.sleepy.R
 import com.lingion.sleepy.ui.theme.SleepyTheme
 
@@ -41,7 +41,7 @@ object WidgetEditScheduleSection : WidgetEditSection {
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
                 text = stringResource(titleRes),
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                style = WedoAppleType.headline().copy(fontWeight = FontWeight.SemiBold),
                 color = SleepyTheme.colors.onSurface
             )
             Spacer(modifier = Modifier.padding(top = 8.dp))
@@ -82,7 +82,7 @@ object WidgetEditScheduleSection : WidgetEditSection {
         ) {
             Text(
                 text = stringResource(R.string.widget_edit_default_label),
-                style = MaterialTheme.typography.bodyLarge,
+                style = WedoAppleType.body(),
                 color = SleepyTheme.colors.onSurface,
                 modifier = Modifier.weight(1f)
             )
@@ -111,7 +111,7 @@ object WidgetEditScheduleSection : WidgetEditSection {
         ) {
             Text(
                 text = tableName,
-                style = MaterialTheme.typography.bodyLarge,
+                style = WedoAppleType.body(),
                 color = SleepyTheme.colors.onSurface,
                 modifier = Modifier.weight(1f)
             )

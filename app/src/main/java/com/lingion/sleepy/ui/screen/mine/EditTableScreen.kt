@@ -29,7 +29,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -54,6 +53,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.lingion.sleepy.ui.theme.WedoAppleType
 import com.lingion.sleepy.R
 import com.lingion.sleepy.data.entity.SmartPeriodConfig
 import com.lingion.sleepy.data.entity.TimeTableEntity
@@ -221,12 +221,12 @@ fun EditTableScreen(
                         Column {
                             Text(
                                 text = stringResource(R.string.edit_table_time_slots),
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                                style = WedoAppleType.headline().copy(fontWeight = FontWeight.SemiBold),
                                 color = colors.onSurface
                             )
                             Text(
                             text = stringResource(R.string.n_periods, slotRows.size) + " · " + if (timeSlotsExpanded) stringResource(R.string.collapse) else stringResource(R.string.expand),
-                                style = MaterialTheme.typography.bodySmall,
+                                style = WedoAppleType.footnote(),
                                 color = colors.onSurfaceVariant
                             )
                         }
@@ -262,7 +262,7 @@ fun EditTableScreen(
 
             error?.let { msg ->
                 item {
-                    Text(text = msg, color = colors.error, style = MaterialTheme.typography.bodyMedium)
+                    Text(text = msg, color = colors.error, style = WedoAppleType.subheadline())
                 }
             }
 
@@ -369,8 +369,8 @@ private fun CardSection(title: String, subtitle: String, content: @Composable ()
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold), color = colors.onSurface)
-            if (subtitle.isNotBlank()) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+            Text(title, style = WedoAppleType.headline().copy(fontWeight = FontWeight.SemiBold), color = colors.onSurface)
+            if (subtitle.isNotBlank()) Text(subtitle, style = WedoAppleType.footnote(), color = colors.onSurfaceVariant)
         }
         content()
     }

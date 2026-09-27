@@ -18,7 +18,6 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
@@ -190,7 +189,7 @@ private fun DefaultTopPickerSection(
         // 标题行
         Text(
             text = stringResource(R.string.conflict_default_top_title),
-            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+            style = WedoAppleType.headline().copy(fontWeight = FontWeight.SemiBold),
             color = colors.onSurface,
             modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
         )
@@ -233,7 +232,7 @@ private fun DefaultTopPickerSection(
                 )
                 Text(
                     text = label,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = WedoAppleType.subheadline(),
                     color = colors.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

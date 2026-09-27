@@ -24,7 +24,6 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -39,6 +38,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.lingion.sleepy.ui.theme.WedoAppleType
 import com.lingion.sleepy.R
 import com.lingion.sleepy.ui.screen.schedule.ScheduleViewModel
 import com.lingion.sleepy.ui.theme.SleepyTheme
@@ -123,12 +123,12 @@ fun AllTablesScreen(
                         }
                         Text(
                             text = table.name,
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                            style = WedoAppleType.headline().copy(fontWeight = FontWeight.SemiBold),
                             color = titleColor
                         )
                         Text(
                             text = if (isCurrent) stringResource(R.string.current_table_week, state.currentWeek) else stringResource(R.string.table_start_date, table.startDate),
-                            style = MaterialTheme.typography.bodySmall,
+                            style = WedoAppleType.footnote(),
                             color = subtitleColor
                         )
                         // v7.10.15 每表显示导入时间(年月日 时分秒) — 方便用户分辨多张课表
@@ -140,7 +140,7 @@ fun AllTablesScreen(
                                         .atZone(java.time.ZoneId.systemDefault())
                                         .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
                                 ),
-                                style = MaterialTheme.typography.bodySmall,
+                                style = WedoAppleType.footnote(),
                                 color = subtitleColor
                             )
                         }

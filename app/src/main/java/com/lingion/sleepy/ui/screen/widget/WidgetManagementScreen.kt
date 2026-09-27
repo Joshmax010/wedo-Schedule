@@ -15,7 +15,6 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -28,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.lingion.sleepy.ui.theme.WedoAppleType
 import com.lingion.sleepy.R
 import com.lingion.sleepy.ui.theme.SleepyTheme
 import com.lingion.sleepy.widget.PlacedWidgetItem
@@ -86,7 +86,7 @@ fun WidgetManagementScreen(
                 ) {
                     Text(
                         text = stringResource(R.string.widget_manage_empty),
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = WedoAppleType.body(),
                         color = colors.onSurfaceVariant
                     )
                 }
@@ -123,14 +123,14 @@ private fun PlacedWidgetRow(item: PlacedWidgetItem, onClick: () -> Unit) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = stringResource(item.variant.displayNameRes),
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = WedoAppleType.body(),
                     color = colors.onSurface
                 )
                 val tableLabel = item.tableName
                     ?: stringResource(R.string.widget_edit_default_label)
                 Text(
                     text = tableLabel,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = WedoAppleType.subheadline(),
                     color = colors.onSurfaceVariant
                 )
             }

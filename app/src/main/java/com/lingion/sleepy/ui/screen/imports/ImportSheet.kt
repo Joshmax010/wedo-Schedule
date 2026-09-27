@@ -5,6 +5,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context.CLIPBOARD_SERVICE
 import android.net.Uri
+import com.lingion.sleepy.ui.theme.WedoAppleType
 import com.lingion.sleepy.BuildConfig
 import org.json.JSONArray
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -43,7 +44,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.TextField
 import androidx.compose.material3.SheetState
@@ -215,13 +215,13 @@ fun ImportSheet(
             // 标题
             Text(
                 text = "添加课表",
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
+                style = WedoAppleType.title2().copy(fontWeight = FontWeight.SemiBold),
                 color = colors.onSurface,
                 modifier = Modifier.padding(bottom = 4.dp)
             )
             Text(
                 text = stringResource(R.string.import_preview_sub),
-                style = MaterialTheme.typography.bodyMedium,
+                style = WedoAppleType.subheadline(),
                 color = colors.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
@@ -295,7 +295,7 @@ fun ImportSheet(
                         Text(
                             text = if (isLoading) stringResource(R.string.import_parsing) else stringResource(R.string.import_preview),
                             color = colors.onPrimary,
-                            style = MaterialTheme.typography.labelLarge
+                            style = WedoAppleType.callout()
                         )
                     }
                 }
@@ -326,7 +326,7 @@ fun ImportSheet(
             ) {
                 Text(
                     text = stringResource(R.string.import_supported_formats),
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                    style = WedoAppleType.headline().copy(fontWeight = FontWeight.SemiBold),
                     color = colors.onSurface,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
@@ -511,11 +511,11 @@ private fun ImportMethodRow(
         Column(modifier = Modifier.weight(1f).padding(start = 14.dp)) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                style = WedoAppleType.body().copy(fontWeight = FontWeight.Medium),
                 color = colors.onSurface
             )
             subtitle?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+                Text(it, style = WedoAppleType.footnote(), color = colors.onSurfaceVariant)
             }
         }
         if (trailing != null) {
@@ -539,19 +539,19 @@ private fun FormatRow(name: String, desc: String, onDetail: () -> Unit) {
     ) {
         Text(
             text = "•",
-            style = MaterialTheme.typography.bodySmall,
+            style = WedoAppleType.footnote(),
             color = colors.primary,
             modifier = Modifier.padding(end = 8.dp, top = 2.dp)
         )
         Text(
             text = name,
-            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
+            style = WedoAppleType.footnote().copy(fontWeight = FontWeight.Medium),
             color = colors.onSurface,
             modifier = Modifier.width(110.dp)
         )
         Text(
             text = desc,
-            style = MaterialTheme.typography.bodySmall,
+            style = WedoAppleType.footnote(),
             color = colors.onSurfaceVariant,
             modifier = Modifier.weight(1f)
         )
@@ -616,7 +616,7 @@ private fun FormatDetailDialog(format: ImportFormat, onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         titleContentColor = colors.onSurface,
         textContentColor = colors.onSurfaceVariant,
-        title = { Text(stringResource(titleRes), style = MaterialTheme.typography.titleLarge) },
+        title = { Text(stringResource(titleRes), style = WedoAppleType.title3()) },
         text = {
             Column(
                 modifier = Modifier
@@ -627,32 +627,32 @@ private fun FormatDetailDialog(format: ImportFormat, onDismiss: () -> Unit) {
             ) {
                 Text(
                     text = stringResource(whenRes),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = WedoAppleType.subheadline(),
                     color = colors.onSurfaceVariant
                 )
                 Text(
                     text = stringResource(R.string.format_help_spec),
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                    style = WedoAppleType.headline().copy(fontWeight = FontWeight.SemiBold),
                     color = colors.onSurface
                 )
                 stringArrayResource(specRes).forEach { item ->
                     Row {
                         Text(
                             text = "•",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = WedoAppleType.footnote(),
                             color = colors.primary,
                             modifier = Modifier.padding(end = 8.dp)
                         )
                         Text(
                             text = item,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = WedoAppleType.footnote(),
                             color = colors.onSurfaceVariant
                         )
                     }
                 }
                 Text(
                     text = stringResource(R.string.format_help_example),
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                    style = WedoAppleType.headline().copy(fontWeight = FontWeight.SemiBold),
                     color = colors.onSurface
                 )
                 Text(
@@ -661,7 +661,7 @@ private fun FormatDetailDialog(format: ImportFormat, onDismiss: () -> Unit) {
                     text = stringResource(exampleRes)
                         .replace("\\n", "\n")
                         .replace("\\t", "\t"),
-                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                    style = WedoAppleType.footnote().copy(fontFamily = FontFamily.Monospace),
                     color = colors.onSurface,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -681,17 +681,17 @@ private fun FormatDetailDialog(format: ImportFormat, onDismiss: () -> Unit) {
                     ) {
                         Text(
                             text = stringResource(R.string.ai_prompt_title),
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                            style = WedoAppleType.headline().copy(fontWeight = FontWeight.SemiBold),
                             color = colors.onPrimaryContainer
                         )
                         Text(
                             text = stringResource(R.string.ai_prompt_hint),
-                            style = MaterialTheme.typography.bodySmall,
+                            style = WedoAppleType.footnote(),
                             color = colors.onPrimaryContainer
                         )
                         Text(
                             text = stringResource(R.string.ai_prompt_text).replace("\\n", "\n"),
-                            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace, fontSize = MaterialTheme.typography.labelSmall.fontSize),
+                            style = WedoAppleType.footnote().copy(fontFamily = FontFamily.Monospace, fontSize = WedoAppleType.caption2().fontSize),
                             color = colors.onPrimaryContainer,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -789,17 +789,17 @@ private fun ImportPreviewDialog(
         textContentColor = colors.onSurfaceVariant,
         title = {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(stringResource(R.string.import_preview_title), style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.import_preview_title), style = WedoAppleType.title3())
                 if (preview.targetTableId == 0L) {
                     Text(
                         text = stringResource(R.string.import_new_table_hint),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = WedoAppleType.footnote(),
                         color = colors.primary
                     )
                 } else {
                     Text(
                         text = stringResource(R.string.import_target_table, preview.targetTableName),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = WedoAppleType.footnote(),
                         color = colors.onSurfaceVariant
                     )
                 }
@@ -866,13 +866,13 @@ private fun ImportPreviewDialog(
                     ) {
                         Text(
                             text = stringResource(R.string.import_multi_location_warning),
-                            style = MaterialTheme.typography.titleSmall,
+                            style = WedoAppleType.headline(),
                             color = colors.onSecondaryContainer
                         )
                         preview.multiLocationWarnings.take(5).forEach { warning ->
                             Text(
                                 text = "• $warning",
-                                style = MaterialTheme.typography.bodySmall,
+                                style = WedoAppleType.footnote(),
                                 color = colors.onSecondaryContainer
                             )
                         }
@@ -882,7 +882,7 @@ private fun ImportPreviewDialog(
                                     R.string.more_unexpanded,
                                     preview.multiLocationWarnings.size - 5
                                 ),
-                                style = MaterialTheme.typography.labelSmall,
+                                style = WedoAppleType.caption2(),
                                 color = colors.onSecondaryContainer
                             )
                         }
@@ -899,20 +899,20 @@ private fun ImportPreviewDialog(
                     ) {
                         Text(
                             text = stringResource(R.string.import_conflicts),
-                            style = MaterialTheme.typography.titleSmall,
+                            style = WedoAppleType.headline(),
                             color = colors.onSurface
                         )
                         preview.conflicts.take(3).forEach { conflict ->
                             Text(
                                 text = "• ${conflict.incoming.courseName} ↔ ${conflict.existing.courseName}（${DateUtils.localizedDay(conflict.incoming.day, LocalContext.current)} ${conflict.incoming.shortNodeString(LocalContext.current)}）",
-                                style = MaterialTheme.typography.bodySmall,
+                                style = WedoAppleType.footnote(),
                                 color = colors.onSurfaceVariant
                             )
                         }
                         if (preview.conflicts.size > 3) {
                             Text(
                                 text = stringResource(R.string.import_conflict_more, preview.conflicts.size - 3),
-                                style = MaterialTheme.typography.labelSmall,
+                                style = WedoAppleType.caption2(),
                                 color = colors.onSurfaceVariant
                             )
                         }
@@ -931,25 +931,25 @@ private fun ImportPreviewDialog(
                     ) {
                         Text(
                             text = stringResource(R.string.import_dropped_title, dropped.size),
-                            style = MaterialTheme.typography.titleSmall,
+                            style = WedoAppleType.headline(),
                             color = colors.onErrorContainer
                         )
                         Text(
                             text = stringResource(R.string.import_dropped_hint),
-                            style = MaterialTheme.typography.bodySmall,
+                            style = WedoAppleType.footnote(),
                             color = colors.onErrorContainer
                         )
                         dropped.take(3).forEach { line ->
                             Text(
                                 text = "• $line",
-                                style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                                style = WedoAppleType.footnote().copy(fontFamily = FontFamily.Monospace),
                                 color = colors.onErrorContainer
                             )
                         }
                         if (dropped.size > 3) {
                             Text(
                                 text = stringResource(R.string.import_conflict_more, dropped.size - 3),
-                                style = MaterialTheme.typography.labelSmall,
+                                style = WedoAppleType.caption2(),
                                 color = colors.onErrorContainer
                             )
                         }
@@ -968,20 +968,20 @@ private fun ImportPreviewDialog(
                     ) {
                         Text(
                             text = stringResource(R.string.import_warnings_title),
-                            style = MaterialTheme.typography.titleSmall,
+                            style = WedoAppleType.headline(),
                             color = colors.onSecondaryContainer
                         )
                         warnings.take(4).forEach { line ->
                             Text(
                                 text = "• $line",
-                                style = MaterialTheme.typography.bodySmall,
+                                style = WedoAppleType.footnote(),
                                 color = colors.onSecondaryContainer
                             )
                         }
                         if (warnings.size > 4) {
                             Text(
                                 text = stringResource(R.string.import_conflict_more, warnings.size - 4),
-                                style = MaterialTheme.typography.labelSmall,
+                                style = WedoAppleType.caption2(),
                                 color = colors.onSecondaryContainer
                             )
                         }
@@ -1086,8 +1086,8 @@ private fun PreviewMetricCard(
             .padding(vertical = 12.dp, horizontal = 10.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Text(text = label, style = MaterialTheme.typography.labelSmall, color = fg.copy(alpha = SleepyTheme.Alpha.highContent))
-        Text(text = value, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = fg)
+        Text(text = label, style = WedoAppleType.caption2(), color = fg.copy(alpha = SleepyTheme.Alpha.highContent))
+        Text(text = value, style = WedoAppleType.title3().copy(fontWeight = FontWeight.Bold), color = fg)
     }
 }
 
@@ -1095,8 +1095,8 @@ private fun PreviewMetricCard(
 private fun PreviewInfoRow(label: String, value: String) {
     val colors = SleepyTheme.colors
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(text = label, style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
-        Text(text = value, style = MaterialTheme.typography.bodyMedium, color = colors.onSurface)
+        Text(text = label, style = WedoAppleType.caption2(), color = colors.onSurfaceVariant)
+        Text(text = value, style = WedoAppleType.subheadline(), color = colors.onSurface)
     }
 }
 
@@ -1126,7 +1126,7 @@ private fun ImportConfirmDialog(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
                     text = stringResource(R.string.import_confirm_body),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = WedoAppleType.subheadline(),
                     color = colors.onSurfaceVariant
                 )
                 if (showTableName) {
@@ -1151,7 +1151,7 @@ private fun ImportConfirmDialog(
                     Text(
                         text = errorMsg!!,
                         color = colors.error,
-                        style = MaterialTheme.typography.bodySmall
+                        style = WedoAppleType.footnote()
                     )
                 }
                 Column(

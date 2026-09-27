@@ -15,7 +15,6 @@ import androidx.compose.material.icons.outlined.PrivacyTip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -24,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.lingion.sleepy.ui.theme.WedoAppleType
 import com.lingion.sleepy.BuildConfig
 import com.lingion.sleepy.R
 import com.lingion.sleepy.ui.theme.SleepyTheme
@@ -67,11 +67,11 @@ fun WedoAboutScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Text("wedo课程表", style = MaterialTheme.typography.headlineMedium)
+                    Text("wedo课程表", style = WedoAppleType.title1())
                     Text("版本 ${BuildConfig.VERSION_NAME}", color = colors.onSurfaceVariant)
                     Text(
                         "面向吉林建筑大学学生的非官方、本地优先 Android 课程表。当前教务导入仍处于真实取证阶段。",
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = WedoAppleType.body(),
                         color = colors.onSurface,
                     )
                 }
@@ -98,7 +98,7 @@ fun WedoAboutScreen(
             item {
                 Text(
                     "本项目基于 Sleepy 二次开发，与吉林建筑大学不存在隶属、商业合作或官方授权关系。",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = WedoAppleType.subheadline(),
                     color = colors.onSurfaceVariant,
                 )
             }

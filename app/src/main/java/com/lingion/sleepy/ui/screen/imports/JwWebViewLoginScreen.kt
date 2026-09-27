@@ -30,7 +30,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -53,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.lingion.sleepy.ui.theme.WedoAppleType
 import com.lingion.sleepy.R
 import com.lingion.sleepy.data.jw.EAMS5_PREFIX_PLACEHOLDER
 import com.lingion.sleepy.data.jw.JwImportViewModel
@@ -179,10 +179,10 @@ fun JwWebViewLoginScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text(school.name, style = MaterialTheme.typography.titleMedium)
+                        Text(school.name, style = WedoAppleType.headline())
                         Text(
                             text = JwProtocol.displayName(school.type),
-                            style = MaterialTheme.typography.bodySmall,
+                            style = WedoAppleType.footnote(),
                             color = SleepyTheme.colors.onSurfaceVariant
                         )
                     }
@@ -466,12 +466,12 @@ private fun CaptureBar(enabled: Boolean, onCapture: () -> Unit) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = stringResource(R.string.jw_after_login),
-                style = MaterialTheme.typography.bodySmall,
+                style = WedoAppleType.footnote(),
                 color = colors.onSurfaceVariant
             )
             Text(
                 text = stringResource(R.string.jw_nav_hint),
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                style = WedoAppleType.subheadline().copy(fontWeight = FontWeight.Medium),
                 color = colors.onSurface
             )
         }
