@@ -96,7 +96,7 @@ fun WedoIconButton(
     icon: ImageVector,
     description: String,
     enabled: Boolean = true,
-    tint: Color = WedoApple.accentText,
+    tint: Color = WedoApple.accentIcon,
     onClick: () -> Unit
 ) {
     val action = if (enabled) Modifier.wedoPress(onClick = onClick) else Modifier
@@ -214,18 +214,25 @@ private fun DockItem(
     accentIcon: Boolean = false
 ) {
     val colors = SleepyTheme.colors
-    val tint = when {
-        accentIcon -> WedoApple.accentText
-        selected -> WedoApple.accentText
-        else -> colors.onSurfaceVariant
+    val inactive = colors.onSurfaceVariant
+    // 图标和标题分两档：22dp 图标按 1.4.11 走 3:1，10dp 标题是正文字号走 4.5:1。
+    // 多数色两者取值相同，只有橙色/薄荷这类才拉开 —— 但拉不开的那个位置
+    // 本来就是最需要拉开的（小字最怕对比度不够）。
+    val iconTint = when {
+        accentIcon || selected -> WedoApple.accentIcon
+        else -> inactive
+    }
+    val labelTint = when {
+        accentIcon || selected -> WedoApple.accentText
+        else -> inactive
     }
     Column(
         modifier.height(WedoAppleDimensions.minTouchTarget).wedoPress(onClick = action),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(22.dp))
+        Icon(icon, contentDescription = label, tint = iconTint, modifier = Modifier.size(22.dp))
         Spacer(Modifier.height(2.dp))
-        Text(label, style = WedoAppleType.caption2(), color = tint)
+        Text(label, style = WedoAppleType.caption2(), color = labelTint)
     }
 }

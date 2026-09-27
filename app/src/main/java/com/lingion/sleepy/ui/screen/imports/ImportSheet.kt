@@ -499,7 +499,7 @@ private fun ImportMethodRow(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = WedoApple.accentText,
+            tint = WedoApple.accentIcon,
             modifier = Modifier.size(22.dp)
         )
         Column(modifier = Modifier.weight(1f).padding(start = 14.dp)) {

@@ -168,7 +168,7 @@ internal fun SettingsItem(icon: ImageVector, label: String, onClick: () -> Unit 
         Icon(
             icon,
             contentDescription = null,
-            tint = WedoApple.accentText,
+            tint = WedoApple.accentIcon,
             modifier = Modifier.size(22.dp)
         )
         Text(

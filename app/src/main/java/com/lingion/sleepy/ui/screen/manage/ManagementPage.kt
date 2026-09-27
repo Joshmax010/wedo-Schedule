@@ -195,7 +195,7 @@ private fun ManageCard(
         Icon(
             icon,
             contentDescription = null,
-            tint = WedoApple.accentText,
+            tint = WedoApple.accentIcon,
             modifier = Modifier.size(24.dp)
         )
         Column(modifier = Modifier.weight(1f).padding(start = 14.dp)) {

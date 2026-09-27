@@ -42,8 +42,15 @@ import com.lingion.sleepy.ui.theme.WedoAppleType
  * 每个色都有浅色版（light）与深色版（dark）两个变体。深色版**不是**浅色版简单调亮，
  * 而是 Apple 针对纯黑背景单独重新标定过饱和度与明度，保证既有足够亮度又不刺眼。
  *
- * 共 12 色 × 2 版本 = 24 个色位，足够 24 门课不重复。
+ * 共 11 色 × 2 版本 = 22 个色位。
  * 用户可在设置页选择任一系统色作为 App 强调色。
+ *
+ * **为什么是 11 而不是 12**：iOS 系统色本来有 12 个，这里砍掉了 `Yellow`。
+ * 原因是**数学上无解** —— `#FFCC00` 在白底上的对比度只有 1.512:1，
+ * 是 12 色里唯一一个差到「当图标完全看不见」的（次差的薄荷还有 2.118:1）。
+ * 要把它救到 3:1 必须压到很暗的土黄，救到 4.5:1 更是变成 `#8C7000` 这种
+ * 和「黄」已经没关系的颜色。Apple 自己也从不用 systemYellow 做文字/链接，
+ * 与其给用户一个「选了就难看」的选项，不如不出现在列表里。
  */
 enum class WedoSystemColor(
     /** 供 UI 显示的色名 */
@@ -59,12 +66,21 @@ enum class WedoSystemColor(
     Pink("玫红", Color(0xFFFF2D55), Color(0xFFFF375F)),
     Red("红色", Color(0xFFFF3B30), Color(0xFFFF453A)),
     Orange("橙色", Color(0xFFFF9500), Color(0xFFFF9F0A)),
-    Yellow("黄色", Color(0xFFFFCC00), Color(0xFFFFD60A)),
     Green("绿色", Color(0xFF34C759), Color(0xFF30D158)),
     Mint("薄荷", Color(0xFF00C7BE), Color(0xFF63E6E2)),
     Teal("青蓝", Color(0xFF30B0C7), Color(0xFF40C8E0)),
     Cyan("天青", Color(0xFF32ADE6), Color(0xFF64D2FF)),
     Brown("棕色", Color(0xFFA2845E), Color(0xFFAC8E68));
+
+    /**
+     * 历史名 → 现名。用于兼容老用户持久化过的值。
+     *
+     * 用户在旧版本里可能已经把强调色存成了 `"Yellow"`；直接按名查表会查不到，
+     * 于是回落默认色 —— 能跑，但用户会觉得「我的设置被重置了」。
+     * 这里把它显式映射到一个观感最接近的可选色，迁移是无感的。
+     */
+    private val legacyAliases: Map<String, WedoSystemColor>
+        get() = mapOf("Yellow" to Orange)
 
     /**
      * 取当前深浅模式下的值。
@@ -74,21 +90,10 @@ enum class WedoSystemColor(
      */
     fun color(isDark: Boolean): Color = if (isDark) this.dark else this.light
 
-    /**
-     * **作为文字/图标着色时可读的强调色**。
-     *
-     * 为什么需要单独一档：iOS 的 12 个系统色是为**填充**标定的（色块底 + 白字），
-     * 不是为「浅底上的彩色文字」标定的。实测在白色卡片上，黄色只有 1.51:1、
-     * 橙色 2.20:1 —— 直接拿来染图标基本看不见。Apple 自己处理这个场景时用的是
-     * 另加深的 link 色（如 systemBlue 文字版比填充版深）。
-     *
-     * 规则：浅色模式下向黑压到 ≥4.5:1，深色模式下向白提亮到 ≥4.5:1
-     * （深色底本身暗，多数色已达标，只有靛紫需要处理）。
-     * 色相保持不变，所以「蓝色还是蓝色」，只是同一色的深浅两档用法。
-     */
-    fun readableColor(isDark: Boolean): Color {
+    /** 该色的可读版本按角色走哪条门槛，见 [WedoColorRole]。 */
+    fun readableColor(isDark: Boolean, role: WedoColorRole = WedoColorRole.Text): Color {
         val surface = if (isDark) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)
-        return readableOn(this.color(isDark), surface)
+        return readableOn(this.color(isDark), surface, role.minContrast)
     }
 
     companion object {
@@ -101,10 +106,38 @@ enum class WedoSystemColor(
          */
         const val DEFAULT_NAME: String = "Blue"
 
-        /** 按名取色，未知名回落默认（SharedPreferences 存的是 enum name） */
+        /**
+         * 按名取色，未知/已移除的名字回落默认（SharedPreferences 存的是 enum name）。
+         *
+         * 顺序：先查现役色 → 再查历史别名（如已移除的 Yellow）→ 最后才回落默认。
+         */
         fun byName(name: String?): WedoSystemColor =
-            entries.firstOrNull { it.name == name } ?: Default
+            entries.firstOrNull { it.name == name }
+                ?: Default.legacyAliases[name]
+                ?: Default
     }
+}
+
+/**
+ * 强调色被拿来「当什么用」——决定它要多可读。
+ *
+ * **为什么要分两档**：WCAG 对这两类的门槛本来就不同，而且差得不少：
+ *  - 正文（≤17pt）要 **4.5:1**（SC 1.4.3）
+ *  - 图标、UI 组件、有意义图形要 **3:1**（SC 1.4.11）
+ *
+ * Apple 的 HIG 页写的也是同一套数：≤17pt → 4.5:1，18pt 或粗体 → 3:1。
+ *
+ * 早先图省事只做了一档 4.5:1，结果是**图标被过度矫正**：浅色模式下系统蓝
+ * `#007AFF`（4.017:1）本来完全够用（也确实是 Apple 自己在用的值），却被压成
+ * 深藏青 `#00438C`（9.626:1），离 Apple 观感远了一大截。按角色给阈值之后，
+ * 图标能留在接近 Apple 原色的位置，文字该严还是严。
+ */
+enum class WedoColorRole(val minContrast: Double) {
+    /** 图标、图形、UI 组件 —— WCAG 1.4.11，3:1 */
+    Icon(TARGET_ACCENT_ICON_CONTRAST),
+
+    /** 正文文字 —— WCAG 1.4.3，4.5:1 */
+    Text(TARGET_ACCENT_TEXT_CONTRAST)
 }
 
 /**
@@ -153,7 +186,7 @@ internal const val TARGET_TEXT_CONTRAST = 6.5
  *  - 深色模式：底色 = 基色压暗后 30% 叠黑（深色下淡底要更实才看得见）；文字 = 基色提到亮色区
  *
  * **明暗取值都是算出来的，不是拍的**。文字色一律交给 [solveForContrast]
- * 按 4.5:1 目标反解 —— 12 个系统色的固有亮度差三倍，任何固定值都会
+ * 按 4.5:1 目标反解 —— 各系统色的固有亮度差近三倍，任何固定值都会
  * 有的过、有的不过。靛紫这种低亮度色相还需要降饱和度才够得着门槛。
  *
  * @param base 课程基色（来自 CourseColorUtil 或用户自选）
@@ -250,26 +283,42 @@ private fun hsvAdjust(color: Color, targetValue: Float, minSaturation: Float): C
 /** 提升到指定对比度的重试上限 —— 留足余量，正常情况 20 步内必收敛 */
 private const val CONTRAST_SEARCH_STEPS = 40
 
-/** 文字/图标可读性门槛（WCAG AA 普通文字） */
-internal const val TARGET_READABLE_CONTRAST = 4.5
+/**
+ * 强调色作**正文**时的可读性门槛（WCAG AA SC 1.4.3）。
+ *
+ * 注意与 [TARGET_TEXT_CONTRAST] 区分：那个 6.5 是**课程块内**「深字压淡底」的门槛，
+ * 场景不同 —— 课程块是同色系深浅叠色，颜色底本身有信息量，所以要求更高更稳；
+ * 这里是「强调色直接压在卡片白底上」，按 WCAG 标准值即可。
+ */
+internal const val TARGET_ACCENT_TEXT_CONTRAST = 4.5
+
+/** 图标 / UI 组件可读性门槛（WCAG AA SC 1.4.11 非文字对比） */
+internal const val TARGET_ACCENT_ICON_CONTRAST = 3.0
 
 /**
  * 把一个**填充用**颜色调成**文字/图标用**的可读版本，色相不变。
  *
- * 用于 iOS 系统色：它们是按「色块底 + 白字」标定的（如 #FFCC00 黄配白字很好看），
- * 但同一支黄直接当白底上的文字/图标就是灾难 —— 实测 #FFCC00 在 #FFFFFF 上
- * 只有 1.51:1。Apple 自己的做法也是分两档（填充色 vs 文字 link 色）。
+ * 用于 iOS 系统色：它们是按「色块底 + 白字」标定的（如黄配白字很好看），
+ * 但同一支黄直接当白底上的文字/图标就是灾难 —— 实测 #FFCC00 在 #FFFFFF 上只有
+ * 1.51:1。Apple 自己的做法也是分档（填充色 vs 文字 link 色）。
  *
- * 方向由背景亮度决定：亮底往黑压，暗底往白提。这样浅色模式下 12 色全部达标，
- * 且相互之间不会忽明忽暗。
+ * **[minContrast] 由调用方按角色给**：图标 3:1、正文 4.5:1，见 [WedoColorRole]。
+ * 已经达标就**原样返回**，不做任何压制 —— 这是「图标留在 Apple 原色」的关键：
+ * 系统蓝 4.017:1 对图标够用，就不会被无谓地调暗。
+ *
+ * 方向由背景亮度决定：亮底往黑压，暗底往白提。这样同一档内各色不会忽明忽暗。
  */
-internal fun readableOn(base: Color, background: Color): Color {
-    if (contrastRatio(base, background) >= TARGET_READABLE_CONTRAST) return base
+internal fun readableOn(
+    base: Color,
+    background: Color,
+    minContrast: Double = TARGET_ACCENT_TEXT_CONTRAST
+): Color {
+    if (contrastRatio(base, background) >= minContrast) return base
     val towardsWhite = relativeLuminance(background) < 0.5
     return solveForContrast(
         base = base,
         background = background,
-        minRatio = TARGET_READABLE_CONTRAST,
+        minRatio = minContrast,
         startValue = if (towardsWhite) 0.85f else 0.55f,
         minSaturation = 0.30f,
         towardsWhite = towardsWhite
@@ -279,8 +328,8 @@ internal fun readableOn(base: Color, background: Color): Color {
 /**
  * 求一个与 [background] 对比度 ≥ [minRatio] 的前景色，色相取自 [base]。
  *
- * **为什么不写死明度**：12 个系统色的固有亮度差异极大 —— 黄色
- * (V=1.0 时相对亮度约 0.62) 和靛紫 (V=1.0 时约 0.20) 差了三倍。
+ * **为什么不写死明度**：各系统色的固有亮度差异极大 —— 例如薄荷
+ * (V=1.0 时相对亮度约 0.55) 和靛紫 (V=1.0 时约 0.20) 差了近三倍。
  * 用同一个 `targetValue` 去套所有色，必然有的过、有的不过。
  * 所以这里改成**按对比度目标反解**。
  *
@@ -679,7 +728,7 @@ object WedoApple {
      * 当前强调色的**填充**版本（已按深浅模式解析）。
      *
      * 用它做色块底、按钮底、胶囊底 —— 即「它当背景」的场合。
-     * 若要把它当**文字或图标颜色**用，请用 [accentText]。
+     * 若要把它当**图标颜色**用，请用 [accentIcon]；当**文字**用，请用 [accentText]。
      */
     val accent: Color
         @Composable
@@ -687,17 +736,31 @@ object WedoApple {
         get() = LocalWedoAccent.current.color(LocalWedoDark.current)
 
     /**
-     * 当前强调色的**文字/图标**版本。
+     * 当前强调色的**图标 / UI 组件**版本（门槛 3:1）。
      *
-     * 与 [accent] 的区别是必要的：系统色是按填充标定的，浅色底上直接染色会不可读
-     * （黄色在白底仅 1.51:1）。本属性保证在对应模式的卡片底色上 ≥4.5:1，色相不变。
+     * 用于给 `Icon` 上色、描边、进度条、勾选标记这类「非文字」场合。
+     * 因为门槛只有 3:1，绝大多数色**原样返回** —— 浅色模式下的系统蓝仍是
+     * `#007AFF`，和 Apple 观感一致，不会被压成深藏青。
+     */
+    val accentIcon: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalWedoAccent.current.readableColor(LocalWedoDark.current, WedoColorRole.Icon)
+
+    /**
+     * 当前强调色的**文字**版本（门槛 4.5:1）。
      *
-     * 判断口诀：**它当背景 → accent；它当文字/图标 → accentText**。
+     * 与 [accent] 的区别是必要的：系统色是按填充标定的，浅色底上直接染色当文字
+     * 会不可读（橙色在白底仅 2.20:1）。本属性保证在对应模式的卡片底色上 ≥4.5:1，
+     * 色相不变，只是同色更深的一档。
+     *
+     * 判断口诀：**它当背景 → accent；它当图标 → accentIcon；它当文字 → accentText**。
+     * 拿不准就当文字用，宁可深一点。
      */
     val accentText: Color
         @Composable
         @ReadOnlyComposable
-        get() = LocalWedoAccent.current.readableColor(LocalWedoDark.current)
+        get() = LocalWedoAccent.current.readableColor(LocalWedoDark.current, WedoColorRole.Text)
 
     /** 当前是否深色 */
     val isDark: Boolean

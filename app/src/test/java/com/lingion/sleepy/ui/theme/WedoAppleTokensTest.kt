@@ -16,8 +16,9 @@ class WedoAppleTokensTest {
     // ── 系统色 ──────────────────────────────────────────────────────────────
 
     @Test
-    fun `系统色共 12 个`() {
-        assertEquals(12, WedoSystemColor.entries.size)
+    fun `系统色共 11 个`() {
+        // 原本 12 个，黄色因浅色模式对比度 1.512:1 无解而被移除
+        assertEquals(11, WedoSystemColor.entries.size)
     }
 
     @Test
@@ -58,7 +59,7 @@ class WedoAppleTokensTest {
 
     // ── 课程块对比度（核心断言） ────────────────────────────────────────────
     //
-    // 门槛是 6.5 而非 WCAG 的 4.5 —— 理由见 WedoAppleTokens.TARGET_TEXT_CONTRAST。
+    // 门槛比 WCAG 的 4.5 更严 —— 理由见 wedoCourseBlockColors 的注释：
     // 简言之：4.5 只是「合法」，会让蓝色系停在 4.5 而绿色系到 10，
     // 同一张课表两种观感。6.5 是「够清楚」且「还认得出颜色」的交点。
 
@@ -110,7 +111,7 @@ class WedoAppleTokensTest {
     }
 
     @Test
-    fun `12 个色相的观感强度是齐整的`() {
+    fun `各色相的观感强度是齐整的`() {
         // 这条是给「各色对比度差三倍很难看」这个真实问题兜底。
         // 只要有一个色相掉队（低于目标一半），整张课表就会显得脏。
         val surface = Color(0xFF1C1C1E)
@@ -301,42 +302,115 @@ class WedoAppleTokensTest {
 
     // ── 强调色作文字/图标时的可读性 ────────────────────────────────────────
     //
-    // 下面三条是**打印真实数值才发现的**问题，不是先写测试再实现：
-    // 系统色是按「色块底 + 白字」标定的，直接拿来染图标会不可读 ——
-    // 实测浅色模式下 12 个色有 11 个低于 4.5，黄色只有 1.512:1。
+    // 下面几条是**打印真实数值才发现的**问题，不是先写测试再实现：
+    // 系统色是按「色块底 + 白字」标定的，直接拿来染图标会不可读。
+    //
+    // 后来又发现第二层问题：**门槛一刀切 4.5 是错的**。WCAG 对图标只要 3:1
+    // （SC 1.4.11），我却按文字标准压所有色，结果浅色模式系统蓝被从
+    // #007AFF(4.017:1) 压成 #00438C(9.626:1)，离 Apple 观感远了一大截。
+    // 现在按角色分档：图标 3:1、文字 4.5:1。
 
     @Test
-    fun `浅色模式下 12 个强调色作文字都达标`() {
+    fun `浅色模式下所有强调色作文字都达标`() {
         val surface = Color(0xFFFFFFFF)
         WedoSystemColor.entries.forEach { c ->
-            val readable = c.readableColor(isDark = false)
+            val readable = c.readableColor(isDark = false, role = WedoColorRole.Text)
             val r = contrastRatio(readable, surface)
             assertTrue(
                 "${c.displayName} 文字版在浅色卡片上对比度仅 ${"%.3f".format(r)}，未达 4.5",
-                r >= 4.5
+                r >= TARGET_ACCENT_TEXT_CONTRAST
             )
         }
     }
 
     @Test
-    fun `深色模式下 12 个强调色作文字都达标`() {
+    fun `深色模式下所有强调色作文字都达标`() {
         val surface = Color(0xFF1C1C1E)
         WedoSystemColor.entries.forEach { c ->
-            val readable = c.readableColor(isDark = true)
+            val readable = c.readableColor(isDark = true, role = WedoColorRole.Text)
             val r = contrastRatio(readable, surface)
             assertTrue(
                 "${c.displayName} 文字版在深色卡片上对比度仅 ${"%.3f".format(r)}，未达 4.5",
-                r >= 4.5
+                r >= TARGET_ACCENT_TEXT_CONTRAST
             )
         }
+    }
+
+    @Test
+    fun `浅色模式下所有强调色作图标都达标`() {
+        val surface = Color(0xFFFFFFFF)
+        WedoSystemColor.entries.forEach { c ->
+            val icon = c.readableColor(isDark = false, role = WedoColorRole.Icon)
+            val r = contrastRatio(icon, surface)
+            assertTrue(
+                "${c.displayName} 图标版在浅色卡片上对比度仅 ${"%.3f".format(r)}，未达 3.0",
+                r >= TARGET_ACCENT_ICON_CONTRAST
+            )
+        }
+    }
+
+    @Test
+    fun `深色模式下所有强调色作图标都达标`() {
+        val surface = Color(0xFF1C1C1E)
+        WedoSystemColor.entries.forEach { c ->
+            val icon = c.readableColor(isDark = true, role = WedoColorRole.Icon)
+            val r = contrastRatio(icon, surface)
+            assertTrue(
+                "${c.displayName} 图标版在深色卡片上对比度仅 ${"%.3f".format(r)}，未达 3.0",
+                r >= TARGET_ACCENT_ICON_CONTRAST
+            )
+        }
+    }
+
+    @Test
+    fun `浅色模式系统蓝作图标时保持 Apple 原色`() {
+        // 这是「门槛不能一刀切」的直接证据：系统蓝 4.017:1 对图标完全够用，
+        // 必须原样返回。若哪天有人把图标也按 4.5 压，这条会红。
+        val blue = WedoSystemColor.Blue
+        assertEquals(
+            Color(0xFF007AFF),
+            blue.readableColor(isDark = false, role = WedoColorRole.Icon)
+        )
+    }
+
+    @Test
+    fun `图标版总是比文字版更接近原色`() {
+        // 门槛更低（3 < 4.5）意味着图标版受的「矫正」更少，应当更接近原色。
+        //
+        // 注意方向：**对比度更高 ≠ 更接近原色**，而且明暗方向两模式相反 ——
+        // 浅色底上「更可读」= 更暗 = 相对亮度更低；深色底上「更可读」= 更亮。
+        // 所以判据不能写「图标版更亮/更暗」，只能写「色相与饱和度的偏移更小」。
+        // 这里用「到原色的 RGB 距离」当代理指标，它同时覆盖明暗两个方向。
+        listOf(false, true).forEach { dark ->
+            WedoSystemColor.entries.forEach { c ->
+                val base = c.color(dark)
+                val icon = c.readableColor(dark, WedoColorRole.Icon)
+                val text = c.readableColor(dark, WedoColorRole.Text)
+                val mode = if (dark) "深色" else "浅色"
+                assertTrue(
+                    "$mode ${c.displayName} 图标版应比文字版更接近原色",
+                    distance(icon, base) <= distance(text, base) + 0.004
+                )
+            }
+        }
+    }
+
+    /** 两个颜色的 RGB 欧氏距离，用来衡量「被矫正掉多少」 */
+    private fun distance(a: Color, b: Color): Double {
+        val dr = (a.red - b.red).toDouble()
+        val dg = (a.green - b.green).toDouble()
+        val db = (a.blue - b.blue).toDouble()
+        return kotlin.math.sqrt(dr * dr + dg * dg + db * db)
     }
 
     @Test
     fun `文字版强调色的强弱是齐整的`() {
-        // 深色模式下 12 色本身差异就不小（黄 12.05 vs 靛紫 4.93），
-        // 这里只要求不出现「三倍级」的参差，阈值按实测留一点余量
+        // 深色模式各色固有亮度差异大，这里只要求不出现「三倍级」的参差，
+        // 阈值按实测留一点余量
         val surface = Color(0xFF1C1C1E)
-        val ratios = WedoSystemColor.entries.map { contrastRatio(it.readableColor(true), surface) }
+        val ratios = WedoSystemColor.entries.map {
+            contrastRatio(it.readableColor(true, WedoColorRole.Text), surface)
+        }
         assertTrue(
             "深色模式文字版强调色强弱过于悬殊：${"%.2f".format(ratios.max())} / ${"%.2f".format(ratios.min())}",
             ratios.max() / ratios.min() <= 2.6
@@ -348,7 +422,20 @@ class WedoAppleTokensTest {
         // readableColor 只处理不达标的情况，达标色必须原样返回，
         // 否则「选了蓝色却显示成深蓝」会让用户觉得颜色没生效
         val c = WedoSystemColor.Indigo
-        assertEquals(c.light, c.readableColor(isDark = false))
+        assertEquals(c.light, c.readableColor(isDark = false, role = WedoColorRole.Text))
+    }
+
+    @Test
+    fun `已移除的历史色名会迁移而不是重置`() {
+        // 老版本用户可能把强调色存成了 "Yellow"。直接回落默认会让用户觉得
+        // 「我选的色没了」，所以显式映射到观感最接近的橙色。
+        assertEquals(WedoSystemColor.Orange, WedoSystemColor.byName("Yellow"))
+    }
+
+    @Test
+    fun `角色门槛与 WCAG 标准一致`() {
+        assertEquals(4.5, WedoColorRole.Text.minContrast, 1e-9)
+        assertEquals(3.0, WedoColorRole.Icon.minContrast, 1e-9)
     }
 
     // ── 层级分层 ────────────────────────────────────────────────────────────

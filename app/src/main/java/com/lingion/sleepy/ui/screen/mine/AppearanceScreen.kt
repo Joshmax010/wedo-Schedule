@@ -128,7 +128,7 @@ fun AppearanceScreen(
             }
 
             item {
-                // 12 个 iOS 系统色，4 列 × 3 行
+                // 11 个 iOS 系统色，4 列 × 3 行（末行 3 个；黄色已移除，见 WedoSystemColor）
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(4),
                     modifier = Modifier.fillMaxWidth().height(216.dp),
