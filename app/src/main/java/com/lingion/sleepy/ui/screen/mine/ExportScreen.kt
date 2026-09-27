@@ -62,6 +62,7 @@ import com.lingion.sleepy.data.parser.ScheduleExporter
 import com.lingion.sleepy.data.parser.SleepyNativeExporter
 import com.lingion.sleepy.ui.screen.schedule.ScheduleViewModel
 import com.lingion.sleepy.ui.theme.SleepyTheme
+import com.lingion.sleepy.ui.theme.WedoApple
 import com.lingion.sleepy.ui.theme.noRippleClickable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -344,24 +345,18 @@ internal fun ExportItem(
             .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(SleepyTheme.shapes.medium)
-                // 对齐 MineScreen.SettingsItem 同语义图标容器（primaryContainer），
-                // 之前 primary.copy(0.12f) 与本文件顶部信息卡的 primaryContainer 也不一致
-                .background(colors.primaryContainer),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = colors.onPrimaryContainer
-            )
-        }
-        Spacer(modifier = Modifier.size(16.dp))
+        // 裸 accent 图标, 不再套 44dp 色块 —— 与 MineScreen.SettingsItem 保持同一语汇。
+        // (原注释说「对齐 MineScreen.SettingsItem 的 primaryContainer 容器」, 但那个
+        //  容器本轮已按 iOS 语汇去掉, 这里若继续留着就会和新版设置页不一致。)
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = WedoApple.accent,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(modifier = Modifier.size(14.dp))
         Column(modifier = Modifier.fillMaxWidth()) {
-            Text(text = title, style = WedoAppleType.headline(), fontWeight = FontWeight.Medium, color = colors.onSurface)
+            Text(text = title, style = WedoAppleType.body(), color = colors.onSurface)
             Spacer(modifier = Modifier.height(2.dp))
             Text(text = subtitle, style = WedoAppleType.footnote(), color = colors.onSurfaceVariant)
         }
