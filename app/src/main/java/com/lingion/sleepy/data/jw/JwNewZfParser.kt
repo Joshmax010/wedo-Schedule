@@ -334,7 +334,7 @@ class JwNewZfParser(source: String) : JwParser(source) {
 
     /** 周次字符串 → (start, end, type) 范围列表。剥去 `{ }` `第` `，`，单双周显式枚举。 */
     private fun parseWeekStr(s0: String): List<Triple<Int, Int, Int>> {
-        // 1. 先剥离花括号与 '第' 字 (SHUFEZJ: '{第1-16周}')
+        // 1. 先剥离花括号与 '第' 字（形如 '{第1-16周}'）
         val s = s0.replace("{", "").replace("}", "").replace("第", "").trim()
         if (s.isBlank()) return listOf(Triple(1, 16, 0))
         val result = mutableListOf<Triple<Int, Int, Int>>()
@@ -451,8 +451,8 @@ class JwNewZfParser(source: String) : JwParser(source) {
             if (result.isNotEmpty()) return result
         }
 
-        // ── 5. 无容器: 返回空列表, 不抛异常 ──
-        return parseHtmlTableFromQz()
+        // ── 5. 无任何已知容器 → 返回空列表，交由上层按「解析为空」处理 ──
+        return emptyList()
     }
 
     /**
@@ -717,12 +717,6 @@ class JwNewZfParser(source: String) : JwParser(source) {
                 type = r.third
             )
         }
-    }
-
-    /** HTML 表格解析兜底：无嵌入 JSON 时走这里。 */
-    private fun parseHtmlTableFromQz(): List<JwCourse> {
-        // 单协议产品下已无第二套解析器可退回。留空列表让上层按「解析为空」处理。
-        return emptyList()
     }
 
     /** 置信度分档：zftal-ui-/kbList = 100；kblist_table = 80；kbtable/kbgrid = 70；其他 = 0。 */

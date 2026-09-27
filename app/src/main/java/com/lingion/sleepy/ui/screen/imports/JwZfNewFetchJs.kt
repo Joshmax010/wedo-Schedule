@@ -3,17 +3,16 @@ package com.lingion.sleepy.ui.screen.imports
 /**
  * 新版正方在 WebView 内 fetch 课表 JSON。
  *
- * 流程 (参考 HUEL_adapter.js + UJS_zhengfang_v9.0.js):
- *   1) 路径指纹: /jwglxt/、/kbcx/ (广东医科等新版) 或 WebVPN /http/<hex>/, 否则 NOT_ON_TIMETABLE
- *   2) gnmkdm 从 URL 抄, 缺省 N2151
- *   3) 推导 pathPrefix: 旧/WebVPN = '/jwglxt'; 新版裸 /kbcx/ = '' (path 自带 /kbcx/)
- *   4) 三段兜底取 (xnm,xqm): URL → 页面 #xnm/#xqm → fetch index 页 + native 选学期
- *   5) POST pathPrefix + /kbcx/xskbcx_cxXsgrkb.html 拿 JSON
- *   6) 嗅探: kbList → OK; login_slogin+csrftoken+密码框 → SESSION_EXPIRED; 解析失败 → SESSION_EXPIRED
- *   7) 回调 {ok, data, format:'zf_new'} 给 native, JwImportViewModel.parseZfNewBridgeResult 拆包
+ * 课表数据不在页面 DOM 里，需要主动调接口取。流程：
+ *   1) 路径指纹：`/jwglxt/`、`/kbcx/` 或 WebVPN 的 `/http/<hex>/`；否则报 `NOT_ON_TIMETABLE`
+ *   2) `gnmkdm` 从 URL 参数取，缺省 `N2151`
+ *   3) 推导接口前缀 `pathPrefix`：老版与 WebVPN 是 `/jwglxt`，新版裸 `/kbcx/` 则为空
+ *   4) 三级兜底取学期 `(xnm, xqm)`：URL 参数 → 页面 `#xnm`/`#xqm` → 拉首页并让用户选
+ *   5) POST `pathPrefix + /kbcx/xskbcx_cxXsgrkb.html` 取 JSON
+ *   6) 嗅探响应：含 `kbList` → 成功；命中登录页特征 → 会话过期；非 JSON → 会话过期
+ *   7) 通过 `window.__wedoBridge.onFetchResult` 回调 `{ok, data, format:'zf_new'}`
  *
- * 失败兜底: 捕获任何异常 → onFetchResult({ok:false, kind:'FORMAT_ERROR', err}),
- * 由 native 侧 tryAllParsers 已抓到的 outerHTML 接管。
+ * 任何异常都收敛为 `{ok:false, kind:'FORMAT_ERROR'}`，不向上抛。
  */
 const val ZF_NEW_FETCH_JS = """(function(){
   function fail(kind, err){

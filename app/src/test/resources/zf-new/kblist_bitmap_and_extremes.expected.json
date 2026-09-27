@@ -1,8 +1,7 @@
 {
-  "_note": "新正方 kbList 32 位 0/1 bitmap 周次边界: 每字符位表示第 N 周是否开课, sleepy JwNewZfParser.parseWeekStr 在 s.length>=10 且全 0/1 时触发 bitmap 分支, 走 bitsToRanges 归并连续/单双区间。①全 1(32 位) → weeks 1..32 连续 → (1,32,0);②0101...01(32 位, 偶数位为 1) → weeks 2,4..32 → 单双周模式归并 → start%2==0 → (2,32,2);③前 28 位 0 + 末 4 位 1 → weeks 29..32 连续 → (29,32,0)。xqj=7 校验周日不越界。jc 仍为 '1-2'/'3-4'/'9-10' 范围串, parser 应先解节次再解周次, 两条解析互不影响。",
+  "_note": "kbList 的 32 位 0/1 bitmap 周次边界。每字符位表示第 N 周是否开课；长度 ≥10 且全为 0/1 时走 bitmap 分支，按连续段与单双周模式归并。① 全 1 → (1,32,0)；② 偶数位为 1 → (2,32,2)；③ 末 4 位为 1 → (29,32,0)。xqj=7 用于校验周日不越界。节次串与周次串的解析互不影响。",
   "_uncertain": [
-    "32 位 bitmap 是否真实存在于新正方 kbList: jw_research.json 明确 'zcd 周次格式=1-16周/2-8周(单)/1-8,11-16 逗号分段, 不是 32位 0/1 位图'(新正方条目 finding 3), bitmap 是 URP classWeek(20 位)的形态; 32 位 bitmap 进 sleepy parseWeekStr 的 s.length>=10 分支能正确解出, 但真实新正方报文未见过此形态。本 fixture 定位为 parseWeekStr bitmap 分支的单元回归样本, 不作为新正方端到端契约。",
-    "jc:'1-2' 在当前(未修)JwNewZfParser 下 firstInt→null→continue 丢课, 3 门全丢返回空; 修复后才能得到本 expected。"
+    "32 位 bitmap 属其他教务系统的形态；新版正方的一手报文里未见过，本 fixture 只作为 bitmap 分支的单元回归样本，不代表新版正方的端到端契约。"
   ],
   "courses": [
     {

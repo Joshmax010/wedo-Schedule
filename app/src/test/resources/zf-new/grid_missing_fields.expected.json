@@ -1,4 +1,4 @@
 {
-  "_note": "边界 3: grid 视图存在但字段缺失。对照 shiguang parserTbale 条件: if (infoStr && infoStr.match(/\\((\\d+-\\d+节)\\)/) && infoStr.split('节)')[1]) → 节次+周次串必须存在; 同时 name && position && teacher && sections.length && weeks.length 全非空才 push。第一行只 title 无 p → infoStr 空 → 跳过; 第二行 p[0] 有但 p[1] p[2] 缺 → position/teacher 空 → 短路不 push。",
+  "_note": "边界：grid 视图存在但字段缺失。节次串、周次串、课名、教室、教师全部非空才产出课程。第一行只有 title 没有 p → 节次串取空 → 跳过；第二行有 p[0] 但缺 p[1]/p[2] → 教室与教师为空 → 跳过。",
   "courses": []
 }
