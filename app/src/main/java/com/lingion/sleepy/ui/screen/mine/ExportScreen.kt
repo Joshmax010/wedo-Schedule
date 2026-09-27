@@ -351,7 +351,7 @@ internal fun ExportItem(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = WedoApple.accent,
+            tint = WedoApple.accentText,
             modifier = Modifier.size(22.dp)
         )
         Spacer(modifier = Modifier.size(14.dp))

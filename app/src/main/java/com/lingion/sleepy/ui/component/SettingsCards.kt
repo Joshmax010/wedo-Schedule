@@ -207,7 +207,7 @@ fun DisplayModeOption(label: String, subtitle: String, selected: Boolean, onClic
                 Text(text = subtitle, style = WedoAppleType.footnote(), color = colors.onSurfaceVariant)
             }
         }
-        if (selected) Icon(Icons.Outlined.Check, null, tint = WedoApple.accent, modifier = Modifier.size(20.dp))
+        if (selected) Icon(Icons.Outlined.Check, null, tint = WedoApple.accentText, modifier = Modifier.size(20.dp))
     }
 }
 

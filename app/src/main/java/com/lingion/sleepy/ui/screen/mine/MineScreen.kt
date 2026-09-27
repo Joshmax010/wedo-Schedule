@@ -139,7 +139,7 @@ private fun StatItem(value: String, label: String) {
     val colors = SleepyTheme.colors
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         // 数值用 accent（Apple 统计数值着色），字号走 Apple 档位，不用 Bold headlineMedium
-        Text(text = value, style = WedoAppleType.title2(), color = WedoApple.accent)
+        Text(text = value, style = WedoAppleType.title2(), color = WedoApple.accentText)
         Text(text = label, style = WedoAppleType.caption1(), color = colors.onSurfaceVariant)
     }
 }
@@ -168,7 +168,7 @@ internal fun SettingsItem(icon: ImageVector, label: String, onClick: () -> Unit 
         Icon(
             icon,
             contentDescription = null,
-            tint = WedoApple.accent,
+            tint = WedoApple.accentText,
             modifier = Modifier.size(22.dp)
         )
         Text(

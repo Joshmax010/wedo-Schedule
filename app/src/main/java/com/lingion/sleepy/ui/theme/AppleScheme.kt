@@ -32,7 +32,10 @@ import androidx.compose.ui.graphics.compositeOver
 internal object AppleNeutralLight {
     val groupedBackground = Color(0xFFF2F2F7)   // 页面底
     val cardBackground = Color(0xFFFFFFFF)      // 卡片 / 列表行
-    val tertiaryBackground = Color(0xFFFFFFFF)  // 三级容器
+    // 三级容器必须**不等于卡片**：原来两者都是 #FFFFFF，实测「三级/卡片」对比度
+    // 恰为 1.000 —— 任何依赖这一层做抬升的组件都拿不到任何分层，等于白写。
+    // iOS 浅色下 elevated 层用极浅灰，与白卡片形成 1.06 左右的差。
+    val tertiaryBackground = Color(0xFFF7F7FA)
 
     val label = Color(0xFF000000)
     val secondaryLabel = Color(0x993C3C43)      // #3C3C43 @ 60%

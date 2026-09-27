@@ -74,6 +74,23 @@ enum class WedoSystemColor(
      */
     fun color(isDark: Boolean): Color = if (isDark) this.dark else this.light
 
+    /**
+     * **作为文字/图标着色时可读的强调色**。
+     *
+     * 为什么需要单独一档：iOS 的 12 个系统色是为**填充**标定的（色块底 + 白字），
+     * 不是为「浅底上的彩色文字」标定的。实测在白色卡片上，黄色只有 1.51:1、
+     * 橙色 2.20:1 —— 直接拿来染图标基本看不见。Apple 自己处理这个场景时用的是
+     * 另加深的 link 色（如 systemBlue 文字版比填充版深）。
+     *
+     * 规则：浅色模式下向黑压到 ≥4.5:1，深色模式下向白提亮到 ≥4.5:1
+     * （深色底本身暗，多数色已达标，只有靛紫需要处理）。
+     * 色相保持不变，所以「蓝色还是蓝色」，只是同一色的深浅两档用法。
+     */
+    fun readableColor(isDark: Boolean): Color {
+        val surface = if (isDark) Color(0xFF1C1C1E) else Color(0xFFFFFFFF)
+        return readableOn(this.color(isDark), surface)
+    }
+
     companion object {
         /** 默认强调色（浅色 #007AFF / 深色 #0A84FF） */
         val Default: WedoSystemColor = Blue
@@ -232,6 +249,32 @@ private fun hsvAdjust(color: Color, targetValue: Float, minSaturation: Float): C
 
 /** 提升到指定对比度的重试上限 —— 留足余量，正常情况 20 步内必收敛 */
 private const val CONTRAST_SEARCH_STEPS = 40
+
+/** 文字/图标可读性门槛（WCAG AA 普通文字） */
+internal const val TARGET_READABLE_CONTRAST = 4.5
+
+/**
+ * 把一个**填充用**颜色调成**文字/图标用**的可读版本，色相不变。
+ *
+ * 用于 iOS 系统色：它们是按「色块底 + 白字」标定的（如 #FFCC00 黄配白字很好看），
+ * 但同一支黄直接当白底上的文字/图标就是灾难 —— 实测 #FFCC00 在 #FFFFFF 上
+ * 只有 1.51:1。Apple 自己的做法也是分两档（填充色 vs 文字 link 色）。
+ *
+ * 方向由背景亮度决定：亮底往黑压，暗底往白提。这样浅色模式下 12 色全部达标，
+ * 且相互之间不会忽明忽暗。
+ */
+internal fun readableOn(base: Color, background: Color): Color {
+    if (contrastRatio(base, background) >= TARGET_READABLE_CONTRAST) return base
+    val towardsWhite = relativeLuminance(background) < 0.5
+    return solveForContrast(
+        base = base,
+        background = background,
+        minRatio = TARGET_READABLE_CONTRAST,
+        startValue = if (towardsWhite) 0.85f else 0.55f,
+        minSaturation = 0.30f,
+        towardsWhite = towardsWhite
+    )
+}
 
 /**
  * 求一个与 [background] 对比度 ≥ [minRatio] 的前景色，色相取自 [base]。
@@ -632,11 +675,29 @@ val LocalWedoDark = staticCompositionLocalOf { false }
 
 /** 便捷入口 */
 object WedoApple {
-    /** 当前强调色的实际 Color 值（已按深浅模式解析） */
+    /**
+     * 当前强调色的**填充**版本（已按深浅模式解析）。
+     *
+     * 用它做色块底、按钮底、胶囊底 —— 即「它当背景」的场合。
+     * 若要把它当**文字或图标颜色**用，请用 [accentText]。
+     */
     val accent: Color
         @Composable
         @ReadOnlyComposable
         get() = LocalWedoAccent.current.color(LocalWedoDark.current)
+
+    /**
+     * 当前强调色的**文字/图标**版本。
+     *
+     * 与 [accent] 的区别是必要的：系统色是按填充标定的，浅色底上直接染色会不可读
+     * （黄色在白底仅 1.51:1）。本属性保证在对应模式的卡片底色上 ≥4.5:1，色相不变。
+     *
+     * 判断口诀：**它当背景 → accent；它当文字/图标 → accentText**。
+     */
+    val accentText: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalWedoAccent.current.readableColor(LocalWedoDark.current)
 
     /** 当前是否深色 */
     val isDark: Boolean

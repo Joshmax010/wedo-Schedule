@@ -283,14 +283,15 @@ private fun SheetHeader(title: String) {
  */
 @Composable
 private fun TimeChip(text: String) {
-    val accent = WedoApple.accent
+    // 前景用 accentText（保证在浅底可读），底用 accent 的淡着色
+    val accentText = WedoApple.accentText
     Text(
         text = text,
         style = WedoAppleType.footnote(),
-        color = accent,
+        color = accentText,
         modifier = Modifier
             .clip(WedoAppleShapes.capsule)
-            .background(accent.copy(alpha = SleepyTheme.Alpha.tinted))
+            .background(WedoApple.accent.copy(alpha = SleepyTheme.Alpha.tinted))
             .padding(horizontal = 12.dp, vertical = 6.dp)
     )
 }

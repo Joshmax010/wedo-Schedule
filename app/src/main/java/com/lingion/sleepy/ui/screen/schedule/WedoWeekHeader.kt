@@ -104,7 +104,7 @@ fun WedoWeekHeader(week: Int, maxWeek: Int, select: (Int) -> Unit) {
                         colors = if (selected) {
                             ButtonDefaults.textButtonColors(
                                 containerColor = WedoApple.accent.copy(alpha = SleepyTheme.Alpha.tinted),
-                                contentColor = WedoApple.accent
+                                contentColor = WedoApple.accentText
                             )
                         } else {
                             ButtonDefaults.textButtonColors(contentColor = colors.onSurface)

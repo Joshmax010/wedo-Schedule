@@ -298,4 +298,77 @@ class WedoAppleTokensTest {
         assertTrue(WedoAppleMotion.exitDurationMs in 200..350)
         assertTrue(WedoAppleMotion.exitDurationMs <= WedoAppleMotion.enterDurationMs)
     }
+
+    // ── 强调色作文字/图标时的可读性 ────────────────────────────────────────
+    //
+    // 下面三条是**打印真实数值才发现的**问题，不是先写测试再实现：
+    // 系统色是按「色块底 + 白字」标定的，直接拿来染图标会不可读 ——
+    // 实测浅色模式下 12 个色有 11 个低于 4.5，黄色只有 1.512:1。
+
+    @Test
+    fun `浅色模式下 12 个强调色作文字都达标`() {
+        val surface = Color(0xFFFFFFFF)
+        WedoSystemColor.entries.forEach { c ->
+            val readable = c.readableColor(isDark = false)
+            val r = contrastRatio(readable, surface)
+            assertTrue(
+                "${c.displayName} 文字版在浅色卡片上对比度仅 ${"%.3f".format(r)}，未达 4.5",
+                r >= 4.5
+            )
+        }
+    }
+
+    @Test
+    fun `深色模式下 12 个强调色作文字都达标`() {
+        val surface = Color(0xFF1C1C1E)
+        WedoSystemColor.entries.forEach { c ->
+            val readable = c.readableColor(isDark = true)
+            val r = contrastRatio(readable, surface)
+            assertTrue(
+                "${c.displayName} 文字版在深色卡片上对比度仅 ${"%.3f".format(r)}，未达 4.5",
+                r >= 4.5
+            )
+        }
+    }
+
+    @Test
+    fun `文字版强调色的强弱是齐整的`() {
+        // 深色模式下 12 色本身差异就不小（黄 12.05 vs 靛紫 4.93），
+        // 这里只要求不出现「三倍级」的参差，阈值按实测留一点余量
+        val surface = Color(0xFF1C1C1E)
+        val ratios = WedoSystemColor.entries.map { contrastRatio(it.readableColor(true), surface) }
+        assertTrue(
+            "深色模式文字版强调色强弱过于悬殊：${"%.2f".format(ratios.max())} / ${"%.2f".format(ratios.min())}",
+            ratios.max() / ratios.min() <= 2.6
+        )
+    }
+
+    @Test
+    fun `已达标且色相合适的颜色不被改动`() {
+        // readableColor 只处理不达标的情况，达标色必须原样返回，
+        // 否则「选了蓝色却显示成深蓝」会让用户觉得颜色没生效
+        val c = WedoSystemColor.Indigo
+        assertEquals(c.light, c.readableColor(isDark = false))
+    }
+
+    // ── 层级分层 ────────────────────────────────────────────────────────────
+
+    @Test
+    fun `浅色模式三级容器与卡片必须能分层`() {
+        // 曾经两者都是 #FFFFFF，对比度恰好 1.000 —— 任何依赖这一层抬升的组件
+        // 都拿不到分层，属于静默失效（编译过、测试过、视觉上就是「没效」）
+        val s = appleScheme(WedoSystemColor.Default.light, dark = false)
+        val r = contrastRatio(s.surfaceContainerHigh, s.surface)
+        assertTrue("三级容器与卡片对比度为 $r，无法分层", r >= 1.03)
+    }
+
+    @Test
+    fun `卡片与页面背景能分层（深浅两模式）`() {
+        listOf(false, true).forEach { dark ->
+            val s = appleScheme(WedoSystemColor.Default.light, dark = dark)
+            val r = contrastRatio(s.surface, s.background)
+            val mode = if (dark) "深色" else "浅色"
+            assertTrue("$mode 模式卡片与背景对比度为 $r，无法分层", r >= 1.05)
+        }
+    }
 }

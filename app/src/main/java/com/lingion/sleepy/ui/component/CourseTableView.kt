@@ -566,7 +566,8 @@ private fun CourseOverlayCard(
 private fun DayHeadCell(day: Int, isToday: Boolean, isGrey: Boolean = false, courseCount: Int, dateStr: String? = null, dayLabel: String = DateUtils.localizedDay(day, androidx.compose.ui.platform.LocalContext.current), modifier: Modifier = Modifier, scale: Float = 1f, cornerRatio: Float = 1f) {
     val colors = SleepyTheme.colors
     val sd = { v: Float -> (v * scale).dp }
-    val accent = WedoApple.accent
+    // 用作前景文字色，故取 accentText 而非 accent
+    val accent = WedoApple.accentText
 
     // Apple 化：今天不再是整块高亮的色卡，而是**「今天」二字染强调色**（如 iOS 日历）。
     // 整块高亮是 Material 的做法，Apple 用颜色只点一处，其余留白。
@@ -1240,7 +1241,7 @@ fun SectionHead(title: String, action: String? = null) {
             Text(
                 text = action,
                 style = WedoAppleType.footnote().copy(fontWeight = FontWeight.SemiBold),
-                color = WedoApple.accent
+                color = WedoApple.accentText
             )
         }
     }

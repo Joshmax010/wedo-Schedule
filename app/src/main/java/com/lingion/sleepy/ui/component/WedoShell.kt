@@ -96,7 +96,7 @@ fun WedoIconButton(
     icon: ImageVector,
     description: String,
     enabled: Boolean = true,
-    tint: Color = WedoApple.accent,
+    tint: Color = WedoApple.accentText,
     onClick: () -> Unit
 ) {
     val action = if (enabled) Modifier.wedoPress(onClick = onClick) else Modifier
@@ -159,7 +159,7 @@ fun WedoSecondaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val accent = WedoApple.accent
+    val accent = WedoApple.accentText
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -215,8 +215,8 @@ private fun DockItem(
 ) {
     val colors = SleepyTheme.colors
     val tint = when {
-        accentIcon -> WedoApple.accent
-        selected -> WedoApple.accent
+        accentIcon -> WedoApple.accentText
+        selected -> WedoApple.accentText
         else -> colors.onSurfaceVariant
     }
     Column(
