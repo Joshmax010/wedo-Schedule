@@ -1,6 +1,8 @@
 package com.lingion.sleepy.ui.component
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -18,14 +20,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ExpandMore
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,12 +32,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import com.lingion.sleepy.ui.theme.SleepyTheme
+import com.lingion.sleepy.ui.theme.WedoApple
+import com.lingion.sleepy.ui.theme.WedoAppleShapes
+import com.lingion.sleepy.ui.theme.WedoAppleType
 import com.lingion.sleepy.ui.theme.noRippleClickable
 
 /**
@@ -48,14 +51,50 @@ import com.lingion.sleepy.ui.theme.noRippleClickable
  * 双选/三选纯选择、单开关项禁折叠, 直接露出)。
  */
 
+/**
+ * iOS 风格开关。
+ *
+ * 与 M3 `Switch` 的差别：轨道更宽扁（51×31 是 iOS 的实机比例）、滑块是纯白圆且带
+ * 轻微投影、关闭态轨道是中性灰（不是 low-contrast 的 surfaceVariant 系带灰）。
+ * M3 的 Switch 滑块偏大、关闭态轨道带紫灰色，一眼能看出不是 iOS。
+ */
+@Composable
+fun WedoToggle(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    val colors = SleepyTheme.colors
+    val trackOn = WedoApple.accent
+    // iOS 关闭态轨道: 浅色 #E9E9EA / 深色 #39393D
+    val trackOff = if (WedoApple.isDark) Color(0xFF39393D) else Color(0xFFE9E9EA)
+    val track by animateColorAsState(if (checked) trackOn else trackOff, label = "wedoToggleTrack")
+    val knob by animateDpAsState(if (checked) 24.dp else 2.dp, label = "wedoToggleKnob")
+
+    Box(
+        modifier = Modifier
+            .size(width = 51.dp, height = 31.dp)
+            .clip(WedoAppleShapes.capsule)
+            .background(track)
+            .noRippleClickable { onCheckedChange(!checked) }
+            .padding(2.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Box(
+            Modifier
+                .padding(start = knob)
+                .size(27.dp)
+                .clip(CircleShape)
+                .background(Color.White)
+                .shadow(1.dp, CircleShape)
+        )
+    }
+}
+
 @Composable
 fun SectionHeader(title: String, subtitle: String? = null) {
     val colors = SleepyTheme.colors
     Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
-        Text(title, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold), color = colors.onBackground)
+        Text(title, style = WedoAppleType.footnote(), color = colors.onSurfaceVariant)
         if (subtitle != null) {
             Spacer(Modifier.height(2.dp))
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+            Text(subtitle, style = WedoAppleType.caption1(), color = colors.onSurfaceVariant)
         }
     }
 }
@@ -68,11 +107,11 @@ fun SettingsCard(title: String, expanded: Boolean, onToggle: () -> Unit, content
         label = "settings-arrow"
     )
     Column(
-        modifier = Modifier.fillMaxWidth().clip(SleepyTheme.shapes.large).background(colors.surfaceContainer).noRippleClickable(onToggle).padding(16.dp),
+        modifier = Modifier.fillMaxWidth().clip(WedoAppleShapes.card).background(colors.surfaceContainer).noRippleClickable(onToggle).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(text = title, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold), color = colors.onSurface, modifier = Modifier.weight(1f))
+            Text(text = title, style = WedoAppleType.body(), color = colors.onSurface, modifier = Modifier.weight(1f))
             // 箭头随展开旋转, 与内容动画同拍
             Icon(
                 imageVector = Icons.Outlined.ExpandMore,
@@ -114,7 +153,7 @@ fun SettingsFlatCard(
 ) {
     val colors = SleepyTheme.colors
     Column(
-        modifier = Modifier.fillMaxWidth().clip(SleepyTheme.shapes.large).background(colors.surfaceContainer).padding(horizontal = 16.dp, vertical = 14.dp),
+        modifier = Modifier.fillMaxWidth().clip(WedoAppleShapes.card).background(colors.surfaceContainer).padding(horizontal = 16.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Row(
@@ -125,7 +164,7 @@ fun SettingsFlatCard(
             // 标题 weight(1f) 吃满剩余宽 → tab 永远贴本行最右(与开关行贴右同一逻辑)
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                style = WedoAppleType.body(),
                 color = colors.onSurface,
                 modifier = Modifier.weight(1f)
             )
@@ -135,7 +174,7 @@ fun SettingsFlatCard(
                 // 每段压到一个汉字宽导致全部换行 —— 必须用 TextMeasurer 实测宽度。
                 val density = LocalDensity.current
                 val textMeasurer = rememberTextMeasurer()
-                val labelStyle = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
+                val labelStyle = WedoAppleType.caption1()
                 val maxLabelPx = options.maxOf { textMeasurer.measure(AnnotatedString(it), labelStyle).size.width }
                 val tabWidth = with(density) {
                     ((maxLabelPx + 32.dp.toPx()) * options.size + 8.dp.toPx()).toDp()
@@ -151,7 +190,7 @@ fun SettingsFlatCard(
             }
         }
         if (subtitle != null) {
-            Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+            Text(text = subtitle, style = WedoAppleType.footnote(), color = colors.onSurfaceVariant)
         }
         content()
     }
@@ -162,12 +201,13 @@ fun DisplayModeOption(label: String, subtitle: String, selected: Boolean, onClic
     val colors = SleepyTheme.colors
     Row(modifier = Modifier.fillMaxWidth().noRippleClickable(onClick).padding(vertical = 10.dp, horizontal = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, style = MaterialTheme.typography.bodyLarge, color = if (selected) colors.primary else colors.onSurface)
+            // iOS 选中态不染文字色, 只在右侧打勾 —— 文字变色会让整列文字跳色
+            Text(text = label, style = WedoAppleType.body(), color = colors.onSurface)
             if (subtitle.isNotEmpty()) {
-                Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+                Text(text = subtitle, style = WedoAppleType.footnote(), color = colors.onSurfaceVariant)
             }
         }
-        if (selected) Icon(Icons.Outlined.Check, null, tint = colors.primary, modifier = Modifier.size(20.dp))
+        if (selected) Icon(Icons.Outlined.Check, null, tint = WedoApple.accent, modifier = Modifier.size(20.dp))
     }
 }
 
@@ -176,11 +216,11 @@ fun SettingToggleRow(label: String, checked: Boolean, onCheckedChange: (Boolean)
     val colors = SleepyTheme.colors
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp, horizontal = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, style = MaterialTheme.typography.bodyLarge, color = colors.onSurface)
+            Text(text = label, style = WedoAppleType.body(), color = colors.onSurface)
             if (subtitle != null) {
-                Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+                Text(text = subtitle, style = WedoAppleType.footnote(), color = colors.onSurfaceVariant)
             }
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange, colors = SwitchDefaults.colors(checkedThumbColor = colors.onPrimary, checkedTrackColor = colors.primary))
+        WedoToggle(checked = checked, onCheckedChange = onCheckedChange)
     }
 }

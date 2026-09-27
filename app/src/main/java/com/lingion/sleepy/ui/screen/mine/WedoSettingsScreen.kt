@@ -39,8 +39,8 @@ fun WedoSettingsScreen(onManage: () -> Unit, onOpenAllTables: () -> Unit,
         item {
             WedoSettingsGroup("外观与手感") {
                 SettingsItem(Icons.Outlined.Palette, "主题模式与强调色", onOpenAppearance)
-                WedoToggle("灵动效果", display.motion) { update(display.copy(motion = it)) }
-                WedoToggle("轻触震动", display.haptics) { update(display.copy(haptics = it)) }
+                WedoLabeledToggle("灵动效果", display.motion) { update(display.copy(motion = it)) }
+                WedoLabeledToggle("轻触震动", display.haptics) { update(display.copy(haptics = it)) }
             }
         }
         item {
@@ -66,7 +66,7 @@ fun WedoSettingsScreen(onManage: () -> Unit, onOpenAllTables: () -> Unit,
                         Text(label, color = colors.onSurface)
                     }
                 }
-                WedoToggle("淡化显示非本周课程", display.ghostCourses) { update(display.copy(ghostCourses = it)) }
+                WedoLabeledToggle("淡化显示非本周课程", display.ghostCourses) { update(display.copy(ghostCourses = it)) }
                 Text("课程冲突样式", color = colors.onSurface)
                 Choices(listOf("stack" to "错位堆叠", "fold" to "折角", "rail" to "侧边轨道"), conflict) {
                     conflict = it; AppPrefs.setConflictStyle(context, it)
@@ -126,10 +126,17 @@ private fun Choices(options: List<Pair<String, String>>, selected: String, onSel
     }
 }
 
+/**
+ * 带标签的设置开关行。
+ *
+ * 注意：这里**不再自己画开关** —— 之前本地实现直接包 M3 `Switch`，与本轮新增的
+ * 共享 `WedoToggle`（iOS 比例轨道 + 白色圆滑块）重名且观感不一致。现在只负责
+ * 「标签 + 右对齐开关」这一层布局，开关本体一律用共享实现，保证全 app 一个样子。
+ */
 @Composable
-private fun WedoToggle(label: String, checked: Boolean, set: (Boolean) -> Unit) {
+private fun WedoLabeledToggle(label: String, checked: Boolean, set: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth().heightIn(min = 52.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, Modifier.weight(1f), color = SleepyTheme.colors.onSurface)
-        Switch(checked, set)
+        WedoToggle(checked = checked, onCheckedChange = set)
     }
 }

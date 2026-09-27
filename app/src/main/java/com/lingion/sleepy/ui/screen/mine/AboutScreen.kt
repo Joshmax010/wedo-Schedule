@@ -27,8 +27,6 @@ import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.NewReleases
 import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -62,6 +60,7 @@ import com.lingion.sleepy.R
 import com.lingion.sleepy.ui.theme.SleepyTheme
 import com.lingion.sleepy.ui.theme.noRippleClickable
 import com.lingion.sleepy.util.FeedbackComposer
+import com.lingion.sleepy.ui.component.WedoToggle
 import com.lingion.sleepy.util.UpdateInfo
 import com.lingion.sleepy.util.UpdateManager
 import com.lingion.sleepy.util.UpdateNotifier
@@ -472,19 +471,13 @@ fun AboutScreen(onBack: () -> Unit, onOpenLicense: () -> Unit = {}) {
                             color = colors.onSurfaceVariant
                         )
                     }
-                    Switch(
+                    WedoToggle(
                         checked = updateCheckEnabled,
                         onCheckedChange = { v ->
                             updateCheckEnabled = v
                             AppPrefs.setUpdateCheckEnabled(context, v)
                             if (!v) UpdateNotifier.clearCache()
-                        },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = colors.onPrimary,
-                            checkedTrackColor = colors.primary,
-                            uncheckedThumbColor = colors.outline,
-                            uncheckedTrackColor = colors.surfaceVariant
-                        )
+                        }
                     )
                 }
             }

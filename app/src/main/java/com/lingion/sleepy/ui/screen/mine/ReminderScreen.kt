@@ -31,8 +31,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
@@ -61,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.lingion.sleepy.R
 import com.lingion.sleepy.SleepyApp
+import com.lingion.sleepy.ui.component.WedoToggle
 import com.lingion.sleepy.ui.theme.SleepyTheme
 import com.lingion.sleepy.ui.theme.noRippleClickable
 import com.lingion.sleepy.util.AppPrefs
@@ -203,13 +202,9 @@ fun ReminderScreen(onBack: () -> Unit) {
                                 )
                             }
                         }
-                        Switch(
+                        WedoToggle(
                             checked = masterEnabled,
-                            onCheckedChange = { onMasterToggle(it) },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = colors.onPrimary,
-                                checkedTrackColor = colors.primary
-                            )
+                            onCheckedChange = { onMasterToggle(it) }
                         )
                     }
                 }
@@ -241,17 +236,13 @@ fun ReminderScreen(onBack: () -> Unit) {
                                     )
                                 }
                             }
-                            Switch(
+                            WedoToggle(
                                 checked = dailyEnabled,
                                 onCheckedChange = { on ->
                                     dailyEnabled = on
                                     AppPrefs.setDailyReminderEnabled(context, on)
                                     SleepyApp.get().notificationScheduler.scheduleAll()
-                                },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = colors.onPrimary,
-                                    checkedTrackColor = colors.primary
-                                )
+                                }
                             )
                         }
 
@@ -312,17 +303,13 @@ fun ReminderScreen(onBack: () -> Unit) {
                                     )
                                 }
                             }
-                            Switch(
+                            WedoToggle(
                                 checked = beforeClassEnabled,
                                 onCheckedChange = { on ->
                                     beforeClassEnabled = on
                                     AppPrefs.setBeforeClassEnabled(context, on)
                                     SleepyApp.get().notificationScheduler.scheduleAll()
-                                },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = colors.onPrimary,
-                                    checkedTrackColor = colors.primary
-                                )
+                                }
                             )
                         }
 
@@ -517,15 +504,8 @@ private fun ReminderToggleRow(title: String, subtitle: String, checked: Boolean,
             Text(title, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold), color = colors.onSurface)
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
         }
-        // 补主题色：之前无 colors 参数走默认 Material3 蓝，与同屏三个主开关不一致
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = colors.onPrimary,
-                checkedTrackColor = colors.primary
-            )
-        )
+        // 开关本体用共享 WedoToggle，保证与全 app 三个主开关同一观感
+        WedoToggle(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 

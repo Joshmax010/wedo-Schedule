@@ -23,8 +23,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -46,6 +44,7 @@ import com.lingion.sleepy.ui.component.SectionHeader
 import com.lingion.sleepy.ui.component.SettingsFlatCard
 import com.lingion.sleepy.ui.component.SettingsCard
 import com.lingion.sleepy.ui.component.SettingToggleRow
+import com.lingion.sleepy.ui.component.WedoToggle
 import com.lingion.sleepy.ui.theme.SleepyTheme
 import com.lingion.sleepy.ui.theme.noRippleClickable
 import com.lingion.sleepy.util.AppPrefs
@@ -401,10 +400,10 @@ fun GeneralSettingsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(text = DateUtils.localizedDay(day, context), style = MaterialTheme.typography.bodyLarge, color = colors.onSurface)
-                            Switch(checked = checked, onCheckedChange = { on ->
+                            WedoToggle(checked = checked, onCheckedChange = { on ->
                                 val n = if (on) visibleDays + day else visibleDays - day
                                 if (n.isNotEmpty()) { visibleDays = n; AppPrefs.setVisibleDays(context, n); refreshWidgets() }
-                            }, colors = SwitchDefaults.colors(checkedThumbColor = colors.onPrimary, checkedTrackColor = colors.primary))
+                            })
                         }
                         if (day != 7) HorizontalDivider(color = colors.outlineVariant.copy(alpha = SleepyTheme.Alpha.hairline))
                     }
@@ -444,11 +443,9 @@ fun GeneralSettingsScreen(
                         color = colors.onSurface,
                         modifier = Modifier.weight(1f)
                     )
-                    Switch(
+                    WedoToggle(
                         checked = courseColorless,
-                        onCheckedChange = { courseColorless = it; AppPrefs.setCourseColorless(context, it) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = colors.onPrimary, checkedTrackColor = colors.primary),
-                        modifier = Modifier.heightIn(max = 32.dp)
+                        onCheckedChange = { courseColorless = it; AppPrefs.setCourseColorless(context, it) }
                     )
                 }
             }
@@ -476,7 +473,7 @@ fun GeneralSettingsScreen(
                         color = colors.onSurface,
                         modifier = Modifier.weight(1f)
                     )
-                    Switch(
+                    WedoToggle(
                         checked = highRefresh,
                         onCheckedChange = { on ->
                             highRefresh = on
@@ -485,12 +482,10 @@ fun GeneralSettingsScreen(
                             if (activity == null) {
                                 // 理论不可达 (本页只从 MainActivity 进入); 留日志防静默失败
                                 Log.w("GeneralSettings", "high refresh toggle: context is not Activity, apply skipped")
-                                return@Switch
+                                return@WedoToggle
                             }
                             com.lingion.sleepy.util.HighRefreshRate.apply(activity, on)
-                        },
-                        colors = SwitchDefaults.colors(checkedThumbColor = colors.onPrimary, checkedTrackColor = colors.primary),
-                        modifier = Modifier.heightIn(max = 32.dp)
+                        }
                     )
                 }
             }
