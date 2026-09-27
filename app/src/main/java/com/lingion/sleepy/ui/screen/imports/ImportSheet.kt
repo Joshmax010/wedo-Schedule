@@ -82,6 +82,7 @@ import com.lingion.sleepy.ui.component.DatePickerField
 import com.lingion.sleepy.ui.component.TimeSlotEditor
 import com.lingion.sleepy.ui.screen.schedule.ScheduleViewModel
 import com.lingion.sleepy.ui.theme.SleepyTheme
+import com.lingion.sleepy.ui.theme.WedoApple
 import com.lingion.sleepy.ui.theme.noRippleClickable
 import kotlinx.coroutines.launch
 
@@ -494,20 +495,13 @@ private fun ImportMethodRow(
             .padding(vertical = 14.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(SleepyTheme.shapes.medium)
-                .background(colors.primaryContainer),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = colors.onPrimaryContainer,
-                modifier = Modifier.size(20.dp)
-            )
-        }
+        // 裸 accent 图标 —— 与设置页/管理页入口同一语汇, 不再套 40dp 色块
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = WedoApple.accent,
+            modifier = Modifier.size(22.dp)
+        )
         Column(modifier = Modifier.weight(1f).padding(start = 14.dp)) {
             Text(
                 text = label,
