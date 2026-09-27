@@ -1233,16 +1233,15 @@ fun SectionHead(title: String, action: String? = null) {
     ) {
         Text(
             text = title,
-            style = SleepyTextStyle.sectionHead(),
+            style = WedoAppleType.title3(),
             color = colors.onSurface
         )
         if (action != null) {
+            // 动作文案走 accent —— 之前是 colors.primary(语义相同, 但统一从 WedoApple 取)
             Text(
                 text = action,
-                style = SleepyTextStyle.smallMeta().copy(
-                    fontWeight = FontWeight.Medium,
-                    color = colors.primary
-                )
+                style = WedoAppleType.footnote().copy(fontWeight = FontWeight.SemiBold),
+                color = WedoApple.accent
             )
         }
     }

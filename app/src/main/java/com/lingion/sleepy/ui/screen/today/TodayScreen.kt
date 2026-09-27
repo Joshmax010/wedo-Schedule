@@ -46,6 +46,7 @@ import com.lingion.sleepy.ui.component.SectionHead
 import com.lingion.sleepy.ui.component.wedoCourseColor
 import com.lingion.sleepy.ui.screen.schedule.ScheduleViewModel
 import com.lingion.sleepy.ui.theme.SleepyTheme
+import com.lingion.sleepy.ui.theme.WedoApple
 import com.lingion.sleepy.ui.theme.WedoAppleDimensions
 import com.lingion.sleepy.ui.theme.WedoAppleShapes
 import com.lingion.sleepy.ui.theme.WedoAppleType
@@ -175,13 +176,13 @@ private fun TodayHeader(date: LocalDate, week: Int, count: Int, semesterStatus: 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(SleepyTheme.shapes.large)
+            .clip(WedoAppleShapes.card)
             .background(colors.surfaceContainer)
             .padding(16.dp)
     ) {
         Text(
             text = stringResource(R.string.today_today),
-            style = MaterialTheme.typography.labelMedium,
+            style = WedoAppleType.footnote(),
             color = colors.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(6.dp))
@@ -191,49 +192,60 @@ private fun TodayHeader(date: LocalDate, week: Int, count: Int, semesterStatus: 
         ) {
             Text(
                 text = stringResource(R.string.date_long_format, date.monthValue, date.dayOfMonth),
-                style = MaterialTheme.typography.headlineMedium,
+                style = WedoAppleType.largeTitle(),
                 color = colors.onSurface
             )
             Text(
                 text = DateUtils.localizedDay(date.dayOfWeek.value, context),
-                style = MaterialTheme.typography.titleMedium,
+                style = WedoAppleType.title3(),
                 color = colors.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 4.dp)
             )
         }
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(10.dp))
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // 学期外: 周次 chip 换学期状态, 不再显示误导性的"第 1 周"
+            // 周次 chip 用强调色底(唯一有彩色的 metadata), 学期状态用中性灰 pill ——
+            // 原来三个 chip 各占一个 M3 container 色(primary/secondary/tertiary),
+            // 是 Material 的「多色 chip」语汇, iOS 的元信息胶囊只有一档中性灰。
             when (semesterStatus) {
                 DateUtils.SemesterStatus.BEFORE_START ->
-                    Stat(label = stringResource(R.string.semester_not_started), bg = colors.secondaryContainer, fg = colors.onSecondaryContainer)
+                    Stat(label = stringResource(R.string.semester_not_started), highlight = false)
                 DateUtils.SemesterStatus.AFTER_END ->
-                    Stat(label = stringResource(R.string.semester_ended), bg = colors.secondaryContainer, fg = colors.onSecondaryContainer)
+                    Stat(label = stringResource(R.string.semester_ended), highlight = false)
                 else ->
-                    Stat(label = stringResource(R.string.schedule_current_week, week), bg = colors.primaryContainer, fg = colors.onPrimaryContainer)
+                    Stat(label = stringResource(R.string.schedule_current_week, week), highlight = true)
             }
             Stat(
                 label = if (count == 0) stringResource(R.string.no_course) else stringResource(R.string.n_course_periods, count),
-                bg = colors.tertiaryContainer,
-                fg = colors.onTertiaryContainer
+                highlight = false
             )
         }
     }
 }
 
+/**
+ * 元信息胶囊。
+ *
+ * @param highlight true = 强调色实底 + 白字（当前周次），false = 中性灰底 + 次级文字色。
+ * 不再接受任意 bg/fg —— 之前调用方各传一个 M3 container 色，导致同屏出现三种颜色。
+ */
 @Composable
-private fun Stat(label: String, bg: Color, fg: Color) {
+private fun Stat(label: String, highlight: Boolean) {
+    val colors = SleepyTheme.colors
+    val bg = if (highlight) WedoApple.accent else colors.surfaceContainerHighest
+    val fg = if (highlight) Color.White else colors.onSurfaceVariant
     Text(
         text = label,
-        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
+        style = WedoAppleType.caption1(),
         color = fg,
         modifier = Modifier
-            .clip(SleepyTheme.shapes.medium)
+            .clip(WedoAppleShapes.capsule)
             .background(bg)
-            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .padding(horizontal = 10.dp, vertical = 5.dp)
     )
 }
 
@@ -243,56 +255,32 @@ private fun EmptyToday(semesterStatus: DateUtils.SemesterStatus = DateUtils.Seme
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(SleepyTheme.shapes.large)
+            .clip(WedoAppleShapes.card)
             .background(colors.surfaceContainer)
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        // 空状态图标用中性灰（不染强调色），避免空屏也在喊
         Icon(
             imageVector = Icons.Outlined.Schedule,
             contentDescription = null,
-            tint = colors.onSurfaceVariant,
-            modifier = Modifier.size(48.dp)
+            tint = colors.onSurfaceVariant.copy(alpha = SleepyTheme.Alpha.hairline),
+            modifier = Modifier.size(44.dp)
         )
+        val title: String
         when (semesterStatus) {
-            DateUtils.SemesterStatus.BEFORE_START -> {
-                Text(
-                    text = stringResource(R.string.semester_not_started),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = colors.onSurface
-                )
-                Text(
-                    text = stringResource(R.string.today_semester_out_hint),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colors.onSurfaceVariant
-                )
-            }
-            DateUtils.SemesterStatus.AFTER_END -> {
-                Text(
-                    text = stringResource(R.string.semester_ended),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = colors.onSurface
-                )
-                Text(
-                    text = stringResource(R.string.today_semester_out_hint),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colors.onSurfaceVariant
-                )
-            }
-            else -> {
-                Text(
-                    text = stringResource(R.string.schedule_no_course_today),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = colors.onSurface
-                )
-                Text(
-                    text = stringResource(R.string.today_no_course),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colors.onSurfaceVariant
-                )
-            }
+            DateUtils.SemesterStatus.BEFORE_START -> title = stringResource(R.string.semester_not_started)
+            DateUtils.SemesterStatus.AFTER_END -> title = stringResource(R.string.semester_ended)
+            else -> title = stringResource(R.string.schedule_no_course_today)
         }
+        Text(text = title, style = WedoAppleType.title3(), color = colors.onSurface)
+        Text(
+            text = if (semesterStatus == DateUtils.SemesterStatus.IN_RANGE) stringResource(R.string.today_no_course)
+            else stringResource(R.string.today_semester_out_hint),
+            style = WedoAppleType.subheadline(),
+            color = colors.onSurfaceVariant
+        )
     }
 }
 
@@ -383,7 +371,7 @@ private fun TodayCourseCard(course: CourseEntity, timeJson: String? = null, onCl
                 }
                 Text(
                     text = meta,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = WedoAppleType.caption1(),
                     color = fg.copy(alpha = SleepyTheme.Alpha.highContent)
                 )
             }
