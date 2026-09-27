@@ -9,18 +9,18 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -34,13 +34,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lingion.sleepy.R
 import com.lingion.sleepy.ui.screen.imports.ImportSheet
 import com.lingion.sleepy.ui.screen.schedule.ScheduleViewModel
 import com.lingion.sleepy.ui.theme.SleepyTheme
+import com.lingion.sleepy.ui.theme.WedoApple
+import com.lingion.sleepy.ui.theme.WedoAppleDimensions
+import com.lingion.sleepy.ui.theme.WedoAppleShapes
+import com.lingion.sleepy.ui.theme.WedoAppleType
 import com.lingion.sleepy.ui.theme.noRippleClickable
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -66,20 +69,23 @@ fun ManagementPage(
             .fillMaxSize()
             .background(colors.background)
     ) {
-        // Dock 悬浮底栏: 滚动尾部多留 Dock 总高(FAB 语义, 同今日/我的页)
+        // 底栏占位: 滚动尾部多留标签栏高度, 最后一项才能完全滚出
         // contentPadding(非 Modifier.padding): 内容能滚到屏幕边缘自然滑出, 禁列表整体内缩硬裁
         val navExtra = com.lingion.sleepy.ui.component.LocalNavExtraBottomPadding.current
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                start = 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp + navExtra
+                start = WedoAppleDimensions.pageMargin,
+                end = WedoAppleDimensions.pageMargin,
+                top = 16.dp,
+                bottom = 16.dp + navExtra
             ),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(WedoAppleDimensions.sectionGap)
         ) {
             item {
                 Text(
                     text = stringResource(R.string.tab_manage),
-                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Medium),
+                    style = WedoAppleType.largeTitle(),
                     color = colors.onBackground
                 )
             }
@@ -90,24 +96,24 @@ fun ManagementPage(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(SleepyTheme.shapes.large)
+                            .clip(WedoAppleShapes.card)
                             .background(colors.surfaceContainer)
                             .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
                             text = stringResource(R.string.manage_current_table),
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                            color = colors.primary
+                            style = WedoAppleType.caption1(),
+                            color = colors.onSurfaceVariant
                         )
                         Text(
                             text = table.name,
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+                            style = WedoAppleType.title3(),
                             color = colors.onSurface
                         )
                         Text(
                             text = stringResource(R.string.table_info, table.startDate, state.currentWeek, state.courses.size),
-                            style = MaterialTheme.typography.bodySmall,
+                            style = WedoAppleType.footnote(),
                             color = colors.onSurfaceVariant
                         )
                     }
@@ -160,6 +166,14 @@ fun ManagementPage(
     }
 }
 
+/**
+ * 管理入口卡片。
+ *
+ * 与之前的 Material 写法两处差别：
+ *  1. 图标去掉 44dp `primaryContainer` 圆角块，改为裸的 accent 色图标 ——
+ *     iOS 没有「每个入口都套一个色块」的做法（色块只用在真正的 App 图标上）
+ *  2. 右侧补 chevron，明确「点了会进入下一页」
+ */
 @Composable
 private fun ManageCard(
     icon: ImageVector,
@@ -171,25 +185,29 @@ private fun ManageCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(SleepyTheme.shapes.large)
+            .heightIn(min = 64.dp)
+            .clip(WedoAppleShapes.card)
             .background(colors.surfaceContainer)
             .noRippleClickable(onClick)
-            .padding(16.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(SleepyTheme.shapes.medium)
-                .background(colors.primaryContainer),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(icon, contentDescription = null, tint = colors.onPrimaryContainer, modifier = Modifier.size(22.dp))
-        }
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = WedoApple.accent,
+            modifier = Modifier.size(24.dp)
+        )
         Column(modifier = Modifier.weight(1f).padding(start = 14.dp)) {
-            Text(title, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold), color = colors.onSurface)
+            Text(title, style = WedoAppleType.headline(), color = colors.onSurface)
             Spacer(modifier = Modifier.height(2.dp))
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+            Text(subtitle, style = WedoAppleType.footnote(), color = colors.onSurfaceVariant)
         }
+        Icon(
+            Icons.Outlined.ChevronRight,
+            contentDescription = null,
+            tint = colors.onSurfaceVariant.copy(alpha = SleepyTheme.Alpha.inactive),
+            modifier = Modifier.size(16.dp)
+        )
     }
 }

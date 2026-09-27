@@ -114,6 +114,66 @@ fun WedoIconButton(
 }
 
 /**
+ * iOS 实心强调色按钮 —— 全 app 主 CTA 唯一入口。
+ *
+ * 与 M3 `Button` 的差别：**完全圆角（capsule）**、高度 50pt、无阴影无描边、
+ * 文字 17pt Semibold、按压是整体变淡（不是涟漪+变暗）。iOS 的主按钮就是这个样子。
+ *
+ * @param destructive 危险操作（删除等）—— 用系统红，不是强调色
+ */
+@Composable
+fun WedoPrimaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    destructive: Boolean = false
+) {
+    val colors = SleepyTheme.colors
+    val bg = if (destructive) Color(0xFFFF3B30) else WedoApple.accent
+    val bgResolved = if (enabled) bg else colors.onSurfaceVariant.copy(alpha = 0.32f)
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(50.dp)
+            .clip(WedoAppleShapes.capsule)
+            .background(bgResolved)
+            .then(if (enabled) Modifier.wedoPress(onClick = onClick) else Modifier),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text,
+            style = WedoAppleType.headline(),
+            color = Color.White.copy(alpha = if (enabled) 1f else 0.7f)
+        )
+    }
+}
+
+/**
+ * iOS 描边按钮（次要动作）—— 用于「取消」这类并列动作。
+ * 浅底透明、1pt 强调色描边、强调色文字。
+ */
+@Composable
+fun WedoSecondaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val accent = WedoApple.accent
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(50.dp)
+            .clip(WedoAppleShapes.capsule)
+            .border(1.dp, accent.copy(alpha = 0.4f), WedoAppleShapes.capsule)
+            .wedoPress(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text, style = WedoAppleType.headline(), color = accent)
+    }
+}
+
+/**
  * iOS 标准底部标签栏。
  *
  * 与原玻璃悬浮胶囊的三处差别：
