@@ -23,7 +23,7 @@ wedo 是从 [Sleepy · 轻课表](https://github.com/lingion/sleepy) 派生的 A
 当文档与行为冲突，按“当前源码与测试 → 当前构建/CI 配置 → 最近的实证记录 → 旧计划/状态文档”的顺序判断。尤其注意：
 
 - 历史 `IMPLEMENTATION_STATUS.md`、`UI_DESIGN.md`、`UI_MVP_IMPLEMENTATION_PLAN.md` 等已移出工作目录，不再作为接手入口；追溯时查 Git 历史。现在 `origin` 是 `https://github.com/Joshmax010/wedo-Schedule.git`。
-- `docs/RELEASING.md` 描述的是目标发布流程；当前 `.github/workflows/` 只保留 `android.yml`，**没有** `v*` 标签自动签名并发布 APK 的工作流。移除的 Gitee 脚本使用上游作者的目标仓库，不是 wedo 必需流程。
+- `docs/RELEASING.md` 描述的是目标发布流程；`.github/workflows/android.yml` 验证主 App，`jw-import-kit.yml` 验证独立开发包，**没有** `v*` 标签自动签名并发布主 App APK 的工作流。移除的 Gitee 脚本使用上游作者的目标仓库，不是 wedo 必需流程。
 - `docs/JLJU_EDUCATION_SYSTEM.md` 是已脱敏的取证记录，也明确列出尚未确认的认证及异常场景。
 
 ## 1. 产品定位、用户承诺与范围
@@ -101,7 +101,7 @@ app/src/main/java/com/lingion/sleepy/
 app/src/main/res/xml/             网络安全、备份/迁移排除规则
 app/src/test/                    本地单元测试
 test/fixtures/jlju/             只含脱敏结构证据
-.github/workflows/               唯一 Android Debug CI 工作流
+.github/workflows/               主 App 和独立开发包的验证工作流
 ```
 
 正常数据流：
@@ -258,3 +258,9 @@ WakeUp 目前用户可见的“导出为日历文件”是本项目迁移入口�
 ## 11. 完整交接的最低验收
 
 下一位维护者应能独立回答并定位：安装包 ID 与源码包名为何不同；首页从哪里组合；玻璃效果真实实现为何；课程颜色和冲突如何算；哪些导入格式对用户真实可用；JLJU 登录页面与解析器的安全边界；数据保存在哪、修改实体如何迁移；如何本地构建/验证；哪些证据缺口禁止发布。若这些答案不能从当前源码或测试复现，请先修正文档或补测试，再扩大功能。
+
+## 12. 可复用教务开发包
+
+`extras/jw-import-kit/` 是另一个可独立打开的 Gradle 工程，包含 `library` 与 Native Views `demo`，不参与主 App 的 `settings.gradle.kts`，也不替换主 App 现有 WebView/Parser/Room 调用链。源码来源于本项目的 JLJU/新版正方流程，脱离 wedo Compose UI 后使用明确周集合、严格 JSON 验证和无原生 JS Bridge 的受控轮询；并非原版文件逐字复制。完整接入、许可证、差异及真实认证验收限制见该目录的 README。
+
+独立包 CI 为 `jw-import-kit.yml`，源码 ZIP 使用 `export.ps1` 白名单生成至被 Git 忽略的 `releases/`，通过 `jw-import-kit-v*` 开发者预览 Release 分发。它与主 App `0.1.0/1.0.0` 发布门、签名和源码标签分开管理；不能用开发包可构建证明主 App 发布条件已达成。

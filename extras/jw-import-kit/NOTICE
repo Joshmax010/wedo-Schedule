@@ -1,0 +1,38 @@
+wedo 教务导入开发包 / Wedo JW Import Kit
+Maintainer and adaptation contributor: Joshmax010
+https://github.com/Joshmax010/wedo-Schedule
+
+This source package is licensed under GNU GPL version 3 (see LICENSE).
+It is derived from the official-WebView and new Zhengfang import flow in wedo,
+which is based on Sleepy by lingion and its contributors:
+https://github.com/lingion/sleepy
+Sleepy baseline: 08a1f26a5d7b1a117e2216d92804b202ddde228d
+wedo extraction baseline: a3920152c3e5d6408f34c8e3f35b7a10b5ddaa8a
+
+Original source references retained for attribution:
+app/src/main/java/com/lingion/sleepy/data/jw/JwNewZfParser.kt
+app/src/main/java/com/lingion/sleepy/data/jw/JwCourse.kt
+app/src/main/java/com/lingion/sleepy/ui/screen/imports/JwZfNewFetchJs.kt
+app/src/main/java/com/lingion/sleepy/ui/screen/imports/JwWebViewLoginScreen.kt
+test/fixtures/jlju/
+
+Sleepy's parser design credits dIT8Zv/WakeupSchedule_BUPT (Apache-2.0):
+https://github.com/dIT8Zv/WakeupSchedule_BUPT
+The Apache license text and bundled Gradle component notices are retained
+in LICENSES/Gradle-LICENSE.txt.
+The Gradle wrapper is also Apache-2.0 licensed; its source notices are preserved.
+Jsoup 1.18.1 (MIT) is resolved separately by Gradle, not bundled in this source ZIP:
+https://github.com/jhy/jsoup/blob/jsoup-1.18.1/LICENSE
+JUnit and org.json are test dependencies, resolved separately, not vendored.
+
+Extraction changes:
+- Standalone Android library and native-Views demo, independent of wedo UI/Room.
+- Only the evidence-backed top-level kbList JSON protocol is exposed.
+- Explicit week sets, strict bounds and anonymous per-record errors.
+- No fallback from missing/unknown week strings to weeks 1..16.
+- No native JS interface: same-origin fetch and guarded evaluateJavascript polling.
+- Missing kbList is an error, not an empty semester.
+- App-wide CookieManager clearing is explicit and never clears saved courses.
+
+This project is not affiliated with, authorized by, or endorsed by JLJU.
+Only access your own data through the school's permitted, normal web login.
