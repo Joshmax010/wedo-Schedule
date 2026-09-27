@@ -1,0 +1,288 @@
+package com.wedo.schedule.ui.screen.schedule
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.wedo.schedule.R
+import com.wedo.schedule.WedoApp
+import com.wedo.schedule.data.entity.CourseEntity
+import com.wedo.schedule.data.entity.TimeTableEntity
+import com.wedo.schedule.data.repository.ScheduleRepository
+import com.wedo.schedule.util.DateUtils
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import java.time.LocalDate
+
+data class ScheduleState(
+    val tables: List<TimeTableEntity> = emptyList(),
+    val selectedTableId: Long? = null,
+    val courses: List<CourseEntity> = emptyList(),
+    val currentWeek: Int = 1,
+    val selectedWeek: Int = 1,
+    /** false=首次加载(本周), true=用户/系统已选定周 — 课程变更时 selectedWeek 不再被重置 */
+    val initialWeekSettled: Boolean = false,
+    val nodesPerDay: Int = 12,
+    val selectedCourseId: Long? = null,
+    val showCourseDialog: Boolean = false,
+    val error: String? = null
+) {
+    val currentWeekCourses: List<CourseEntity>
+        get() = courses.filter { it.inWeek(selectedWeek) }
+            .let { list ->
+                val tj = currentTable?.timeJson
+                if (tj == null) list else list.map { c -> c.normalizeNode(tj) }
+            }
+    val currentTable: TimeTableEntity?
+        get() = tables.find { it.id == selectedTableId }
+}
+
+class ScheduleViewModel : ViewModel() {
+
+    private val repo: ScheduleRepository = WedoApp.get().repository
+
+    private val _state = MutableStateFlow(ScheduleState())
+    val state: StateFlow<ScheduleState> = _state.asStateFlow()
+
+    /** Whether the user has explicitly selected a table (vs auto-picking default on load) */
+    private var manualSelectDone = false
+
+    /**
+     * 当前在 observe 课程的协程。切换表时必须先 cancel 上一个，
+     * 否则多个协程同时往 state.courses 写，后启动的会被后 emit 的旧协程覆盖，
+     * 导致"显示成另一张表"的 bug。
+     */
+    private var coursesJob: Job? = null
+
+    init {
+        loadTables()
+    }
+
+    private fun loadTables() {
+        viewModelScope.launch {
+            combine(
+                repo.observeAllTables(),
+                kotlinx.coroutines.flow.flowOf(LocalDate.now())
+            ) { tables, _ -> tables }
+                .collect { tables ->
+                    if (tables.isEmpty()) {
+                        // 没有课表就老实空着，不强行造占位表。
+                        // selectedTableId = null，UI 走空态。
+                        _state.update { it.copy(tables = emptyList(), selectedTableId = null) }
+                        return@collect
+                    }
+                    val selectedId = _state.value.selectedTableId
+                    val targetId: Long = if (manualSelectDone && selectedId != null && tables.any { t -> t.id == selectedId }) {
+                        selectedId
+                    } else {
+                        tables.find { it.isDefault }?.id ?: tables.first().id
+                    }
+                    _state.update { it.copy(tables = tables, selectedTableId = targetId) }
+                    loadCourses(targetId)
+                }
+        }
+    }
+
+    private fun loadCourses(tableId: Long) {
+        // 取消旧协程，避免多个 observeCourses 同时写 state.courses 互相覆盖
+        coursesJob?.cancel()
+        coursesJob = viewModelScope.launch {
+            repo.observeCourses(tableId).collect { courses ->
+                _state.update { st ->
+                    val table = st.tables.find { it.id == tableId }
+                    val week = table?.let { DateUtils.currentWeek(it.startDate) } ?: 1
+                    // v7.10.16s: 只更新真实周(currentWeek, 供"回到本周"), 不再重置 selectedWeek —
+                    // 用户在第 x 周编辑/删课, 保存回来仍停在 x 周(此前被拽回真实周=跳回第一周体验)。
+                    // 首次加载(initial=true)仍落真实周, 保持原行为
+                    st.copy(
+                        courses = courses,
+                        currentWeek = week,
+                        selectedWeek = if (st.initialWeekSettled) st.selectedWeek else week,
+                        initialWeekSettled = true,
+                        nodesPerDay = table?.nodesPerDay ?: 12
+                    )
+                }
+                // 课程数据变更后刷新所有 widget
+                try {
+                    com.wedo.schedule.widget.WidgetUpdater.notifyDataChanged(
+                        com.wedo.schedule.WedoApp.get()
+                    )
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
+    fun selectTable(id: Long) {
+        manualSelectDone = true
+        // 切表 = 新学期语境, 周选择回到该表真实周(initialWeekSettled 复位, loadCourses 重新落周)
+        _state.update { it.copy(selectedTableId = id, initialWeekSettled = false) }
+        loadCourses(id)
+        // 切表后同步数据库 isDefault，使小组件严格跟随 App 当前选中表（widget 按默认表解析）
+        viewModelScope.launch {
+            try {
+                repo.setDefault(id)
+                com.wedo.schedule.widget.WidgetUpdater.notifyDataChanged(
+                    com.wedo.schedule.WedoApp.get()
+                )
+            } catch (_: Exception) {}
+        }
+    }
+
+    /**
+     * v7.10.15 创建课表副本 — 全量复制表配置+课程, 新副本不接管默认表也不切选中,
+     * 命名沿用导入路径的去重规则(原名+"2"/"3"...)。
+     */
+    fun duplicateTable(id: Long) {
+        viewModelScope.launch {
+            val source = repo.getTable(id) ?: return@launch
+            val courses = repo.getCourses(id)
+            val existingNames = repo.getAllTables().map { it.name }
+            var index = 2
+            var name = "${source.name}2"
+            while (name in existingNames) { index++; name = "${source.name}$index" }
+            val newId = repo.insertTable(
+                source.copy(id = 0, name = name, isDefault = false, createdAt = System.currentTimeMillis())
+            )
+            if (courses.isNotEmpty()) {
+                // groupId 整组映射到新 UUID — 同一门课的节次共享新组 ID, 副本内仍可整组编辑
+                val groupMap = courses.associate { it.groupId to java.util.UUID.randomUUID().toString() }
+                repo.insertCourses(courses.map { it.copy(id = 0, groupId = groupMap[it.groupId] ?: it.groupId, tableId = newId) })
+            }
+            com.wedo.schedule.widget.WidgetUpdater.notifyDataChanged(com.wedo.schedule.WedoApp.get())
+        }
+    }
+
+    /** Create a new empty table with auto-generated name.
+     *  @param commitSelection if true (default), immediately switches the selected table
+     *         to the new one. If false, the table is inserted but selection is not changed —
+     *         useful when the caller plans to either roll back the new table or commit the
+     *         selection later. */
+    suspend fun createEmptyTable(commitSelection: Boolean = true): Long {
+        val existingNames = _state.value.tables.map { it.name }
+        var index = _state.value.tables.size + 1
+        var name = com.wedo.schedule.WedoApp.get().getString(R.string.default_table_with_num, index)
+        while (name in existingNames) { index++; name = com.wedo.schedule.WedoApp.get().getString(R.string.default_table_with_num, index) }
+        val now = LocalDate.now()
+        val lastWeekMonday = now.with(java.time.DayOfWeek.MONDAY).minusWeeks(1)
+        // 没有任何表时，新表自动 isDefault = true，避免出现"无默认表"
+        val isFirstTable = _state.value.tables.isEmpty()
+        val table = TimeTableEntity(
+            name = name,
+            startDate = lastWeekMonday.toString(),
+            isDefault = isFirstTable
+        )
+        val id = repo.insertTable(table)
+        if (isFirstTable) {
+            // 数据库侧 isDefault 唯一性保证（其他表如有 isDefault 会自动清掉）
+            repo.setDefault(id)
+        }
+        if (commitSelection) {
+            // 创建后立刻把 state 切到新表，并加载新课程。
+            // 否则 loadTables 协程 observeAllTables emit 会因为 manualSelectDone=true + selectedTableId!=null
+            // 继续保留旧表选择，导致 UI 显示"默认课表"而非用户新建的课表。
+            manualSelectDone = true
+            _state.update { it.copy(selectedTableId = id) }
+            loadCourses(id)
+        } else {
+            // 不切选中：仅通知 widget 刷新（observeAllTables 会带回新表，但不切 selectedTableId）
+        }
+        // 通知 widget
+        try {
+            com.wedo.schedule.widget.WidgetUpdater.notifyDataChanged(
+                com.wedo.schedule.WedoApp.get()
+            )
+        } catch (_: Exception) {}
+        return id
+    }
+
+    fun updateTable(table: TimeTableEntity) {
+        viewModelScope.launch { repo.updateTable(table) }
+    }
+
+    fun deleteTable(id: Long) {
+        viewModelScope.launch {
+            repo.deleteTable(id)
+            manualSelectDone = false
+        }
+    }
+
+    /** Discard a newly-created table that was never saved by the user.
+     *  Deletes the table and reverts selection to the previous default table. */
+    fun discardNewTable(newId: Long, fallbackId: Long?) {
+        viewModelScope.launch {
+            repo.deleteTable(newId)
+            // The observeAllTables flow will re-emit; ensure selectedTableId falls back
+            // to the previous default table (or first remaining table).
+            manualSelectDone = false
+            val remaining = repo.observeAllTables().first().filter { it.id != newId }
+            val targetId = fallbackId?.takeIf { id -> remaining.any { it.id == id } }
+                ?: remaining.find { it.isDefault }?.id
+                ?: remaining.firstOrNull()?.id
+            if (targetId != null) {
+                selectTable(targetId)
+            }
+        }
+    }
+
+    fun changeWeek(week: Int) {
+        // 防呆: 下限 1, 上限 maxWeek — 之前只有下限, 右箭头可以无限翻出学期范围外
+        val maxWeek = _state.value.currentTable?.maxWeek ?: 20
+        if (week < 1 || week > maxWeek) return
+        _state.update { it.copy(selectedWeek = week) }
+    }
+
+    /**
+     * v7.10.16 撤回最近一次数据改动(导入/加课/编辑/删课/删表/建表...)。
+     * 返回 false = 没有可撤回的操作(调用方 toast 提示)。
+     */
+    suspend fun undoLastChange(): Boolean {
+        val ok = repo.restoreLastSnapshot()
+        if (ok) manualSelectDone = false   // 恢复后选中态交回 default 表
+        return ok
+    }
+
+    fun openCourse(id: Long) {
+        _state.update { it.copy(selectedCourseId = id, showCourseDialog = true) }
+    }
+
+    fun dismissCourseDialog() {
+        _state.update { it.copy(showCourseDialog = false) }
+    }
+
+    fun addEmptyCourse() {
+        viewModelScope.launch {
+            val tableId = _state.value.selectedTableId
+                ?: createEmptyTable()  // 没课表就先生成一张，再加课
+            val empty = CourseEntity(
+                groupId = java.util.UUID.randomUUID().toString(),
+                tableId = tableId,
+                courseName = com.wedo.schedule.WedoApp.get().getString(com.wedo.schedule.R.string.new_course),
+                teacher = "",
+                room = "",
+                day = DateUtils.todayDayOfWeek(),
+                startNode = 1,
+                step = 1,
+                startWeek = _state.value.currentWeek,
+                endWeek = _state.value.currentWeek + 16,
+                color = "#FF6750A4"
+            )
+            val id = repo.insertCourse(empty)
+            openCourse(id)
+        }
+    }
+
+    fun updateCourse(course: CourseEntity) {
+        viewModelScope.launch { repo.updateCourse(course) }
+    }
+
+    fun deleteCourse(id: Long) {
+        viewModelScope.launch {
+            repo.deleteCourse(id)
+            dismissCourseDialog()
+        }
+    }
+}

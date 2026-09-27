@@ -104,7 +104,7 @@
     <string name="format_html">HTMLテーブル</string>
     <string name="format_html_desc">&lt;table&gt;形式、ヘッダー検出後に行ごとに解析</string>
     <string name="format_plain">プレーンテキスト</string>
-    <string name="format_plain_desc">Sleepyネイティブ形式、1行1科目、縦棒区切り</string>
+    <string name="format_plain_desc">wedoネイティブ形式、1行1科目、縦棒区切り</string>
 
     <!-- フォーマット詳細ダイアログ: 文言は ScheduleParser の実際の識別動作と一致させること -->
     <string name="format_help_spec">識別条件</string>
@@ -113,9 +113,9 @@
     <string name="format_detail_content_desc">フォーマットの詳細を見る</string>
     <string name="copy_prompt">プロンプトをコピー</string>
     <string name="copied">コピーしました</string>
-    <string name="ai_prompt_title">AIにスクショを変換させる（Sleepyネイティブ形式）</string>
-    <string name="ai_prompt_hint">下のプロンプトをコピーして Doubao・ChatGPT などの AI に送り、時間割のスクリーンショットも一緒に送ってください。AI は #sleepy-v1 形式のテキストを出力するので、全体をコピーして上の入力欄に貼り付けるとインポートできます。</string>
-    <string name="ai_prompt_text">タスク：これから送る時間割のスクリーンショット（またはファイル内容）を、sleepy-v1 プレーンテキスト形式に変換して出力してください。変換結果以外は一切出力しないこと（説明・挨拶・Markdownコードフェンス禁止）。出力の1行目は必ず #sleepy-v1。\n\n========== 一、書式ルール ==========\n\n1行目は必ず：#sleepy-v1\n\n2行目以降は1行1レコード、列は縦棒 | で区切る。行は3種類：\n\n1. T 行（テーブル情報、省略可、最大1行）：\nTテーブル名|学期開始日|総週数|1日のコマ数\n· 開始日の形式は YYYY-MM-DD、第1週の月曜日であること\n· 時間割に明記されている項目のみ記入し、無い項目は空のまま。値がある列まで書けばOK（例：T|2026-03-02）\n· 時間割に全く言及がなければ T 行自体を出力しない。推測禁止\n\n2. N 行（各コマの開始・終了時刻、省略可、1コマ1行）：\nN番号|開始時刻|終了時刻\n· 例：N3|10:00|10:45\n· 時間割に時限表が明記されている場合のみ出力。時刻は24時間制 HH:mm（8:00 は 08:00 と書く）\n· 時限表がなければ N 行は一切出力しない\n\n3. C 行（科目、本体、1時限1行）：\nC科目名|曜日|コマ|週|教員|教室|色|備考|時刻|グループ\n常に10列・縦棒9個。空の列は空のまま、ただし縦棒は省略しない。各列の規則：\n  第1列 科目名：時間割の原文を一字一句そのまま写す（言語不問）\n  第2列 曜日：月〜日 = 1 2 3 4 5 6 7\n  第3列 コマ：3-4時限なら 3-4、単一時限は 6\n  第4列 週：「二、週のルール」参照\n  第5列 教員：時間割にあればそのまま、無ければ空\n  第6列 教室：同上\n  第7列 色：常に空\n  第8列 備考：時間割に備考があれば記入、無ければ空\n  第9列 時刻：時間割が科目ごとに具体的時刻（夜間授業など）を明記する場合のみ HH:mm-HH:mm、無ければ空\n  第10列 グループ：常に空\n\n========== 二、週のルール ==========\n\n各科目の開催週集合を抽出し、順に判定：\n1. 連続範囲かつ奇数・偶数の制約なし → S-E（例：1-16）\n2. 範囲内すべて奇数週（「奇数週」の表記）→ S-E单（例：1-15单）\n3. 範囲内すべて偶数週（「偶数週」の表記）→ S-E双（例：2-16双）\n4. 飛び飛びの週（例：1-8週、10週、12-16週）→ 連続する区間ごとに分割し、それぞれ独立した C 行に。他の列はそのままコピー：\n   · 全週の連続区間 → S-E（例：1-8、12-16）\n   · 孤立した単週 → S定（例：10定）\n   · 純奇数の連続 → S-E单、純偶数の連続 → S-E双\n   · 連続でなく純奇偶でもない → S-E定（例：6,7週 → 6-7定）\n5. 週の記載がなければ 1-16\n\n========== 三、抽出ルール ==========\n\n· 同じ科目が1週間に複数回（別日・別コマ）→ 複数の C 行、1時限1行。1行にまとめない\n· コマ番号は時間割の「X時限」から読む。時限がなく時刻のみなら、重複しない時間帯を朝から 1, 2, 3… と採番し、対応する N 行も出力\n· 科目名・教員・教室は原文のまま。テキストに | \ \" &amp;lt; { ( が含まれる場合は各文字の前に \ を付ける。文中の改行は \n の2文字、タブは \t\n· 時間割に無い情報はすべて空。教員・教室・時刻・週を捏造しないこと\n\n========== 四、出力セルフチェック（心中で確認。出力しない） ==========\n\n· 1行目が #sleepy-v1 で、他に余計な文字が一切ない\n· 各 C 行は正確に縦棒9個・10列\n· 曜日は 1-7 の数字。時刻は時が2桁（8:00 でなく 08:00）\n· 週の列は S-E、S-E单、S-E双、S-E定、S定 の5形態のみ\n· 科目名は時間割の原文と一致。捏造なし\n\n========== 五、出力例 ==========\n\n#sleepy-v1\nT|2026-03-02\nN1|08:00|08:45\nN2|08:55|09:40\nN3|10:00|10:45\nN4|10:55|11:40\nN5|14:00|14:45\nN6|14:55|15:40\nN7|16:00|16:45\nN8|16:55|17:40\nN9|19:00|19:45\nN10|19:55|20:40\nC高等数学A|1|1-2|1-16|张三|A101||||\nC高等数学A|3|3-4|1-16|张三|A101||||\nC大学英语|2|3-4|1-15单|李四|C301||||\nC数据结构|4|3-4|2-16双|王五|C302||||\nC体育|4|5-6|3-4定||||||\nCJava实战|3|9-10|1-16||机房|||19:00-21:30|\nC影视鉴赏|7|6|10-16双||||||\nC形势与政策|5|8-9|1-8||||||\nC形势与政策|5|8-9|12-16||||||</string>
+    <string name="ai_prompt_title">AIにスクショを変換させる（wedoネイティブ形式）</string>
+    <string name="ai_prompt_hint">下のプロンプトをコピーして Doubao・ChatGPT などの AI に送り、時間割のスクリーンショットも一緒に送ってください。AI は #wedo-v1 形式のテキストを出力するので、全体をコピーして上の入力欄に貼り付けるとインポートできます。</string>
+    <string name="ai_prompt_text">タスク：これから送る時間割のスクリーンショット（またはファイル内容）を、wedo-v1 プレーンテキスト形式に変換して出力してください。変換結果以外は一切出力しないこと（説明・挨拶・Markdownコードフェンス禁止）。出力の1行目は必ず #wedo-v1。\n\n========== 一、書式ルール ==========\n\n1行目は必ず：#wedo-v1\n\n2行目以降は1行1レコード、列は縦棒 | で区切る。行は3種類：\n\n1. T 行（テーブル情報、省略可、最大1行）：\nTテーブル名|学期開始日|総週数|1日のコマ数\n· 開始日の形式は YYYY-MM-DD、第1週の月曜日であること\n· 時間割に明記されている項目のみ記入し、無い項目は空のまま。値がある列まで書けばOK（例：T|2026-03-02）\n· 時間割に全く言及がなければ T 行自体を出力しない。推測禁止\n\n2. N 行（各コマの開始・終了時刻、省略可、1コマ1行）：\nN番号|開始時刻|終了時刻\n· 例：N3|10:00|10:45\n· 時間割に時限表が明記されている場合のみ出力。時刻は24時間制 HH:mm（8:00 は 08:00 と書く）\n· 時限表がなければ N 行は一切出力しない\n\n3. C 行（科目、本体、1時限1行）：\nC科目名|曜日|コマ|週|教員|教室|色|備考|時刻|グループ\n常に10列・縦棒9個。空の列は空のまま、ただし縦棒は省略しない。各列の規則：\n  第1列 科目名：時間割の原文を一字一句そのまま写す（言語不問）\n  第2列 曜日：月〜日 = 1 2 3 4 5 6 7\n  第3列 コマ：3-4時限なら 3-4、単一時限は 6\n  第4列 週：「二、週のルール」参照\n  第5列 教員：時間割にあればそのまま、無ければ空\n  第6列 教室：同上\n  第7列 色：常に空\n  第8列 備考：時間割に備考があれば記入、無ければ空\n  第9列 時刻：時間割が科目ごとに具体的時刻（夜間授業など）を明記する場合のみ HH:mm-HH:mm、無ければ空\n  第10列 グループ：常に空\n\n========== 二、週のルール ==========\n\n各科目の開催週集合を抽出し、順に判定：\n1. 連続範囲かつ奇数・偶数の制約なし → S-E（例：1-16）\n2. 範囲内すべて奇数週（「奇数週」の表記）→ S-E单（例：1-15单）\n3. 範囲内すべて偶数週（「偶数週」の表記）→ S-E双（例：2-16双）\n4. 飛び飛びの週（例：1-8週、10週、12-16週）→ 連続する区間ごとに分割し、それぞれ独立した C 行に。他の列はそのままコピー：\n   · 全週の連続区間 → S-E（例：1-8、12-16）\n   · 孤立した単週 → S定（例：10定）\n   · 純奇数の連続 → S-E单、純偶数の連続 → S-E双\n   · 連続でなく純奇偶でもない → S-E定（例：6,7週 → 6-7定）\n5. 週の記載がなければ 1-16\n\n========== 三、抽出ルール ==========\n\n· 同じ科目が1週間に複数回（別日・別コマ）→ 複数の C 行、1時限1行。1行にまとめない\n· コマ番号は時間割の「X時限」から読む。時限がなく時刻のみなら、重複しない時間帯を朝から 1, 2, 3… と採番し、対応する N 行も出力\n· 科目名・教員・教室は原文のまま。テキストに | \ \" &amp;lt; { ( が含まれる場合は各文字の前に \ を付ける。文中の改行は \n の2文字、タブは \t\n· 時間割に無い情報はすべて空。教員・教室・時刻・週を捏造しないこと\n\n========== 四、出力セルフチェック（心中で確認。出力しない） ==========\n\n· 1行目が #wedo-v1 で、他に余計な文字が一切ない\n· 各 C 行は正確に縦棒9個・10列\n· 曜日は 1-7 の数字。時刻は時が2桁（8:00 でなく 08:00）\n· 週の列は S-E、S-E单、S-E双、S-E定、S定 の5形態のみ\n· 科目名は時間割の原文と一致。捏造なし\n\n========== 五、出力例 ==========\n\n#wedo-v1\nT|2026-03-02\nN1|08:00|08:45\nN2|08:55|09:40\nN3|10:00|10:45\nN4|10:55|11:40\nN5|14:00|14:45\nN6|14:55|15:40\nN7|16:00|16:45\nN8|16:55|17:40\nN9|19:00|19:45\nN10|19:55|20:40\nC高等数学A|1|1-2|1-16|张三|A101||||\nC高等数学A|3|3-4|1-16|张三|A101||||\nC大学英语|2|3-4|1-15单|李四|C301||||\nC数据结构|4|3-4|2-16双|王五|C302||||\nC体育|4|5-6|3-4定||||||\nCJava实战|3|9-10|1-16||机房|||19:00-21:30|\nC影视鉴赏|7|6|10-16双||||||\nC形势与政策|5|8-9|1-8||||||\nC形势与政策|5|8-9|12-16||||||</string>
 
     <string name="format_wakeup_share_when">WakeUp アプリからの乗り換え。WakeUp の「コース共有」で生成されたテキスト全体をそのまま貼り付け。</string>
     <string-array name="format_wakeup_share_spec">
@@ -135,7 +135,7 @@
     </string-array>
     <string name="format_wakeup_json_example" formatted="false">{\n  "name": "My table",\n  "startDate": "2026-09-07",\n  "courses": [\n    {"name":"Calculus","teacher":"John","position":"A101","day":1,"startNode":1,"step":2,"startWeek":1,"endWeek":16,"type":0}\n  ]\n}</string>
 
-    <string name="format_ics_when">学校システムや WakeUp がエクスポートしたカレンダーファイル（.ics）。「ファイルからインポート」で選ぶか、ファイルマネージャーでタップして Sleepy を選択、またはテキストエディタで開いて全て貼り付け。</string>
+    <string name="format_ics_when">学校システムや WakeUp がエクスポートしたカレンダーファイル（.ics）。「ファイルからインポート」で選ぶか、ファイルマネージャーでタップして wedo を選択、またはテキストエディタで開いて全て貼り付け。</string>
     <string-array name="format_ics_spec">
         <item>テキストは BEGIN:VCALENDAR で始まること —— 1行目を落とすと識別できない</item>
         <item>各授業は1イベント：SUMMARY=科目名、LOCATION=教室、教員は説明から自動識別</item>
@@ -157,7 +157,7 @@
     </string-array>
     <string name="format_csv_example" formatted="false">course,teacher,room,weekday,period,weeks,type\nCalculus,John,A101,Monday,1-2,1-16,weekly\nEnglish,Mary,B202,3,3-4,1-16,odd</string>
 
-    <string name="format_html_when">時間割ページを .html として保存したもの、コピーしたテーブルのソース、またはファイルマネージャーで .html をタップして Sleepy を選択。</string>
+    <string name="format_html_when">時間割ページを .html として保存したもの、コピーしたテーブルのソース、またはファイルマネージャーで .html をタップして wedo を選択。</string>
     <string-array name="format_html_spec">
         <item>テキストは &lt;!DOCTYPE、&lt;html、&lt;table などのタグで始まる必要がある —— 前に普通の文章があると認識されない、削除して貼る</item>
         <item>ページ内にテーブルがあり、ヘッダー行に「科目」(course) を含むこと</item>
@@ -167,9 +167,9 @@
     </string-array>
     <string name="format_html_example" formatted="false">&lt;table&gt;\n&lt;tr&gt;&lt;td&gt;course&lt;/td&gt;&lt;td&gt;teacher&lt;/td&gt;&lt;td&gt;room&lt;/td&gt;&lt;td&gt;weekday&lt;/td&gt;&lt;td&gt;period&lt;/td&gt;&lt;td&gt;weeks&lt;/td&gt;&lt;/tr&gt;\n&lt;tr&gt;&lt;td&gt;Calculus&lt;/td&gt;&lt;td&gt;John&lt;/td&gt;&lt;td&gt;A101&lt;/td&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;1-2&lt;/td&gt;&lt;td&gt;1-16&lt;/td&gt;&lt;/tr&gt;\n&lt;/table&gt;</string>
 
-    <string name="format_plain_when">Sleepyネイティブ形式（sleepy-v1）：コンパクトで整然、寛容性が高い。手入力にも、AI によるスクショ変換（下のプロンプト参照）にも最適。旧のタブ区切り形式も引き続きインポート可能。</string>
+    <string name="format_plain_when">wedoネイティブ形式（wedo-v1）：コンパクトで整然、寛容性が高い。手入力にも、AI によるスクショ変換（下のプロンプト参照）にも最適。旧のタブ区切り形式も引き続きインポート可能。</string>
     <string-array name="format_plain_spec">
-        <item>1行目は必ず #sleepy-v1</item>
+        <item>1行目は必ず #wedo-v1</item>
         <item>科目行の書式：C科目名|曜日|コマ|週|教員|教室|色|備考|時刻|グループ の10列・縦棒9個</item>
         <item>空の列は空のまま、縦棒は省略しない</item>
         <item>曜日は 1-7（月曜=1）。コマは範囲 1-2、単一コマは 6</item>
@@ -180,11 +180,11 @@
         <item>テーブル行（省略可）：T名前|開始日|総週数|1日コマ数。開始日は第1週の月曜日</item>
         <item>認識できない行はインポートプレビューに列挙され、黙って捨てられることはない</item>
     </string-array>
-    <string name="format_plain_example" formatted="false">#sleepy-v1\nT私の時間割|2026-03-02|20|12\nNd\nC高等数学A|1|1-2|1-16|张三|A101||||\nC大学英语|2|3-4|1-15单|李四|C301||||\nC体育|4|5-6|3-4定||||||\nC影视鉴赏|7|6|10-16双||||||</string>
+    <string name="format_plain_example" formatted="false">#wedo-v1\nT私の時間割|2026-03-02|20|12\nNd\nC高等数学A|1|1-2|1-16|张三|A101||||\nC大学英语|2|3-4|1-15单|李四|C301||||\nC体育|4|5-6|3-4定||||||\nC影视鉴赏|7|6|10-16双||||||</string>
     <string name="import_dropped_title">%1$d 行を認識できませんでした</string>
     <string name="import_dropped_hint">これらの行はスキップされました。形式を確認して再インポートしてください：</string>
     <string name="import_warnings_title">ヒント</string>
-    <string name="export_native_title">Sleepy ネイティブ</string>
+    <string name="export_native_title">wedo ネイティブ</string>
     <string name="export_native_subtitle">完全バックアップ · 最小サイズ · 移行に最適</string>
     <string name="import_start_date_required">学期開始日を入力してください</string>
     <string name="start_date_format">日付形式はYYYY-MM-DDで入力してください</string>
@@ -330,12 +330,12 @@
 
     <!-- Widget / Common UI -->
     <string name="widget_create_schedule">最初に時間割を作成してください</string>
-    <string name="widget_open_sleepy">Sleepyを開いて追加</string>
+    <string name="widget_open_wedo">wedoを開いて追加</string>
     <string name="widget_edit_section_schedule">表示する時間割</string>
     <string name="widget_edit_default_label">デフォルト（現在の時間割に従う）</string>
     <string name="widget_manage_title">ホームウィジェットを管理</string>
     <string name="widget_edit_title">ウィジェットを編集</string>
-    <string name="widget_manage_empty">ホーム画面に Sleepy ウィジェットが追加されていません。空いているスペースを長押し → ウィジェット → Sleepy を選択してください。</string>
+    <string name="widget_manage_empty">ホーム画面に wedo ウィジェットが追加されていません。空いているスペースを長押し → ウィジェット → wedo を選択してください。</string>
     <string name="widget_manage_entry">ホームウィジェットを管理</string>
     <string name="more_sections">他に %1$d コマ…</string>
     <string name="tomorrow">明日</string>
@@ -392,7 +392,7 @@
     <string name="delete_period">この時限を削除</string>
 
     <string name="mine_about">情報</string>
-    <string name="mine_about_body">Sleepy 時間割 v%1$s\n\nミニマルでクリーン、ローカルファーストの時間割アプリ。\nすべてのデータはデバイス内に保存され、サーバーにアップロードされません。\n\n· 広告なし\n· 追跡なし\n· WakeUp / ICS / CSV / HTML / プレーンテキスト インポート対応</string>
+    <string name="mine_about_body">wedo 時間割 v%1$s\n\nミニマルでクリーン、ローカルファーストの時間割アプリ。\nすべてのデータはデバイス内に保存され、サーバーにアップロードされません。\n\n· 広告なし\n· 追跡なし\n· WakeUp / ICS / CSV / HTML / プレーンテキスト インポート対応</string>
 
     <string-array name="day_names">
         <item>月</item>
@@ -445,35 +445,24 @@
     <string name="update_retry">再試行</string>
     <string name="update_download_failed">ダウンロード失敗: %1$s</string>
     <string name="about_author">作者</string>
-    <string name="about_author_name">Lingion</string>
-    <string name="about_license_body">本アプリの一部の履修取り込みアダプタは、以下のオープンソースプロジェクトの公開実装を参考にしています。跨校(複数大学共通の基盤的)プロジェクトと単校(各校固有)プロジェクトの二層構造に整理し、単校カードはタップで展開して当該校が参考にした全ての学生プロジェクトを確認できます。
-
-跨校基盤的プロジェクト:WakeUp Schedule (YZune, Apache-2.0) および WakeupSchedule_BUPT (dIT8Zv, Apache-2.0) — 12 種類の教育システムパーサー(強智系・旧正方・URP・青果・湖南科技大学等)と中間データ構造のリファレンス実装;WakeupSchedule_Kotlin (Apache-2.0) クラシック金智 EAMS;cqu.js(時光課程表重慶大学アダプタ)重慶大学ポータル REST;shiguang_warehouse (XingHeYuZhuan, MIT) 武漢理工大学 kcbcxby・クラシック EAMS・新正方グリッドビュー;zfn_api (openschoolcn, MPL-2.0) と FlowCourse (jiaweiyaya, GPL-3.0) 新正方 kbList 形式のクロスバリデーション;iwut (TokenTeam, AGPL-3.0、プロトコル形式のみ参考) 武漢理工大学のコマ割りマッピング;「上课」shangkeschedule (qiqqqqq517, Apache-2.0) と WakeUp Schedule 学校登録データは、リスト照合に活用。
-
-単校プロジェクト（1 校 1 カード、展開で明細）—— 合肥工業大学 HFUT:HFUT-Schedule (Chiu-xaH, MIT)、HfutOpenApi (BoynChan, MIT)、hfut_schedule_hacker (Aoi-cn)、django-hfut-auth (elonzh, MIT);東南大学 SEU:SEUTimetable (sakimidare, Apache-2.0)、Aetik-yue/hormone、luzy99/SEUAutoLogin;浙江大学 ZJU:zju-ical-py (Xecades, LGPL-2.1);中国科学技術大学 USTC:USTC-timetable-to-ics (1970633640);四川大学 SCU:ScuTimetable (Z-P-J);東北部大学 NEU:neu_wisedu2wakeup (CreamPig233)、PopulusYang/NeuTimetable、neucn/elise、RekaYOO/NEU-JWXT-Toolkit、PeterPtroc/neu-jwxt-to-wakeup、leavesvv-source/NEU-Timetable;重慶大学 CQU:321CQU/pymycqu、BillYang2016/CQU-class2ics、haowang02/CourseMonitor、LengerHu/CQU_classtabletoics、Hagb/cqu_timetable_new、VayneDuan/CQU-Grade-Monitor、weearc/cm-http-api、barryZZJ/course_to_calander_converter;武漢理工大学 WHUT:courseTable (acm910);電子科技大学 UESTC:MilLoong/UESTC-EAMS-Helper-App、MilLoong/UESTC-EAMS-Helper-Python、KaranocaVe/UESTCJWCWatchdog、whtsky/uestc-eams-cleartimeout-userscript、Sunmxt/UESTC-EAMS;広東工業大学 GDUT:N0tExpectErr0r/GDUT-ClassTimeTable、Richard-Zheng/GDUT-Schedule-ng、StarArchive/gdut-course-frontend、StarArchive/gdut-course-backend、HoneQ7/GDUT_iOS_Timetable;広東財経大学 GDUFE:jkgeekJack/Android-GDUFE-JWC-SDK-1.0.0、Kiteio/GDUFE-wrapper;広東金融学院 GDUf:Kiteio/Punica、gduf-finmind;広東外語外貿大学 GDUFS:yongjianzheng/Gdufszhushou、Crazioker/agency;広東医科大学 GDMU:ユーザー提供のキャプチャで zf_new プロトコル確定 (新正方 zftal-ui-v5 素 /kbcx/ パス)、docs/release-notes-v1.0.49.md 参照;長沙理工大学 CSUST:zHElEARN/CSUSTKit、CreaMakers/EduSpider、timeisthe/CSUSTDataGet、Julius-lq/EduAdminSystem、JS-CAUTION/csust-course-schedule;北京郵電大学 BUPT:helium777/bupt-course-grab、JmPotato/BUPT-Grader、Seizzzz/Auto-Login-BUPT;北京大学 PKU:zhongxinghong/PKUAutoElective、thezzisu/pku-elective、Hovennnnn/PKUAutoElective2023、Lihhan/AutoElective_4_PKU、AuYang261/PKU_Elective_Toolset;北京化工大学 BUCT:MarkYangKp/ZhengFangJY;中国科学院大学 UCAS:ldiex/UCAS_Course_Schedule_Convertor (Python, 13 節次 + 選課周次マッピング)、Hurray0/UCAS_GET_Course (Python, xkgo.ucas.ac.cn 選課取得スクリプト)、cld378632668/ucas_course_tool (Java, UCAS コースユーティリティ)、GentleCP/UCAS-Helper (TypeScript, UCAS コース/成績ヘルパー);北京航空航天大学 BUAA:APassbyDreg/BUAA_JW_Utils (Python 工具集, ieas2.1 选课 + 评教 URL 锚点)、SE2020-TopUnderstanding/BUAA-Campus-Tools-Backend (Python, jwxt-7001.e2.buaa.edu.cn/ieas2.1/kbcx/queryGrkb 课表 endpoint 实锤)、fondoger/buaa-teacher-evaluation (MIT, 一键评教 sso.buaa.edu.cn CAS)、Cauchy1412/BUAAGetCourse (Python 抢课脚本)、KKRainbow/JWOneShotEval (PHP, 校内 IP 锚点等价);北京林業大学 BJFU:Bloomberg2000/bjfu_course_ics_generator、Bloomberg2000/bjfu_util.py;安徽大学 AHU:Tonyseth/AHU_JW_GPA_Calculator;東北林業大学 NEFU:bboy-xp/nefu-crawler、heyMahalo/crouse_select;東華大学 DHU:tk.dcmmcc、Bad-086/DHU_CourseMonitor;雲南財経大学 YNUFE:NINIYOYYO/ynufe-campus-app、MiaoWuNYA/ynufeRealLogin;北京理工大学 BIT:BIT-Login (BIT101-dev);北京信息科技大学 BISTU:iBistu (ProjektMing);安徽建築大学 AHU-JZ:JdaAssist (CH4019, MIT);重慶邮电大学移通学院 CQYTU:CQYTZFCheckScores (xM3GAN, Apache-2.0);華南農業大学 SCAU:ScheduleXParser_SCAU (greyovo);斉魯工業大学 QLU:JW-spider (Zhy423310825);渤海大学 BHU:BohaiServiceDome (joun233);東北石油大学 NEPU:WeNEPU (cutiechi);南京理工大学 NUST:HeraldStudentCurriculum (idailylife)。
-
-</string>
-    <string name="about_license_detail">ライセンスと謝辞</string>
-    <string name="license_page_title">ライセンスと謝辞</string>
+    <string name="about_author_name">Joshmax010</string>
+    <string name="about_license_detail">ライセンス</string>
+    <string name="license_page_title">ライセンス</string>
     <string name="license_gpl_section">ライセンス</string>
-    <string name="license_gpl_body">Sleepy はオープンソースのスマート時間割アプリです。ソースコードは GNU General Public License v3.0 の下で公開されています。誰でも自由に使用、改変、配布できます。GitHub での貢献を歓迎します。</string>
-    <string name="license_attribution_section">教务システムアダプタの謝辞</string>
-    <string name="license_attribution_note">一部の教务システム取り込みアダプタは、以下のオープンソースプロジェクトの公開実装を参考にしています。皆様に感謝申し上げます。</string>
-    <string name="license_foundational_section">複数大学共通の基盤プロジェクト</string>
-    <string name="license_perschool_section">大学別の謝辞</string>
+    <string name="license_gpl_body">wedo はオープンソースのスマート時間割アプリです。ソースコードは GNU General Public License v3.0 の下で公開されています。誰でも自由に使用、改変、配布できます。GitHub での貢献を歓迎します。</string>
+    <string name="license_origin_section">プロジェクトの由来</string>
+    <string name="license_origin_body">本アプリは Sleepy（GNU GPL v3.0）を基にした派生作品です。GPL-3.0 の要求により、上流の著作権表示とライセンスを保持しています。詳細はリポジトリ直下の NOTICE と LICENSE を参照してください。</string>
+    <string name="license_third_party_section">サードパーティ</string>
+    <string name="license_third_party_note">上記はプロトコル形態の参考、またはパーサーへの移植元です。ライセンス全文は各リポジトリを参照してください。</string>
     <string name="about_update_check">自動的にアップデートを確認</string>
     <string name="about_update_check_detail">起動時に GitHub Releases を確認し、新バージョンがあれば「について」ページ上部にバナーを表示します</string>
     <string name="about_update_available">新バージョン %1$s があります — タップで表示</string>
     <string name="about_license_title">オープンソース宣言</string>
     <string name="about_source">ソースコード</string>
-    <string name="about_source_url">github.com/lingion/sleepy</string>
+    <string name="about_source_url">github.com/Joshmax010/wedo-Schedule</string>
     <string name="about_feedback">フィードバックと提案</string>
     <string name="about_feedback_detail">GitHub Issue でバグやアイデアを報告するか、メールで作者に連絡できます</string>
     <string name="about_feedback_github">GitHub Issue</string>
-    <string name="about_feedback_email">メール</string>
-    <string name="about_feedback_email_subject">[Sleepy フィードバック]</string>
-    <string name="about_feedback_email_body">問題やアイデアを説明してください：\n\n— 環境 —\n（任意）\n</string>
-    <string name="about_feedback_no_mail_app">メールアプリが見つかりません。GitHub Issue を使用してください。</string>
     <string name="about_title">について</string>
     <string name="about_update">更新を確認</string>
     <string name="about_update_checking">更新を確認中…</string>
@@ -493,7 +482,7 @@
     <string name="export_no_table">エクスポート可能な時間割がありません</string>
     <string name="export_pick_table">エクスポートする時間割を選択</string>
     <string name="export_current_table_badge">現在の時間割</string>
-    <string name="export_saved_to">Download/Sleepy/%1$s に保存しました</string>
+    <string name="export_saved_to">Download/wedo/%1$s に保存しました</string>
     <string name="export_share_chooser">時間割を共有</string>
     <string name="export_share_subtitle">短いテキスト形式、チャットアプリに貼り付け可能</string>
     <string name="export_share_title">テキストを共有</string>
@@ -509,7 +498,7 @@
     <string name="jw_pending_input_url">URL を手動入力</string>
     <string name="jw_pending_legacy">旧版</string>
     <string name="jw_pending_manual">手動で授業を追加</string>
-    <string name="jw_pending_msg">%1$s の教務システムは Sleepy の対応リストにありません。\n\n以下の方法があります：\n1.「対応をリクエスト」をタップして開発者に送信\n2.「URL を手動入力」をタップして WebView で開きログイン\n3. 一時的に HTML / CSV ファイルからインポート、または手動で授業を追加</string>
+    <string name="jw_pending_msg">%1$s の教務システムは wedo の対応リストにありません。\n\n以下の方法があります：\n1.「対応をリクエスト」をタップして開発者に送信\n2.「URL を手動入力」をタップして WebView で開きログイン\n3. 一時的に HTML / CSV ファイルからインポート、または手動で授業を追加</string>
     <string name="jw_pending_pending">未対応</string>
     <string name="jw_pending_supported">対応済み</string>
     <string name="jw_pending_title">この学校の教務インポートは未実装です</string>
@@ -551,7 +540,7 @@
     <string name="reminder_fluid_note">通知をタップすると授業詳細を展開できます。Fluid Cloud / Super Island として表示されるかどうかは、スマホのシステム、通知権限、メーカーのサービス資格によって決まります。</string>
     <string name="reminder_fluid_sub">対応する Xiaomi・OPPO スマホでリアルタイム授業カードを表示</string>
     <string name="reminder_fluid_title">Fluid Cloud / Super Island</string>
-    <string name="reminder_master_sub">Sleepy に授業通知の送信を許可</string>
+    <string name="reminder_master_sub">wedo に授業通知の送信を許可</string>
     <string name="reminder_master_title">リマインダーを有効化</string>
     <string name="reminder_pick_time">リマインダー時刻を選択</string>
     <string name="reminder_title">リマインダー</string>

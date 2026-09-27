@@ -8,11 +8,13 @@
 
 ## 0. 接手时先读的结论
 
-wedo 是从 [Sleepy · 轻课表](https://github.com/lingion/sleepy) 派生的 Android 原生、本地优先课程表。当前默认使用蓝色、明亮通透的周视图和 Android 原生 Compose 交互；已开放吉林建筑大学（JLJU）官方网页登录导入，同时提供日历文件、通用文件、文本和手动添加入口。无自建账号和后端，不依赖 Google Play Services。代码仍保留大量 Sleepy 的类名、包名、页面和解析器，不能因为名称带 `Sleepy`/`WakeUp` 就视为无用代码。
+wedo 是从 [Sleepy · 轻课表](https://github.com/lingion/sleepy) 派生的 Android 原生、本地优先课程表。当前默认使用蓝色、明亮通透的周视图和 Android 原生 Compose 交互；已开放吉林建筑大学（JLJU）官方网页登录导入，同时提供日历文件、通用文件、文本和手动添加入口。无自建账号和后端，不依赖 Google Play Services。
+
+**2026-09-27 内核重构已完成**：包名、类名、应用内文案全部改为 wedo；30 个上游教务协议解析器（含 `schools.json` 182 校目录、DFS iframe 抓取、5 段上游 fetch JS）已删除，教务链路收敛为单一 JLJU 新版正方。导入格式标识由 `#sleepy-v1` 改为 `#wedo-v1`，导入端兼容旧标识。
 
 接手者最需要记住的五件事：
 
-1. **应用 ID 与源码包名不同**：安装包 `com.wedo.schedule`，Debug 为 `com.wedo.schedule.debug`；Kotlin `namespace`/主要源码包仍为 `com.lingion.sleepy`。不要为“统一命名”贸然全仓换包。
+1. **包名已统一为 `com.wedo.schedule`**：安装包同名，Debug 为 `com.wedo.schedule.debug`；Kotlin `namespace` 与源码目录同为 `com.wedo.schedule`。
 2. **首页是已实现的 MVP，不是设计稿**：七日周网格、紧凑周切换、彩色课程卡和悬浮 Dock 在代码中；已移除的历史 `UI_DESIGN.md` 曾有过时措辞，以本手册和当前源码为准。
 3. **WakeUp 迁移的产品入口是其“导出为日历文件”产生的 ICS**；并不存在经用户证实的“WakeUp JSON 导出文件”入口。通用 JSON 解析仍保留，但不能营销为 WakeUp JSON 兼容。
 4. **教务直连目前只公开 JLJU**。`assets/schools.json` 和多所学校解析器是继承的能力/研究材料，不代表它们在 wedo 已验证或已对用户开放。
@@ -44,10 +46,10 @@ wedo 是从 [Sleepy · 轻课表](https://github.com/lingion/sleepy) 派生的 A
 
 ### 2.1 仓库及版本
 
-- 上游仓库：`https://github.com/lingion/sleepy.git`；基准提交 `08a1f26a5d7b1a117e2216d92804b202ddde228d`；本仓仍保留上游历史，远端名 `upstream`。
+- 上游仓库：`https://github.com/lingion/sleepy.git`；基准提交 `08a1f26a5d7b1a117e2216d92804b202ddde228d`。Git 历史与根目录 `LICENSE`/`NOTICE` 保留上游归属（GPL-3.0 要求）；`upstream` 远端已移除。
 - 项目远端：`https://github.com/Joshmax010/wedo-Schedule.git`，远端名 `origin`；默认分支 `main`。编辑代码时先核对 `git status` 和本地/远端差异，不覆盖他人未提交改动。
 - `app/build.gradle.kts`：`applicationId = com.wedo.schedule`、`minSdk = 26`、`compileSdk = targetSdk = 37`、`versionName = 0.1.0`、`versionCode = 1`。Debug 加 `.debug` 后缀；Release 当前配置为**未签名**。
-- 打包只生成 `arm64-v8a`、`armeabi-v7a`、`x86_64` ABI 包，无 universal APK；只打包简体中文资源，上游其他语言资源仍在源码中。
+- 打包只生成 `arm64-v8a`、`armeabi-v7a`、`x86_64` ABI 包，无 universal APK。
 
 ### 2.2 主要技术选择
 
@@ -81,8 +83,8 @@ Debug APK 位于 `app/build/outputs/apk/debug/` 下的 ABI 分包；安装前按
 以下路径均相对于仓库根目录：
 
 ```text
-app/src/main/java/com/lingion/sleepy/
-├─ SleepyApp.kt                 应用级数据库/仓库初始化
+app/src/main/java/com/wedo/schedule/
+├─ WedoApp.kt                   应用级数据库/仓库初始化
 ├─ MainActivity.kt              首页路由、导入面板、Dock、返回栈与外部 Intent
 ├─ WedoPrivacyConsent.kt       首次启动隐私确认
 ├─ data/
@@ -123,7 +125,7 @@ test/fixtures/jlju/             只含脱敏结构证据
 
 ### 3.1 启动与导航
 
-`MainActivity` 是启动页。首次启动由 `WedoPrivacyConsent` 要求明确接受；拒绝则退出。接受状态在 `SharedPreferences("wedo_privacy")` 中。主界面由 `SleepyThemeProvider`、`WedoDisplayProvider` 和 `WedoBackground` 包裹，`MainActivity.AppRoot` 自己管理根 Tab、覆盖页面栈和导入弹层：
+`MainActivity` 是启动页。首次启动由 `WedoPrivacyConsent` 要求明确接受；拒绝则退出。接受状态在 `SharedPreferences("wedo_privacy")` 中。主界面由 `WedoThemeProvider`、`WedoDisplayProvider` 和 `WedoBackground` 包裹，`MainActivity.AppRoot` 自己管理根 Tab、覆盖页面栈和导入弹层：
 
 - 可见 Dock 三个入口：左“课表”、中“＋”、右“设置”。“创建、导入与管理”是从设置继续进入的内部页面，并非第三个常驻 Dock 项。
 - 设置页/管理页返回课表；覆盖页按栈逐层返回；课表根页面双击返回键退出。
@@ -134,7 +136,7 @@ test/fixtures/jlju/             只含脱敏结构证据
 
 - `TimeTableEntity`：一张课表/学期，含 `startDate`（`yyyy-MM-dd`，保存时按周一规范化）、`maxWeek`、`nodesPerDay`、`timeJson`、默认标记、智慧节次配置等。
 - `CourseEntity`：一条上课记录，含 `tableId`、课程组 `groupId`、名称/教师/教室/备注、星期 `day=1..7`、起始节 `startNode`（1-based）、连续节数 `step`、起止周和单双周 `type`，以及颜色、非常规节次/时间等。**同一门课可以有多条记录**（不同周、地点、星期、时间）。删除“这次课程”只删除该记录；课程组操作依 `groupId`。
-- Room 数据库名仍为 `sleepy.db`，版本 5；使用明确迁移，不使用破坏性回退。增字段/改表时必须补 Migration 和旧库升级测试，不能通过卸载 App 掩盖迁移问题。
+- Room 数据库名为 `sleepy.db`（历史标识，改名会导致既有安装数据丢失，需配迁移）；版本 5；使用明确迁移，不使用破坏性回退。增字段/改表时必须补 Migration 和旧库升级测试，不能通过卸载 App 掩盖迁移问题。
 - 当前周由 `ScheduleViewModel` 调用 `DateUtils.currentWeek(startDate)` 计算，周标题今日日期显式使用 `Asia/Shanghai`。`DateUtils` 默认日期参数则使用设备本地日期；若要全链路保证中国时区或学期外“假期/非教学周”，需单独核对并补测试，**不要把目标文档的描述当作现有完全实现**。
 - `CourseEntity.inWeek` 依据起止周及单双周决定是否显示。`type=3` 代码层仍按记录范围显示，离散周依解析阶段拆分为多条记录；后续若改周次模型，须保留此兼容语义并测试混合周、单双周和重复导入。
 - 设置持久化并非全在 DataStore：wedo 显示项放在 `SharedPreferences("wedo_display")`，主题、显示星期、冲突样式等放在继承的 `AppPrefs`，首次隐私同意又是单独的 `wedo_privacy`。修改设置前先查真理源，避免同名状态写两处。

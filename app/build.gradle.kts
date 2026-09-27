@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.lingion.sleepy"
+    namespace = "com.wedo.schedule"
     compileSdk = 37
 
     defaultConfig {

@@ -16,7 +16,17 @@ GPL-3.0 允许运行、研究、修改和再分发。分发 wedo 源码或 APK �
 
 ## 上游归属
 
-Sleepy 的教务解析代码注明部分设计或实现来自 Apache-2.0 项目，例如 WakeUp 相关分叉。Apache-2.0 代码可以组合进 GPL-3.0 项目，但必须保留原有版权、许可证和修改声明。发布前需复核应用内开源声明与仓库中每个移植解析器的来源注释。
+Sleepy 的教务解析代码注明部分设计或实现来自 Apache-2.0 项目，例如 WakeUp 相关分叉。Apache-2.0 代码可以组合进 GPL-3.0 项目，但必须保留原有版权、许可证和修改声明。
+
+**2026-09-27 内核重构后的状态**：30 个上游协议解析器已删除，原先挂在应用内「开源许可」页的 40+ 条教务适配致谢随之撤下——那些条目致谢的代码已不在仓库里，继续保留反而是失实声明。
+
+仍在仓库中、且确实源自他方的成果只剩以下四项，已逐条在应用内「开源许可」页列出：
+
+- `shiguang_warehouse`（MIT）`zhengfang_01.js` 的网格视图 / 列表视图解析 —— 代码移植，义务最重
+- `FlowCourse`（GPL-3.0）与 `zfn_api`（MPL-2.0）—— kbList 字段形态交叉验证依据
+- `WakeupSchedule_BUPT`（Apache-2.0）—— 解析器基类契约设计参考
+
+`JwParser` 基类与 `JwNewZfParser` 仍是本仓代码，但 `JwNewZfParser.parseKbgridTable0` / `parseKblistTable` 两个函数属移植实现，其来源注释必须保留。若要彻底去除这项义务，需先完成这两个函数的独立重写，重写后方可从致谢中撤下 `shiguang_warehouse`。
 
 ## wedo 修改义务
 
