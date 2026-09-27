@@ -61,6 +61,7 @@ import com.lingion.sleepy.R
 import com.lingion.sleepy.data.entity.CourseEntity
 import com.lingion.sleepy.ui.theme.SleepyTheme
 import com.lingion.sleepy.ui.theme.SleepyTextStyle
+import com.lingion.sleepy.ui.theme.wedoCourseBlockColors
 import com.lingion.sleepy.ui.theme.noRippleClickable
 import com.lingion.sleepy.util.AppPrefs
 import com.lingion.sleepy.util.ConflictCluster
@@ -462,16 +463,22 @@ fun ConflictClusterCard(
 
     // 课色(描边/虚线/flap 取色,含 isGrey 灰显,与卡渲染取同一色)
     // issue#22: 同名课程多地点 — 传 cluster 全行作为 groupRows,支持 AUTO/CUSTOM 模式取色
+    //
+    // Apple 化：配色入口从「饱和 HSL 底」换成 [wedoCourseBlockColors]。
+    // 冲突簇的描边/虚线/flap 都取**实色条那一档**（block.bar），
+    // 与课程块左侧 4px 条同源 —— 这样冲突簇和非冲突课用的是同一套色系，
+    // 不会出现「普通课是淡底、冲突课是浓色」的割裂。
     val groupRowsForCard = cluster.courses
+    val blockSurface = colors.surfaceContainerLow
+    val isDarkPalette = CourseColorUtil.isPaletteDark(palette)
     fun courseColorOf(course: CourseEntity): Color {
-        val bg = CourseColorUtil.pickCourseColorComposeWithGroupRows(
-            row = course,
-            groupRows = groupRowsForCard,
-            isDark = CourseColorUtil.isPaletteDark(palette),
-            neutralColor = colors.surfaceVariant,
-            colorless = AppPrefs.isCourseColorless(context)
+        // 用户自定色优先，否则按课程名稳定散列出色相（与 WedoCourseCard 同一入口）
+        val block = wedoCourseBlockColors(
+            base = wedoCourseColor(course, isDarkPalette),
+            dark = isDarkPalette,
+            surface = blockSurface
         )
-        return if (isGrey) bg.copy(alpha = SleepyTheme.Alpha.inactive) else bg
+        return if (isGrey) block.bar.copy(alpha = SleepyTheme.Alpha.inactive) else block.bar
     }
     val courseById = drawList.associateBy { it.course.id }
 

@@ -58,7 +58,13 @@ import com.lingion.sleepy.R
 import com.lingion.sleepy.data.entity.CourseEntity
 import com.lingion.sleepy.ui.theme.SleepyTextStyle
 import com.lingion.sleepy.ui.theme.SleepyTheme
+import com.lingion.sleepy.ui.theme.WedoApple
+import com.lingion.sleepy.ui.theme.WedoAppleDimensions
+import com.lingion.sleepy.ui.theme.WedoAppleShapes
+import com.lingion.sleepy.ui.theme.WedoAppleType
+import com.lingion.sleepy.ui.theme.WedoCourseBlockColors
 import com.lingion.sleepy.ui.theme.noRippleClickable
+import com.lingion.sleepy.ui.theme.wedoCourseBlockColors
 import com.lingion.sleepy.util.AppPrefs
 import com.lingion.sleepy.util.ConflictLayoutEngine
 import com.lingion.sleepy.util.CourseColorUtil
@@ -214,8 +220,25 @@ fun CardsGridView(
                 // ---- Grid 主体：固定高度 Box，内部全用 Modifier.offset 绝对定位 ----
                 Box(modifier = Modifier.fillMaxWidth().height(gridH).drawBehind {
                     if (wedo) {
-                        for (i in 0..timeSlots.size) drawLine(colors.outlineVariant.copy(alpha = .32f), Offset(timeW.toPx(), (rowH * i).toPx()), Offset(size.width, (rowH * i).toPx()), 1f)
-                        for (i in 0..dayCount) { val x = (timeW + gapW + (colW + gapW) * i).toPx(); drawLine(colors.outlineVariant.copy(alpha = .18f), Offset(x, 0f), Offset(x, size.height), 1f) }
+                        // Apple 化：网格线从 1px 改为 0.5px，并大幅降低不透明度。
+                        // 原来横线 32% / 竖线 18% 的 1px 线，整体看是一片「表格网」，
+                        // 界面显钝。iOS 的分隔线是 0.5pt 极淡 —— 隐约可辨即可，
+                        // 让视线落在内容上而不是格子上。
+                        val hairline = WedoAppleDimensions.hairline.toPx()
+                        val rowStroke = colors.outlineVariant.copy(alpha = .22f)
+                        val colStroke = colors.outlineVariant.copy(alpha = .12f)
+                        for (i in 0..timeSlots.size) {
+                            drawLine(
+                                rowStroke,
+                                Offset(timeW.toPx(), (rowH * i).toPx()),
+                                Offset(size.width, (rowH * i).toPx()),
+                                hairline
+                            )
+                        }
+                        for (i in 0..dayCount) {
+                            val x = (timeW + gapW + (colW + gapW) * i).toPx()
+                            drawLine(colStroke, Offset(x, 0f), Offset(x, size.height), hairline)
+                        }
                     }
                 }) {
                     // 时间栏：每个节次一个 Row，用 offset 定位到正确 y
@@ -249,10 +272,13 @@ fun CardsGridView(
                         if (index < 0 || dayIndex < 0) continue
                         Box(Modifier.offset(x = timeW + gapW + (colW + gapW) * dayIndex, y = rowH * index)
                             .width(colW).height(rowH * course.step.coerceIn(1, timeSlots.size - index) - gapH)
-                            .padding(2.dp).clip(RoundedCornerShape(10.dp))
-                            .background(colors.surfaceVariant.copy(alpha = .35f))) {
+                            .padding(2.dp).clip(WedoAppleShapes.continuous(WedoAppleDimensions.courseCorner))
+                            // 非本周课程：Apple 化后统一走「无彩淡底」——
+                            // 它是背景信息，不该用课程色争夺注意力（原来的 surfaceVariant 35% 也接近，这里明确其语义）
+                            .background(colors.surfaceContainerHigh.copy(alpha = 0.6f))) {
                             Text("非本周\n" + course.courseName, Modifier.padding(4.dp),
-                                color = colors.onSurfaceVariant, fontSize = 10.sp, maxLines = 3)
+                                color = colors.onSurfaceVariant.copy(alpha = SleepyTheme.Alpha.highContent),
+                                fontSize = 10.sp, lineHeight = 13.sp, maxLines = 3)
                         }
                     }
                     // 课程卡片：用 offset 绝对定位 — 冲突簇整簇走 ConflictClusterCard,
@@ -371,11 +397,21 @@ fun CardsGridView(
 private fun SingleTimeHeadCell(slot: TimeSlot, scale: Float = 1f, modifier: Modifier = Modifier, cornerRatio: Float = 1f, wedo: Boolean = false) {
     val colors = SleepyTheme.colors
     if (wedo) {
-        Column(modifier.padding(top = 6.dp), horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(slot.label, color = colors.onSurface, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            Text(slot.displayStart, color = colors.onSurfaceVariant, fontSize = 9.sp, maxLines = 1)
-            Text(slot.displayEnd, color = colors.onSurfaceVariant, fontSize = 9.sp, maxLines = 1)
+        // Apple 化：时间栏去容器化。原来每格是一张 surfaceContainerLow 圆角卡片，
+        // 一列下来是一串「小方块」。iOS 的时间轴只是**一行淡色小字**，
+        // 不占视觉重量 —— 它的作用是被扫到，不是被看到。
+        Column(
+            modifier.padding(top = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(1.dp)
+        ) {
+            Text(
+                slot.label,
+                color = colors.onSurfaceVariant,
+                style = WedoAppleType.caption1().copy(fontWeight = FontWeight.Medium, fontSize = 12.sp, lineHeight = 15.sp)
+            )
+            Text(slot.displayStart, color = colors.onSurfaceVariant.copy(alpha = SleepyTheme.Alpha.inactive), fontSize = 9.sp, lineHeight = 11.sp, maxLines = 1)
+            Text(slot.displayEnd, color = colors.onSurfaceVariant.copy(alpha = SleepyTheme.Alpha.inactive), fontSize = 9.sp, lineHeight = 11.sp, maxLines = 1)
         }
         return
     }
@@ -531,15 +567,25 @@ private fun CourseOverlayCard(
 private fun DayHeadCell(day: Int, isToday: Boolean, isGrey: Boolean = false, courseCount: Int, dateStr: String? = null, dayLabel: String = DateUtils.localizedDay(day, androidx.compose.ui.platform.LocalContext.current), modifier: Modifier = Modifier, scale: Float = 1f, cornerRatio: Float = 1f) {
     val colors = SleepyTheme.colors
     val sd = { v: Float -> (v * scale).dp }
-    val bg = if (isToday) colors.primaryContainer else colors.surface
-    val fg = if (isGrey) colors.onSurfaceVariant.copy(alpha = SleepyTheme.Alpha.inactive) else if (isToday) colors.onPrimaryContainer else colors.onSurface
-    val subFg = if (isGrey) colors.onSurfaceVariant.copy(alpha = SleepyTheme.Alpha.inactive) else if (isToday) colors.onPrimaryContainer.copy(alpha = SleepyTheme.Alpha.highContent) else colors.onSurfaceVariant
+    val accent = WedoApple.accent
+
+    // Apple 化：今天不再是整块高亮的色卡，而是**「今天」二字染强调色**（如 iOS 日历）。
+    // 整块高亮是 Material 的做法，Apple 用颜色只点一处，其余留白。
+    val bg = Color.Transparent
+    val fg = when {
+        isGrey -> colors.onSurfaceVariant.copy(alpha = SleepyTheme.Alpha.inactive)
+        isToday -> accent
+        else -> colors.onSurface
+    }
+    val subFg = when {
+        isGrey -> colors.onSurfaceVariant.copy(alpha = SleepyTheme.Alpha.inactive)
+        isToday -> accent.copy(alpha = SleepyTheme.Alpha.highContent)
+        else -> colors.onSurfaceVariant
+    }
 
     Box(
         modifier = modifier
-            .height(if (dateStr != null) sd(56f) else sd(52f))
-            .clip(RoundedCornerShape((16 * scale * cornerRatio).dp))
-            .background(bg)
+            .height(if (dateStr != null) sd(48f) else sd(44f))
             .padding(vertical = sd(6f)),
         contentAlignment = Alignment.Center
     ) {
@@ -549,10 +595,10 @@ private fun DayHeadCell(day: Int, isToday: Boolean, isGrey: Boolean = false, cou
         ) {
             Text(
                 text = dayLabel,
-                style = MaterialTheme.typography.labelLarge.copy(
+                style = WedoAppleType.subheadline().copy(
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = (14 * scale).sp,
-                    lineHeight = (20 * scale).sp
+                    fontSize = (13 * scale).sp,
+                    lineHeight = (17 * scale).sp
                 ),
                 color = fg,
                 maxLines = 1
@@ -560,14 +606,14 @@ private fun DayHeadCell(day: Int, isToday: Boolean, isGrey: Boolean = false, cou
             if (dateStr != null) {
                 Text(
                     text = dateStr,
-                    style = SleepyTextStyle.micro().copy(fontSize = (10 * scale).sp, lineHeight = (11 * scale).sp),
+                    style = WedoAppleType.caption1().copy(fontSize = (10 * scale).sp, lineHeight = (13 * scale).sp),
                     color = subFg,
                     maxLines = 1
                 )
             } else {
                 Text(
                     text = if (courseCount == 0) stringResource(R.string.no_course) else stringResource(R.string.course_count_format, courseCount),
-                    style = SleepyTextStyle.micro().copy(fontSize = (9 * scale).sp, lineHeight = (11 * scale).sp),
+                    style = WedoAppleType.caption2().copy(fontSize = (9 * scale).sp, lineHeight = (12 * scale).sp),
                     color = subFg,
                     maxLines = 1
                 )
@@ -1057,19 +1103,29 @@ private fun LessonRow(
     // 双层缩放: scale=全局周视图缩放(issue#8), laneScale=v7.10.4 冲突栏按实宽压缩
     val effScale = scale * laneScale
     val sd = { v: Float -> (v * effScale).dp }
-    // 统一取色入口（决策 D3）— colorless 读取 AppPrefs course_colorless 独立开关
-    // issue#22: 同名课程多地点 — 用 groupRows 传同 groupId 全行,支持 AUTO/CUSTOM 模式取色
-    val bg = CourseColorUtil.pickCourseColorComposeWithGroupRows(
-        row = course,
-        groupRows = groupRows,
-        isDark = CourseColorUtil.isPaletteDark(palette),
-        neutralColor = colors.surfaceVariant,
-        colorless = AppPrefs.isCourseColorless(context)
-    )
-    // 文字色亮度自适应（决策 D5-13）— 深色自定义课色上切白字，浅色底仍 onSurface
-    val fg = CourseColorUtil.textColorOn(bg, CourseColorUtil.isPaletteDark(palette), colors.onSurface)
-    val effectiveBg = if (isGrey) bg.copy(alpha = SleepyTheme.Alpha.inactive) else bg
-    val effectiveFg = if (isGrey) fg.copy(alpha = SleepyTheme.Alpha.inactive) else fg
+
+    // Apple 化：与 WedoCourseCard 同一套配色语汇 ——
+    // 淡底（tint）+ 左侧色条（bar）+ 同色系文字（title/subtitle）。
+    // 原来是整行铺饱和色 + 白字，在列表模式下尤其刺眼。
+    val isDarkPalette = CourseColorUtil.isPaletteDark(palette)
+    val colorless = AppPrefs.isCourseColorless(context)
+    val block = if (colorless && !CourseColorUtil.hasCustomColor(course)) {
+        WedoCourseBlockColors(
+            tint = colors.surfaceContainerHigh,
+            bar = colors.onSurfaceVariant.copy(alpha = SleepyTheme.Alpha.inactive),
+            title = colors.onSurface,
+            subtitle = colors.onSurfaceVariant
+        )
+    } else {
+        wedoCourseBlockColors(
+            base = wedoCourseColor(course, isDarkPalette),
+            dark = isDarkPalette,
+            surface = colors.surfaceContainerLow
+        )
+    }
+    val effectiveBar = if (isGrey) block.bar.copy(alpha = SleepyTheme.Alpha.inactive) else block.bar
+    val effectiveFg = if (isGrey) block.title.copy(alpha = SleepyTheme.Alpha.inactive) else block.title
+    val effectiveSub = if (isGrey) block.subtitle.copy(alpha = SleepyTheme.Alpha.inactive) else block.subtitle
     val holidayStyle = AppPrefs.getHolidayStyle(context)
     val textDecoration = if (isGrey && holidayStyle == "strikethrough") androidx.compose.ui.text.style.TextDecoration.LineThrough else null
 
@@ -1082,12 +1138,20 @@ private fun LessonRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(sd(12f * cornerRatio)))
-            .background(effectiveBg)
+            .clip(WedoAppleShapes.continuous(WedoAppleDimensions.courseCorner))
+            .background(block.tint)
             .noRippleClickable(onClick)
             .padding(sd(9f)),
         horizontalArrangement = Arrangement.spacedBy(sd(8f))
     ) {
+        // 左侧 4px 实色条 —— 与课程块保持同一辨识载体
+        Box(
+            Modifier
+                .width(WedoAppleDimensions.courseBarWidth)
+                .height(sd(28f))
+                .clip(RoundedCornerShape(2.dp))
+                .background(effectiveBar)
+        )
         val sideStyle = SleepyTextStyle.smallMeta().copy(
             fontSize = (12 * effScale).sp,
             lineHeight = (16 * effScale).sp,
@@ -1146,7 +1210,7 @@ private fun LessonRow(
                         lineHeight = (14 * effScale).sp,
                         textDecoration = textDecoration
                     ),
-                    color = effectiveFg.copy(alpha = SleepyTheme.Alpha.highContent),
+                    color = effectiveSub,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )

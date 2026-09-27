@@ -60,9 +60,7 @@ import kotlin.math.roundToInt
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GeneralSettingsScreen(
-    onBack: () -> Unit,
-    navDock: Boolean = false,
-    onNavDockChange: (Boolean) -> Unit = {}
+    onBack: () -> Unit
 ) {
     val colors = SleepyTheme.colors
     val context = LocalContext.current
@@ -495,26 +493,6 @@ fun GeneralSettingsScreen(
                         modifier = Modifier.heightIn(max = 32.dp)
                     )
                 }
-            }
-
-            // 底栏样式: 贴底 / 悬浮药丸 Dock — 贴右 SegmentedSwitcher 双 tab(用户 2026-09-04: 放「画面」分组)
-            // 状态由 MainActivity(AppRoot) 持有下传: 底栏与设置页同一真值, 切换即生效
-            item {
-                SettingsFlatCard(
-                    title = stringResource(R.string.settings_nav_style),
-                    options = listOf(
-                        stringResource(R.string.settings_nav_style_docked),
-                        stringResource(R.string.settings_nav_style_floating)
-                    ),
-                    selectedKey = if (navDock) 1 else 0,
-                    onSelect = { idx ->
-                        val on = idx == 1
-                        if (navDock != on) {
-                            AppPrefs.setNavDock(context, on)
-                            onNavDockChange(on)
-                        }
-                    }
-                )
             }
 
             // ── 分隔线 ──

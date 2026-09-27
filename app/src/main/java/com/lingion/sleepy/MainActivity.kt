@@ -38,8 +38,6 @@ import com.lingion.sleepy.ui.screen.schedule.ScheduleViewModel
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.lingion.sleepy.data.entity.CourseEntity
 import com.lingion.sleepy.ui.screen.edit.AddCourseScreen
-import com.lingion.sleepy.ui.component.NavDockSpec
-import com.lingion.sleepy.ui.component.PillNavigationBar
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.WindowInsets
@@ -47,7 +45,6 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.ui.platform.LocalDensity
-import com.lingion.sleepy.ui.component.PillNavItemSpec
 import com.lingion.sleepy.ui.screen.manage.ManagementPage
 import com.lingion.sleepy.ui.screen.mine.AllTablesScreen
 import com.lingion.sleepy.ui.screen.mine.AppearanceScreen
@@ -220,9 +217,7 @@ private fun AppRoot(
     var previousDefaultTableId by rememberSaveable { mutableStateOf<Long?>(null) }
     var autoImportTriggered by remember { mutableStateOf(false) }
     var showAddSheet by remember { mutableStateOf(false) }
-    // 底栏形态(贴底/悬浮 Dock): AppRoot 持真值 — 设置页改, 底栏即时切
     val context = LocalContext.current
-    var navDock by remember { mutableStateOf(AppPrefs.isNavDock(context)) }
     val mainScope = rememberCoroutineScope()
     val mainVm: ScheduleViewModel = viewModel()
 
@@ -293,9 +288,7 @@ private fun AppRoot(
     }
     if (topOverlay() == OverlayScreen.General) {
         GeneralSettingsScreen(
-            onBack = { popOverlay() },
-            navDock = navDock,
-            onNavDockChange = { navDock = it }
+            onBack = { popOverlay() }
         )
         return
     }
@@ -329,7 +322,7 @@ private fun AppRoot(
     }
     com.lingion.sleepy.ui.component.WedoBackground(Modifier.fillMaxSize()) {
         androidx.compose.runtime.CompositionLocalProvider(
-            com.lingion.sleepy.ui.component.LocalNavExtraBottomPadding provides 84.dp,
+            com.lingion.sleepy.ui.component.LocalNavExtraBottomPadding provides 52.dp,
             com.lingion.sleepy.ui.theme.LocalWedoCollapsed provides collapsed
         ) {
             Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars).nestedScroll(scrollConnection)) {
@@ -349,7 +342,7 @@ private fun AppRoot(
             }
         }
         androidx.compose.animation.AnimatedVisibility(
-            visible = !collapsed || !navDock,
+            visible = !collapsed,
             modifier = Modifier.align(Alignment.BottomCenter),
             enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically(
                 animationSpec = if (display.motion) androidx.compose.animation.core.spring(dampingRatio = .76f)

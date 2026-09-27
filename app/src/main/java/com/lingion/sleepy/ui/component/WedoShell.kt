@@ -14,6 +14,7 @@ import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.*
@@ -25,14 +26,26 @@ import androidx.compose.ui.unit.dp
 import com.lingion.sleepy.ui.theme.*
 
 /**
- * 应用级外壳组件。
+ * 应用级外壳组件（原 WedoGlass.kt）。
  *
  * 本文件原为玻璃组件（`wedoGlass()` 等），按「全面取消玻璃质感」的指令重写：
  *  - `WedoBackground` 从「蓝色渐变 + 光斑」改为 **Apple grouped 纯色背景**
  *  - `wedoGlass()` **已删除**（唯一调用点均已改为实色卡片）
  *  - `WedoDock` 从「悬浮玻璃胶囊」改为 **iOS 标准底部标签栏**
- *  - 新增 `wedoPress` 的 Apple 版按压反馈（不用涟漪）
+ *  - `wedoPress` 保留按压反馈，但改为 Apple 的缩放式（不用涟漪）
+ *
+ * 另：原 `PillNavigationBar.kt`（含 `NavDockSpec` / `DockNavigationBar` 悬浮玻璃胶囊）
+ * 已整文件删除 —— 底栏只有 `WedoDock` 这一种形态，不再提供会渲染玻璃的第二形态。
  */
+
+/**
+ * 底栏占位高度 —— 供各页滚动容器在末尾留白，避免最后一项被标签栏遮住。
+ *
+ * 语义已随 `WedoDock` 变化：旧值 84dp 是为**悬浮胶囊**预留的（胶囊 64dp + 悬空 12dp
+ * + 投影余量）。iOS 标准标签栏是**通栏贴底**的，不需要为「悬空」留白，只要覆盖
+ * 标签栏本体（52dp）即可；安全区由 `navigationBarsPadding()` 自行吸收，不重复计入。
+ */
+val LocalNavExtraBottomPadding = staticCompositionLocalOf { 52.dp }
 
 /**
  * Apple 分组背景。
@@ -100,11 +113,6 @@ fun WedoIconButton(
     }
 }
 
-/** 保留旧名以免其余文件一次性全面改名 —— 语义已变为「纯图标按钮」 */
-@Composable
-fun GlassIconButton(icon: ImageVector, description: String, enabled: Boolean = true, onClick: () -> Unit) =
-    WedoIconButton(icon, description, enabled, onClick = onClick)
-
 /**
  * iOS 标准底部标签栏。
  *
@@ -129,7 +137,7 @@ fun WedoDock(settings: Boolean, onSchedule: () -> Unit, onAdd: () -> Unit, onSet
             Modifier.fillMaxWidth().height(52.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            DockItem(Icons.Outlined.CalendarMonth, "课表", !settings && true, Modifier.weight(1f), onSchedule)
+            DockItem(Icons.Outlined.CalendarMonth, "课表", !settings, Modifier.weight(1f), onSchedule)
             DockItem(Icons.Outlined.Add, "添加", false, Modifier.weight(1f), onAdd, accentIcon = true)
             DockItem(Icons.Outlined.Settings, "设置", settings, Modifier.weight(1f), onSettings)
         }

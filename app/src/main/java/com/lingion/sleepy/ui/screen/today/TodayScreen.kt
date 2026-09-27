@@ -43,9 +43,15 @@ import com.lingion.sleepy.R
 import com.lingion.sleepy.data.entity.CourseEntity
 import com.lingion.sleepy.ui.component.CourseDetailSheet
 import com.lingion.sleepy.ui.component.SectionHead
+import com.lingion.sleepy.ui.component.wedoCourseColor
 import com.lingion.sleepy.ui.screen.schedule.ScheduleViewModel
 import com.lingion.sleepy.ui.theme.SleepyTheme
+import com.lingion.sleepy.ui.theme.WedoAppleDimensions
+import com.lingion.sleepy.ui.theme.WedoAppleShapes
+import com.lingion.sleepy.ui.theme.WedoAppleType
+import com.lingion.sleepy.ui.theme.WedoCourseBlockColors
 import com.lingion.sleepy.ui.theme.noRippleClickable
+import com.lingion.sleepy.ui.theme.wedoCourseBlockColors
 import com.lingion.sleepy.util.AppPrefs
 import com.lingion.sleepy.util.CourseColorUtil
 import com.lingion.sleepy.util.DateUtils
@@ -295,18 +301,25 @@ private fun TodayCourseCard(course: CourseEntity, timeJson: String? = null, onCl
     val colors = SleepyTheme.colors
     val palette = SleepyTheme.palette
     val context = LocalContext.current
-    // 统一取色入口 — hue 源自动对齐 groupId（修复原 course.id%360 导致同门课多节次异色+三屏三色）
-    // colorless 读取 AppPrefs course_colorless 独立开关
-    // issue#22: 同名课程多地点 — 用 groupRows 传同 groupId 全行,支持 AUTO/CUSTOM 模式取色
-    val bg = CourseColorUtil.pickCourseColorComposeWithGroupRows(
-        row = course,
-        groupRows = groupRows,
-        isDark = CourseColorUtil.isPaletteDark(palette),
-        neutralColor = colors.surfaceVariant,
-        colorless = AppPrefs.isCourseColorless(context)
-    )
-    // 文字色亮度自适应（决策 D5-13）— 深色自定义课色上切白字，浅色底仍 onSurface
-    val fg = CourseColorUtil.textColorOn(bg, CourseColorUtil.isPaletteDark(palette), colors.onSurface)
+    // Apple 化：与课表页共用同一套配色语汇（淡底 + 左色条 + 同色系字）。
+    // 原来是整卡铺饱和色 + 白字，与课表页改完后会明显不一致。
+    val isDarkPalette = CourseColorUtil.isPaletteDark(palette)
+    val colorless = AppPrefs.isCourseColorless(context)
+    val block = if (colorless && !CourseColorUtil.hasCustomColor(course)) {
+        WedoCourseBlockColors(
+            tint = colors.surfaceContainerHigh,
+            bar = colors.onSurfaceVariant.copy(alpha = SleepyTheme.Alpha.inactive),
+            title = colors.onSurface,
+            subtitle = colors.onSurfaceVariant
+        )
+    } else {
+        wedoCourseBlockColors(
+            base = wedoCourseColor(course, isDarkPalette),
+            dark = isDarkPalette,
+            surface = colors.surfaceContainerLow
+        )
+    }
+    val fg = block.title
     val time = if (course.ownTime && course.startTime.isNotBlank() && course.endTime.isNotBlank()) {
         "${course.startTime}-${course.endTime}"
     } else {
@@ -316,13 +329,21 @@ private fun TodayCourseCard(course: CourseEntity, timeJson: String? = null, onCl
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(SleepyTheme.shapes.large)
-            .background(bg)
+            .clip(WedoAppleShapes.continuous(WedoAppleDimensions.cardCorner))
+            .background(block.tint)
             .then(if (onClick != null) Modifier.noRippleClickable(onClick = onClick) else Modifier)
             .padding(12.dp),
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        // 左侧 4px 实色条 —— 课程辨识载体
+        Box(
+            Modifier
+                .width(WedoAppleDimensions.courseBarWidth)
+                .height(34.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(block.bar)
+        )
         // 时间槽 — 固定宽度避免 "10:20-12:45" 被截断
         Column(
             modifier = Modifier.width(76.dp),
@@ -330,14 +351,14 @@ private fun TodayCourseCard(course: CourseEntity, timeJson: String? = null, onCl
         ) {
             Text(
                 text = course.shortNodeString(context),
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                style = WedoAppleType.subheadline().copy(fontWeight = FontWeight.SemiBold),
                 color = fg
             )
             if (time != null) {
                 Text(
                     text = time,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = fg.copy(alpha = SleepyTheme.Alpha.highContent),
+                    style = WedoAppleType.caption1(),
+                    color = block.subtitle,
                     maxLines = 1,
                     softWrap = false
                 )
@@ -347,7 +368,7 @@ private fun TodayCourseCard(course: CourseEntity, timeJson: String? = null, onCl
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = course.courseName,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                style = WedoAppleType.headline(),
                 color = fg,
                 maxLines = 2
             )
