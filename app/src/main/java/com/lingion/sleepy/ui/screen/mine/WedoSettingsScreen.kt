@@ -1,5 +1,6 @@
 package com.lingion.sleepy.ui.screen.mine
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -9,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.lingion.sleepy.ui.component.*
@@ -25,17 +27,18 @@ fun WedoSettingsScreen(onManage: () -> Unit, onOpenAllTables: () -> Unit,
     var conflict by remember { mutableStateOf(AppPrefs.getConflictStyle(context)) }
     val colors = SleepyTheme.colors
     fun update(value: WedoDisplay) = WedoPreferences.write(context, value)
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 20.dp, 16.dp, 120.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp)) {
-        item { Text("设置", color = colors.onSurface, style = MaterialTheme.typography.headlineLarge) }
+    LazyColumn(Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            start = WedoAppleDimensions.pageMargin,
+            end = WedoAppleDimensions.pageMargin,
+            top = 20.dp,
+            bottom = 120.dp
+        ),
+        verticalArrangement = Arrangement.spacedBy(WedoAppleDimensions.sectionGap)) {
+        item { Text("设置", color = colors.onSurface, style = WedoAppleType.largeTitle()) }
         item {
             WedoSettingsGroup("外观与手感") {
                 SettingsItem(Icons.Outlined.Palette, "主题模式与强调色", onOpenAppearance)
-                Text("玻璃效果", Modifier.padding(top = 8.dp), color = colors.onSurface)
-                Choices(listOf("smooth" to "流畅", "balanced" to "平衡", "fine" to "精致"), display.quality) {
-                    update(display.copy(quality = it))
-                }
-                Text("根据设备性能自动调整光影细节", style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
                 WedoToggle("灵动效果", display.motion) { update(display.copy(motion = it)) }
                 WedoToggle("轻触震动", display.haptics) { update(display.copy(haptics = it)) }
             }
@@ -87,11 +90,28 @@ fun WedoSettingsScreen(onManage: () -> Unit, onOpenAllTables: () -> Unit,
     }
 }
 
+/**
+ * 设置分组卡片。
+ *
+ * Apple 化：去掉玻璃底，改为**实心卡片 + 0.5pt 描边**。
+ * iOS 设置页的分组是「实色卡片浮在 groupBackground 上」，不是半透明玻璃。
+ * 这里用 surfaceContainerLow 作卡面（比页面背景亮一档），靠明度差分层次。
+ */
 @Composable
 private fun WedoSettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Column(Modifier.fillMaxWidth().wedoGlass().padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(title, style = MaterialTheme.typography.titleMedium, color = SleepyTheme.colors.primary,
-            modifier = Modifier.padding(bottom = 8.dp))
+    Column(
+        Modifier.fillMaxWidth()
+            .clip(WedoAppleShapes.card)
+            .background(SleepyTheme.colors.surfaceContainerLow)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            title,
+            style = WedoAppleType.footnote(),
+            color = SleepyTheme.colors.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
         content()
     }
 }

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Settings
@@ -16,117 +17,147 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.*
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.lingion.sleepy.ui.theme.*
-import com.lingion.sleepy.util.CourseColorUtil
 
+/**
+ * 应用级外壳组件。
+ *
+ * 本文件原为玻璃组件（`wedoGlass()` 等），按「全面取消玻璃质感」的指令重写：
+ *  - `WedoBackground` 从「蓝色渐变 + 光斑」改为 **Apple grouped 纯色背景**
+ *  - `wedoGlass()` **已删除**（唯一调用点均已改为实色卡片）
+ *  - `WedoDock` 从「悬浮玻璃胶囊」改为 **iOS 标准底部标签栏**
+ *  - 新增 `wedoPress` 的 Apple 版按压反馈（不用涟漪）
+ */
+
+/**
+ * Apple 分组背景。
+ *
+ * 此前这里是「垂直蓝色渐变 + 两个径向光斑」，属于给 App 一个**彩色身份** ——
+ * 正是被否定的那类做法。iOS 的底色永远是**中性灰白**（grouped）或**纯黑**
+ * （dark），层次靠卡片与背景的明度差表达，不靠渐变和光斑。
+ *
+ * 浅色 #F2F2F7 / 深色 #000000，与 UIKit 的 systemGroupedBackground 一致。
+ */
 @Composable
 fun WedoBackground(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
-    val dark = CourseColorUtil.isPaletteDark(SleepyTheme.palette)
-    val base = if (dark) listOf(Color(0xFF061225), Color(0xFF102D50))
-        else listOf(Color(0xFFF7FAFF), Color(0xFFE4EFFD))
-    Box(modifier.background(Brush.verticalGradient(base)).drawBehind {
-        val light = if (dark) Color(0xFF257DDB).copy(alpha = .15f) else Color(0xFF87BCFF).copy(alpha = .19f)
-        drawCircle(Brush.radialGradient(listOf(light, Color.Transparent),
-            center = Offset(size.width * .86f, size.height * .13f), radius = size.width * .8f),
-            radius = size.width * .8f, center = Offset(size.width * .86f, size.height * .13f))
-        drawCircle(Brush.radialGradient(listOf(light, Color.Transparent),
-            center = Offset(0f, size.height * .91f), radius = size.width * .8f),
-            radius = size.width * .8f, center = Offset(0f, size.height * .91f))
-    }, content = content)
+    val base = if (WedoApple.isDark) Color(0xFF000000) else Color(0xFFF2F2F7)
+    Box(modifier.background(base), content = content)
 }
 
-/** Layered glass works from API 26; only decoration is reduced on low-RAM devices. */
-@Composable
-fun Modifier.wedoGlass(shape: Shape = RoundedCornerShape(28.dp)): Modifier {
-    val dark = CourseColorUtil.isPaletteDark(SleepyTheme.palette)
-    val display = LocalWedoDisplay.current
-    val context = LocalContext.current
-    val lowRam = remember(context) {
-        (context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager).isLowRamDevice
-    }
-    val simple = display.quality == "smooth" || lowRam
-    val refined = display.quality == "fine" && !simple
-    // “精致”档保持真正的通透层次：不再用高不透明白底把每个玻璃容器画成白卡片。
-    // Android 26 无系统级实时折射 API，因此这里用低透明渐变、环境光和细边缘高光模拟玻璃，
-    // 同时保证老设备与低内存设备仍有稳定、清晰的降级表现。
-    val fill = when {
-        dark && simple -> listOf(Color(0xFF244D79).copy(alpha = .74f), Color(0xFF0D213D).copy(alpha = .80f))
-        dark && refined -> listOf(Color(0xFF61A9F2).copy(alpha = .20f), Color(0xFF0D294B).copy(alpha = .34f))
-        dark -> listOf(Color(0xFF315F8E).copy(alpha = .49f), Color(0xFF102A49).copy(alpha = .58f))
-        simple -> listOf(Color(0xFFF5FAFF).copy(alpha = .76f), Color(0xFFCFE3FA).copy(alpha = .62f))
-        refined -> listOf(Color(0xFFEAF4FF).copy(alpha = .23f), Color(0xFFAFCFF2).copy(alpha = .17f))
-        else -> listOf(Color(0xFFF2F8FF).copy(alpha = .48f), Color(0xFFC8DEF6).copy(alpha = .34f))
-    }
-    val edge = if (dark) {
-        Color(0xFF8BC4FF).copy(alpha = if (simple) .30f else if (refined) .62f else .50f)
-    } else {
-        Color(0xFFFFFFFF).copy(alpha = if (simple) .70f else if (refined) .78f else .88f)
-    }
-    return this.shadow(if (simple) 0.dp else if (refined) 9.dp else 6.dp, shape,
-        ambientColor = Color(0xFF246BBC), spotColor = Color(0xFF246BBC))
-        .clip(shape).background(Brush.linearGradient(fill))
-        .border(if (refined) 1.3.dp else 1.dp, Brush.linearGradient(listOf(edge, edge.copy(alpha = .15f), edge.copy(alpha = .65f))), shape)
-}
-
+/**
+ * Apple 按压反馈。
+ *
+ * 与 Material 的区别：**不用涟漪**，改为整体轻微缩放 + 透明度微降。
+ * iOS 的反馈是「整个元素轻轻陷下去」，涟漪是 Android 的语汇。
+ */
 @Composable
 fun Modifier.wedoPress(onLongClick: (() -> Unit)? = null, onClick: () -> Unit): Modifier {
     val interactions = remember { MutableInteractionSource() }
     val pressed by interactions.collectIsPressedAsState()
     val motion = LocalWedoDisplay.current.motion
-    val scale by animateFloatAsState(if (pressed && motion) .96f else 1f,
-        if (motion) spring(dampingRatio = .68f, stiffness = 480f) else snap(), label = "wedoPress")
+    val scale by animateFloatAsState(
+        if (pressed && motion) 0.97f else 1f,
+        if (motion) spring(dampingRatio = .72f, stiffness = 520f) else snap(),
+        label = "wedoPress"
+    )
     return this.graphicsLayer { scaleX = scale; scaleY = scale }
-        .combinedClickable(interactionSource = interactions, indication = null, role = Role.Button,
-            onLongClick = onLongClick, onClick = onClick)
+        .combinedClickable(
+            interactionSource = interactions, indication = null, role = Role.Button,
+            onLongClick = onLongClick, onClick = onClick
+        )
 }
 
+/**
+ * 纯图标按钮 —— Apple 风格。
+ *
+ * 视觉上只有一个色化的图标，没有圆形底、没有描边；触控区撑到 44pt。
+ * 之前这里是「40dp 玻璃圆底 + 24dp 图标」，容器感是 Material 的做法。
+ */
 @Composable
-fun GlassIconButton(icon: ImageVector, description: String, enabled: Boolean = true, onClick: () -> Unit) {
+fun WedoIconButton(
+    icon: ImageVector,
+    description: String,
+    enabled: Boolean = true,
+    tint: Color = WedoApple.accent,
+    onClick: () -> Unit
+) {
     val action = if (enabled) Modifier.wedoPress(onClick = onClick) else Modifier
     Box(
-        modifier = Modifier.size(40.dp).wedoGlass(CircleShape).then(action),
+        modifier = Modifier.size(WedoAppleDimensions.minTouchTarget).then(action),
         contentAlignment = Alignment.Center
     ) {
-        Icon(icon, description, modifier = Modifier.size(24.dp),
-            tint = SleepyTheme.colors.primary.copy(alpha = if (enabled) 1f else .35f))
+        Icon(
+            icon,
+            contentDescription = description,
+            modifier = Modifier.size(24.dp),
+            tint = if (enabled) tint else tint.copy(alpha = SleepyTheme.Alpha.inactive)
+        )
     }
 }
 
+/** 保留旧名以免其余文件一次性全面改名 —— 语义已变为「纯图标按钮」 */
+@Composable
+fun GlassIconButton(icon: ImageVector, description: String, enabled: Boolean = true, onClick: () -> Unit) =
+    WedoIconButton(icon, description, enabled, onClick = onClick)
+
+/**
+ * iOS 标准底部标签栏。
+ *
+ * 与原玻璃悬浮胶囊的三处差别：
+ *  1. **通栏**，不是居中悬浮的 74% 宽胶囊
+ *  2. **实色 + 0.5pt 顶部细线**，不是半透明玻璃
+ *  3. 「添加」不再是凸起的圆形浮动按钮 —— iOS 的标签栏里没有 FAB 这个语汇
+ *
+ * 三个入口等宽平分（课表 / 添加 / 设置），中间「添加」用强调色图标区分。
+ */
 @Composable
 fun WedoDock(settings: Boolean, onSchedule: () -> Unit, onAdd: () -> Unit, onSettings: () -> Unit) {
-    Box(Modifier.testTag("wedo-dock").fillMaxWidth().navigationBarsPadding().padding(bottom = 8.dp, top = 10.dp)) {
-        Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth(.74f).widthIn(max = 300.dp)
-            .height(56.dp).wedoGlass(RoundedCornerShape(30.dp)),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceAround) {
-            DockItem(Icons.Outlined.CalendarMonth, "课表", !settings, onSchedule)
-            Spacer(Modifier.width(52.dp))
-            DockItem(Icons.Outlined.Settings, "设置", settings, onSettings)
-        }
-        Box(Modifier.align(Alignment.TopCenter).offset(y = (-10).dp).size(60.dp)
-            .wedoGlass(CircleShape).padding(4.dp)
-            .background(Brush.linearGradient(listOf(Color(0xFF62B5FF), Color(0xFF2476F5))), CircleShape)
-            .border(1.dp, Color.White.copy(alpha = .65f), CircleShape).wedoPress(onClick = onAdd),
-            contentAlignment = Alignment.Center) {
-            Icon(Icons.Outlined.Add, "添加课表", tint = Color.White, modifier = Modifier.size(28.dp))
+    val colors = SleepyTheme.colors
+    Column(
+        Modifier.testTag("wedo-dock").fillMaxWidth()
+            .background(colors.surfaceContainerLow)
+            .navigationBarsPadding()
+    ) {
+        // 顶部 0.5pt 细线 —— Apple 标签栏的分隔特征
+        HorizontalDivider(thickness = WedoAppleDimensions.hairline, color = colors.outlineVariant)
+        Row(
+            Modifier.fillMaxWidth().height(52.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            DockItem(Icons.Outlined.CalendarMonth, "课表", !settings && true, Modifier.weight(1f), onSchedule)
+            DockItem(Icons.Outlined.Add, "添加", false, Modifier.weight(1f), onAdd, accentIcon = true)
+            DockItem(Icons.Outlined.Settings, "设置", settings, Modifier.weight(1f), onSettings)
         }
     }
 }
 
 @Composable
-private fun DockItem(icon: ImageVector, label: String, selected: Boolean, action: () -> Unit) {
+private fun DockItem(
+    icon: ImageVector,
+    label: String,
+    selected: Boolean,
+    modifier: Modifier,
+    action: () -> Unit,
+    accentIcon: Boolean = false
+) {
     val colors = SleepyTheme.colors
-    Column(Modifier.width(68.dp).height(48.dp).clip(RoundedCornerShape(22.dp))
-        .background(if (selected) colors.primary.copy(alpha = .10f) else Color.Transparent)
-        .wedoPress(onClick = action), horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center) {
-        Icon(icon, null, tint = if (selected) colors.primary else colors.onSurfaceVariant, modifier = Modifier.size(21.dp))
-        Text(label, style = MaterialTheme.typography.labelSmall, color = if (selected) colors.primary else colors.onSurfaceVariant)
+    val tint = when {
+        accentIcon -> WedoApple.accent
+        selected -> WedoApple.accent
+        else -> colors.onSurfaceVariant
+    }
+    Column(
+        modifier.height(WedoAppleDimensions.minTouchTarget).wedoPress(onClick = action),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(22.dp))
+        Spacer(Modifier.height(2.dp))
+        Text(label, style = WedoAppleType.caption2(), color = tint)
     }
 }

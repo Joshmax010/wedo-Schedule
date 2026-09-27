@@ -3,6 +3,7 @@ package com.lingion.sleepy.util
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.res.Configuration
+import com.lingion.sleepy.ui.theme.WedoSystemColor
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -113,11 +114,15 @@ object AppPrefs {
     }
 
 
-    // ===== 主题色 =====
+    // ===== 强调色 =====
+    //
+    // 键名仍叫 KEY_THEME（改名会丢掉老用户的设置），但**存的值语义已变**：
+    // 从「预设主题 key」（"ocean"/"spring"…）改为「iOS 系统色名」（"Blue"/"Indigo"…）。
+    // 旧值经 WedoSystemColor.byName 回落为默认系统蓝，不会崩，只是老用户
+    // 的外观会被重置一次 —— 这次重设本来就要重设外观，可以接受。
 
     fun getThemeKey(ctx: Context): String =
-        sp(ctx).getString(KEY_THEME, com.lingion.sleepy.ui.theme.ThemePresets.KEY_OCEAN)
-            ?: com.lingion.sleepy.ui.theme.ThemePresets.KEY_OCEAN
+        sp(ctx).getString(KEY_THEME, WedoSystemColor.DEFAULT_NAME) ?: WedoSystemColor.DEFAULT_NAME
 
     fun setThemeKey(ctx: Context, key: String) {
         sp(ctx).edit().putString(KEY_THEME, key).apply()
@@ -126,8 +131,8 @@ object AppPrefs {
     fun themeKeyFlow(ctx: Context): Flow<String> = callbackFlow {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { sp, k ->
             if (k == KEY_THEME) {
-                val v = sp.getString(KEY_THEME, com.lingion.sleepy.ui.theme.ThemePresets.KEY_OCEAN)
-                    ?: com.lingion.sleepy.ui.theme.ThemePresets.KEY_OCEAN
+                val v = sp.getString(KEY_THEME, WedoSystemColor.DEFAULT_NAME)
+                    ?: WedoSystemColor.DEFAULT_NAME
                 trySend(v)
             }
         }

@@ -14,18 +14,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -42,11 +40,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lingion.sleepy.R
-import com.lingion.sleepy.ui.component.SectionHeader
 import com.lingion.sleepy.ui.theme.SleepyTheme
+import com.lingion.sleepy.ui.theme.WedoApple
+import com.lingion.sleepy.ui.theme.WedoAppleDimensions
+import com.lingion.sleepy.ui.theme.WedoAppleShapes
+import com.lingion.sleepy.ui.theme.WedoAppleType
+import com.lingion.sleepy.ui.theme.WedoSystemColor
 import com.lingion.sleepy.ui.theme.noRippleClickable
-import com.lingion.sleepy.ui.theme.ThemePreset
-import com.lingion.sleepy.ui.theme.ThemePresets
 import com.lingion.sleepy.util.AppPrefs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -54,8 +54,17 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /**
- * 外观页(决策 D2 合并页): 仅主题色彩组。课程显示/小组件组已迁至 GeneralSettingsScreen(2026-08-24)。
- * 保留 refreshWidgets() 管线, 主题变更后即时刷新小组件。
+ * 外观页 —— Apple 化重写。
+ *
+ * **删掉的**：5 套 M3 预设主题卡片、「跟随系统」Material You 动态取色卡片。
+ * 理由：Apple 的 app 没有「主题」概念 —— 只有**强调色**和**深浅模式**。
+ * 一个 app 的骨架（背景/卡片/分隔线）永远中性，用户能改的只有强调色的那一抹。
+ *
+ * **保留的**：深浅模式三态切换（跟随系统 / 浅色 / 深色），以及主题变更后
+ * 刷新小组件的管线。
+ *
+ * 强调色存的是 [WedoSystemColor] 的 enum name（如 "Blue"），复用原来存
+ * preset key 的那个 SharedPreferences 键，旧值会被 byName 回落为默认系统蓝。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,7 +75,9 @@ fun AppearanceScreen(
 ) {
     val context = LocalContext.current
     val colors = SleepyTheme.colors
-    val currentKey by AppPrefs.themeKeyFlow(context).collectAsState(initial = AppPrefs.getThemeKey(context))
+    val currentAccentName by AppPrefs.themeKeyFlow(context)
+        .collectAsState(initial = AppPrefs.getThemeKey(context))
+    val selectedAccent = WedoSystemColor.byName(currentAccentName)
     val selectedMode = themeMode
 
     // 选主题/模式后立即刷小组件: 之前只写 SP 不刷 widget → 小组件不跟主题变
@@ -76,85 +87,114 @@ fun AppearanceScreen(
     }
 
     Scaffold(
-        modifier = Modifier.fillMaxSize().background(colors.background),
+        modifier = Modifier.fillMaxSize(),
         containerColor = colors.background,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.mine_appearance)) },
+                title = { Text(stringResource(R.string.mine_appearance), style = WedoAppleType.headline()) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.back))
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.background, titleContentColor = colors.onBackground, navigationIconContentColor = colors.onBackground)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = colors.background,
+                    titleContentColor = colors.onBackground,
+                    navigationIconContentColor = colors.onBackground
+                )
             )
         }
     ) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            contentPadding = PaddingValues(WedoAppleDimensions.pageMargin),
+            verticalArrangement = Arrangement.spacedBy(WedoAppleDimensions.sectionGap)
         ) {
-            // ── 分组① 主题色彩 ──
+            // ── 强调色 ──
             item {
-                SectionHeader(title = stringResource(R.string.appearance_section_theme))
-            }
-
-            item {
-                SystemThemeCard(
-                    selected = currentKey == ThemePresets.KEY_SYSTEM,
-                    onClick = {
-                        AppPrefs.setThemeKey(context, ThemePresets.KEY_SYSTEM)
-                        refreshWidgets()
-                    }
-                )
-            }
-
-            // 2 列网格 5 套预设
-            item {
-                val presets = ThemePresets.all
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    presets.chunked(2).forEach { row ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            row.forEach { p ->
-                                Box(Modifier.weight(1f)) {
-                                    PresetThemeCard(
-                                        preset = p,
-                                        selected = currentKey == p.key,
-                                        onClick = { AppPrefs.setThemeKey(context, p.key); refreshWidgets() }
-                                    )
-                                }
-                            }
-                            if (row.size == 1) Box(Modifier.weight(1f))
-                        }
-                    }
+                Column {
+                    Text(
+                        stringResource(R.string.appearance_accent_title),
+                        style = WedoAppleType.title3(),
+                        color = colors.onSurface
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        stringResource(R.string.appearance_accent_desc),
+                        style = WedoAppleType.footnote(),
+                        color = colors.onSurfaceVariant
+                    )
                 }
             }
 
-            // 外观模式: 浅色 / 深色 / 深浅色跟随系统 三态分段控件(标签与主题取色的 theme_system"跟随系统"区分)
             item {
-                Text(stringResource(R.string.theme_appearance), style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold), color = colors.onSurface)
-                Spacer(Modifier.height(8.dp))
-                val modes = listOf(
-                    AppPrefs.THEME_MODE_SYSTEM to stringResource(R.string.theme_mode_system),
-                    AppPrefs.THEME_MODE_LIGHT to stringResource(R.string.theme_mode_light),
-                    AppPrefs.THEME_MODE_DARK to stringResource(R.string.theme_mode_dark)
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth().clip(SleepyTheme.shapes.medium).background(colors.surfaceContainer).padding(3.dp),
-                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                // 12 个 iOS 系统色，4 列 × 3 行
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(4),
+                    modifier = Modifier.fillMaxWidth().height(216.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    userScrollEnabled = false
                 ) {
-                    modes.forEach { (mode, label) ->
-                        val sel = mode == selectedMode
-                        Box(
-                            modifier = Modifier.weight(1f).clip(SleepyTheme.shapes.medium).background(if (sel) colors.primary else colors.surfaceContainer).noRippleClickable {
-                                if (mode != selectedMode) {
-                                    AppPrefs.setThemeMode(context, mode); onThemeModeChange(mode); refreshWidgets()
-                                }
-                            }.padding(vertical = 12.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(label, style = MaterialTheme.typography.labelLarge.copy(fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Medium), color = if (sel) colors.onPrimary else colors.onSurfaceVariant)
+                    items(WedoSystemColor.entries) { color ->
+                        AccentSwatch(
+                            color = color,
+                            selected = color == selectedAccent,
+                            onClick = {
+                                AppPrefs.setThemeKey(context, color.name)
+                                refreshWidgets()
+                            }
+                        )
+                    }
+                }
+            }
+
+            // ── 外观模式 ──
+            item {
+                Column {
+                    Text(
+                        stringResource(R.string.theme_appearance),
+                        style = WedoAppleType.title3(),
+                        color = colors.onSurface
+                    )
+                    Spacer(Modifier.height(WedoAppleDimensions.sectionGap))
+                    val modes = listOf(
+                        AppPrefs.THEME_MODE_SYSTEM to stringResource(R.string.theme_mode_system),
+                        AppPrefs.THEME_MODE_LIGHT to stringResource(R.string.theme_mode_light),
+                        AppPrefs.THEME_MODE_DARK to stringResource(R.string.theme_mode_dark)
+                    )
+                    // iOS 分段控件：外框圆角容器 + 选中项白/深色滑块
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .clip(WedoAppleShapes.continuous(8.dp))
+                            .background(colors.surfaceContainerHigh)
+                            .padding(2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        modes.forEach { (mode, label) ->
+                            val sel = mode == selectedMode
+                            Box(
+                                modifier = Modifier.weight(1f)
+                                    .clip(WedoAppleShapes.continuous(7.dp))
+                                    .background(if (sel) colors.surfaceContainerLowest else Color.Transparent)
+                                    .noRippleClickable {
+                                        if (mode != selectedMode) {
+                                            AppPrefs.setThemeMode(context, mode)
+                                            onThemeModeChange(mode)
+                                            refreshWidgets()
+                                        }
+                                    }
+                                    .padding(vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    label,
+                                    style = WedoAppleType.subheadline().copy(
+                                        fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal
+                                    ),
+                                    color = if (sel) colors.onSurface else colors.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }
@@ -163,58 +203,34 @@ fun AppearanceScreen(
     }
 }
 
-// ── 以下复制自 ThemeColorScreen ──
-
+/**
+ * 强调色色块。
+ *
+ * iOS 的取色器是**圆形色点**，选中时套一圈同色描边 —— 不是方形卡片。
+ * 这里照此实现：36dp 圆点 + 选中态 2dp 同色环。
+ */
 @Composable
-private fun SystemThemeCard(selected: Boolean, onClick: () -> Unit) {
-    val colors = SleepyTheme.colors
-    // 2026-08-25 用户指令: 全 app 纯色块禁描线 — 选中态只用色块层级+对勾表达
-    val bgColor = if (selected) colors.primaryContainer else colors.surfaceContainer
-    Surface(
-        modifier = Modifier.fillMaxWidth().clip(SleepyTheme.shapes.large).noRippleClickable(onClick),
-        color = bgColor, shape = SleepyTheme.shapes.large
+private fun AccentSwatch(color: WedoSystemColor, selected: Boolean, onClick: () -> Unit) {
+    val dark = WedoApple.isDark
+    val fill = color.color(dark)
+    Box(
+        modifier = Modifier.size(WedoAppleDimensions.minTouchTarget).noRippleClickable(onClick),
+        contentAlignment = Alignment.Center
     ) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(56.dp).clip(SleepyTheme.shapes.large).background(colors.primaryContainer), contentAlignment = Alignment.Center) {
-                Icon(Icons.Outlined.AutoAwesome, null, tint = colors.onPrimaryContainer, modifier = Modifier.size(28.dp))
-            }
-            Spacer(Modifier.width(16.dp))
-            Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.theme_system), style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
-                Spacer(Modifier.height(2.dp))
-                Text(stringResource(R.string.theme_system_desc), style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
-            }
-            if (selected) Icon(Icons.Outlined.Check, stringResource(R.string.selected), tint = colors.primary, modifier = Modifier.size(24.dp))
-        }
-    }
-}
-
-@Composable
-private fun PresetThemeCard(preset: ThemePreset, selected: Boolean, onClick: () -> Unit) {
-    val colors = SleepyTheme.colors
-    val scheme = if (colors.background.red < 0.5f) preset.light else preset.dark
-    // 2026-08-25 用户指令: 全 app 纯色块禁描线 — 选中态只用色块层级+对勾表达
-    val bgColor = if (selected) colors.primaryContainer else colors.surfaceContainer
-    Surface(
-        modifier = Modifier.fillMaxWidth().clip(SleepyTheme.shapes.large).noRippleClickable(onClick),
-        color = bgColor, shape = SleepyTheme.shapes.large
-    ) {
-        Column(Modifier.padding(16.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ColorSwatch(scheme.primary)
-                ColorSwatch(scheme.secondary)
-                ColorSwatch(scheme.tertiary)
-            }
-            Spacer(Modifier.height(12.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(preset.nameRes), style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Medium), color = colors.onSurface, modifier = Modifier.weight(1f))
-                if (selected) Icon(Icons.Outlined.Check, stringResource(R.string.selected), tint = colors.primary, modifier = Modifier.size(20.dp))
+        Box(
+            Modifier.size(36.dp)
+                .clip(androidx.compose.foundation.shape.CircleShape)
+                .background(fill),
+            contentAlignment = Alignment.Center
+        ) {
+            if (selected) {
+                Icon(
+                    Icons.Outlined.Check,
+                    contentDescription = stringResource(R.string.selected),
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }
-}
-
-@Composable
-private fun ColorSwatch(color: Color) {
-    Box(Modifier.size(28.dp).clip(SleepyTheme.shapes.small).background(color))
 }

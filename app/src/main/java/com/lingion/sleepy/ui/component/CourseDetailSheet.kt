@@ -40,6 +40,10 @@ import com.lingion.sleepy.R
 import com.lingion.sleepy.data.entity.CourseEntity
 import com.lingion.sleepy.ui.theme.SleepyTextStyle
 import com.lingion.sleepy.ui.theme.SleepyTheme
+import com.lingion.sleepy.ui.theme.WedoApple
+import com.lingion.sleepy.ui.theme.WedoAppleDimensions
+import com.lingion.sleepy.ui.theme.WedoAppleShapes
+import com.lingion.sleepy.ui.theme.WedoAppleType
 import com.lingion.sleepy.util.AppPrefs
 import com.lingion.sleepy.util.ConflictCluster
 import com.lingion.sleepy.util.ConflictLayoutEngine
@@ -86,13 +90,14 @@ fun CourseDetailSheet(
         ModalBottomSheet(
             onDismissRequest = onDismiss,
             sheetState = sheetState,
-            containerColor = SleepyTheme.colors.surface,
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+            // 去掉玻璃底：Apple 的 sheet 是实色卡面 + 顶部大圆角。
+            // 用 surfaceContainerLow 一档（比页面背景亮），靠明度差表达「浮起」。
+            containerColor = SleepyTheme.colors.surfaceContainerLow,
+            shape = WedoAppleShapes.continuous(WedoAppleDimensions.panelCorner)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .wedoGlass(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                     .verticalScroll(rememberScrollState())
                     .padding(bottom = 24.dp)
             ) {
@@ -239,20 +244,30 @@ private fun DefaultTopPickerSection(
     }
 }
 
+/**
+ * 弹层标题。
+ *
+ * Apple 化：去掉表面色块，改为大标题直接落在卡面上 —— iOS sheet 的标题
+ * 从来不坐在一条不同色的横条里，那条横条是 Material 的 app bar 语汇。
+ */
 @Composable
 private fun SheetHeader(title: String) {
     val colors = SleepyTheme.colors
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(colors.surfaceContainer)
-            .padding(start = 20.dp, top = 16.dp, bottom = 12.dp, end = 20.dp),
+            .padding(
+                start = WedoAppleDimensions.pageMargin,
+                top = 20.dp,
+                bottom = 12.dp,
+                end = WedoAppleDimensions.pageMargin
+            ),
         horizontalArrangement = Arrangement.Start,
         verticalAlignment = Alignment.Top
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleLarge.copy(),
+            style = WedoAppleType.title2(),
             color = colors.onSurface,
             maxLines = 3,
             overflow = TextOverflow.Ellipsis,
@@ -261,20 +276,32 @@ private fun SheetHeader(title: String) {
     }
 }
 
+/**
+ * 时间标签。
+ *
+ * Apple 化：用**强调色 12% 淡底 + 强调色字**，替代原来的 secondaryContainer
+ * 色块。这样与课程块的「淡底 + 同色系字」是同一套语汇。
+ */
 @Composable
 private fun TimeChip(text: String) {
-    val colors = SleepyTheme.colors
+    val accent = WedoApple.accent
     Text(
         text = text,
-        style = MaterialTheme.typography.labelMedium,
-        color = colors.onSecondaryContainer,
+        style = WedoAppleType.footnote(),
+        color = accent,
         modifier = Modifier
-            .clip(SleepyTheme.shapes.medium)
-            .background(colors.secondaryContainer)
+            .clip(WedoAppleShapes.capsule)
+            .background(accent.copy(alpha = SleepyTheme.Alpha.tinted))
             .padding(horizontal = 12.dp, vertical = 6.dp)
     )
 }
 
+/**
+ * 详情行。
+ *
+ * Apple 化：key 用 footnote（13pt）而不是 bodyMedium（14pt），与 value 的
+ * body（17pt）拉开字号差 —— iOS 的「标签 / 值」是靠字号而非字重区分的。
+ */
 @Composable
 private fun DetailRow(key: String, value: String) {
     val colors = SleepyTheme.colors
@@ -285,13 +312,13 @@ private fun DetailRow(key: String, value: String) {
     ) {
         Text(
             text = key,
-            style = MaterialTheme.typography.bodyMedium,
+            style = WedoAppleType.footnote(),
             color = colors.onSurfaceVariant,
-            modifier = Modifier.width(54.dp)
+            modifier = Modifier.width(56.dp)
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium,
+            style = WedoAppleType.body(),
             color = colors.onSurface,
             modifier = Modifier.weight(1f)
         )

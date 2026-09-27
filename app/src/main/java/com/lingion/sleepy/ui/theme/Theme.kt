@@ -381,102 +381,81 @@ object SleepyTheme {
     }
 }
 
+/**
+ * 主题提供者 —— Apple 质感版本。
+ *
+ * **语义变更**：`themeKey` 参数名保留（避免改 4 处调用点与 AppPrefs 的读写键），
+ * 但它的含义从「预设主题 key」变成了「**强调色名**」（取 [WedoSystemColor] 的
+ * enum name，如 "Blue"）。旧值（"ocean"/"spring"…）会经 [WedoSystemColor.byName]
+ * 回落为默认系统蓝，不会崩。
+ *
+ * **删掉的东西**：5 套预设主题、Material You 动态取色、`wedoColors()` 的蓝白底色。
+ * 理由见 [AppleScheme]：Apple 的 app 没有「主题色」这个概念，只有**强调色**
+ * 和**深浅模式** —— 界面骨架永远中性。
+ */
 @Composable
 fun SleepyThemeProvider(
     darkTheme: Boolean = false,
-    themeKey: String = ThemePresets.KEY_DEFAULT,
+    themeKey: String = WedoSystemColor.Default.name,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
 
-    // "跟随系统" 走 Material You 动态取色（API 31+）；低版本降级到默认。
-    // 其他 5 套用预设的 light/dark scheme。
-    val dynamicAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-    val preset = if (themeKey == ThemePresets.KEY_SYSTEM && dynamicAvailable) {
-        null  // 标记走 dynamic 分支
-    } else {
-        ThemePresets.byKey(themeKey)
-    }
+    // themeKey 现在是强调色名；未知名回落默认（兼容旧的 "ocean"/"default" 等 preset key）
+    val accent = WedoSystemColor.byName(themeKey)
+    val accentColor = accent.color(darkTheme)
 
-    // 合并两个分支（preset vs dynamic）到同一个 content() 调用位置，
-    //   防止 Compose 因 if/else 树结构变化而丢失 AppRoot 的 remember 状态。
-    //   之前 preset==null 走 early return → content() 在不同树位置 → 切换时状态丢失。
-    val (wakeColors, palette, m3Scheme) = if (preset == null) {
-        // dynamic 取色 — API 31+ Material You (preset==null 仅在 dynamicAvailable(S/31)+ 时成立,
-        // lint 需要显式版本守卫才能识别 dynamicDarkColorScheme/dynamicLightColorScheme 的 API 31 要求)
-        val m3Dynamic = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        } else {
-            // 理论不可达: preset==null 已含 S 守卫; 防御性回退默认 scheme
-            if (darkTheme) darkColorScheme() else lightColorScheme()
-        }
-        // 用 dynamic scheme 的值构造 WakeUpColorScheme（课程色退回默认）
-        val wc = WakeUpColorScheme(
-            primary = m3Dynamic.primary,
-            onPrimary = m3Dynamic.onPrimary,
-            primaryContainer = m3Dynamic.primaryContainer,
-            onPrimaryContainer = m3Dynamic.onPrimaryContainer,
-            secondary = m3Dynamic.secondary,
-            onSecondary = m3Dynamic.onSecondary,
-            secondaryContainer = m3Dynamic.secondaryContainer,
-            onSecondaryContainer = m3Dynamic.onSecondaryContainer,
-            tertiary = m3Dynamic.tertiary,
-            onTertiary = m3Dynamic.onTertiary,
-            tertiaryContainer = m3Dynamic.tertiaryContainer,
-            onTertiaryContainer = m3Dynamic.onTertiaryContainer,
-            background = m3Dynamic.background,
-            onBackground = m3Dynamic.onBackground,
-            surface = m3Dynamic.surface,
-            onSurface = m3Dynamic.onSurface,
-            surfaceVariant = m3Dynamic.surfaceVariant,
-            onSurfaceVariant = m3Dynamic.onSurfaceVariant,
-            surfaceContainerLowest = m3Dynamic.surfaceContainerLowest,
-            surfaceContainerLow = m3Dynamic.surfaceContainerLow,
-            surfaceContainer = m3Dynamic.surfaceContainer,
-            surfaceContainerHigh = m3Dynamic.surfaceContainerHigh,
-            surfaceContainerHighest = m3Dynamic.surfaceContainerHighest,
-            outline = m3Dynamic.outline,
-            outlineVariant = m3Dynamic.outlineVariant,
-            scrim = m3Dynamic.scrim,
-            error = m3Dynamic.error,
-            onError = m3Dynamic.onError,
-            errorContainer = m3Dynamic.errorContainer,
-            onErrorContainer = m3Dynamic.onErrorContainer
+    val wakeColors = appleScheme(accentColor, darkTheme)
+
+    // M3 层同样换成 Apple 语义 —— Compose 内置组件（Switch/Chip/Button 等）
+    // 会读取 M3 scheme，若不换，强调色在系统组件里会退回 M3 紫。
+    val m3Scheme = if (darkTheme) {
+        darkColorScheme(
+            primary = accentColor, onPrimary = wakeColors.onPrimary,
+            primaryContainer = wakeColors.primaryContainer, onPrimaryContainer = wakeColors.onPrimaryContainer,
+            secondary = wakeColors.secondary, onSecondary = wakeColors.onSecondary,
+            secondaryContainer = wakeColors.secondaryContainer, onSecondaryContainer = wakeColors.onSecondaryContainer,
+            tertiary = wakeColors.tertiary, onTertiary = wakeColors.onTertiary,
+            tertiaryContainer = wakeColors.tertiaryContainer, onTertiaryContainer = wakeColors.onTertiaryContainer,
+            background = wakeColors.background, onBackground = wakeColors.onBackground,
+            surface = wakeColors.surface, onSurface = wakeColors.onSurface,
+            surfaceVariant = wakeColors.surfaceVariant, onSurfaceVariant = wakeColors.onSurfaceVariant,
+            surfaceContainerLowest = wakeColors.surfaceContainerLowest,
+            surfaceContainerLow = wakeColors.surfaceContainerLow,
+            surfaceContainer = wakeColors.surfaceContainer,
+            surfaceContainerHigh = wakeColors.surfaceContainerHigh,
+            surfaceContainerHighest = wakeColors.surfaceContainerHighest,
+            outline = wakeColors.outline, outlineVariant = wakeColors.outlineVariant, scrim = wakeColors.scrim,
+            error = wakeColors.error, onError = wakeColors.onError,
+            errorContainer = wakeColors.errorContainer, onErrorContainer = wakeColors.onErrorContainer
         )
-        Triple(wc, if (darkTheme) DarkCoursePalette else LightCoursePalette, m3Dynamic)
     } else {
-        val wc = wedoColors(if (darkTheme) preset.dark else preset.light, darkTheme, themeKey == ThemePresets.KEY_OCEAN)
-        val m3 = if (darkTheme) {
-            darkColorScheme(
-                primary = wc.primary, onPrimary = wc.onPrimary, primaryContainer = wc.primaryContainer, onPrimaryContainer = wc.onPrimaryContainer,
-                secondary = wc.secondary, onSecondary = wc.onSecondary, secondaryContainer = wc.secondaryContainer, onSecondaryContainer = wc.onSecondaryContainer,
-                tertiary = wc.tertiary, onTertiary = wc.onTertiary, tertiaryContainer = wc.tertiaryContainer, onTertiaryContainer = wc.onTertiaryContainer,
-                background = wc.background, onBackground = wc.onBackground, surface = wc.surface, onSurface = wc.onSurface,
-                surfaceVariant = wc.surfaceVariant, onSurfaceVariant = wc.onSurfaceVariant,
-                surfaceContainerLowest = wc.surfaceContainerLowest, surfaceContainerLow = wc.surfaceContainerLow,
-                surfaceContainer = wc.surfaceContainer, surfaceContainerHigh = wc.surfaceContainerHigh, surfaceContainerHighest = wc.surfaceContainerHighest,
-                outline = wc.outline, outlineVariant = wc.outlineVariant, scrim = wc.scrim,
-                error = wc.error, onError = wc.onError, errorContainer = wc.errorContainer, onErrorContainer = wc.onErrorContainer
-            )
-        } else {
-            lightColorScheme(
-                primary = wc.primary, onPrimary = wc.onPrimary, primaryContainer = wc.primaryContainer, onPrimaryContainer = wc.onPrimaryContainer,
-                secondary = wc.secondary, onSecondary = wc.onSecondary, secondaryContainer = wc.secondaryContainer, onSecondaryContainer = wc.onSecondaryContainer,
-                tertiary = wc.tertiary, onTertiary = wc.onTertiary, tertiaryContainer = wc.tertiaryContainer, onTertiaryContainer = wc.onTertiaryContainer,
-                background = wc.background, onBackground = wc.onBackground, surface = wc.surface, onSurface = wc.onSurface,
-                surfaceVariant = wc.surfaceVariant, onSurfaceVariant = wc.onSurfaceVariant,
-                surfaceContainerLowest = wc.surfaceContainerLowest, surfaceContainerLow = wc.surfaceContainerLow,
-                surfaceContainer = wc.surfaceContainer, surfaceContainerHigh = wc.surfaceContainerHigh, surfaceContainerHighest = wc.surfaceContainerHighest,
-                outline = wc.outline, outlineVariant = wc.outlineVariant, scrim = wc.scrim,
-                error = wc.error, onError = wc.onError, errorContainer = wc.errorContainer, onErrorContainer = wc.onErrorContainer
-            )
-        }
-        Triple(wc, if (darkTheme) DarkCoursePalette else LightCoursePalette, m3)
+        lightColorScheme(
+            primary = accentColor, onPrimary = wakeColors.onPrimary,
+            primaryContainer = wakeColors.primaryContainer, onPrimaryContainer = wakeColors.onPrimaryContainer,
+            secondary = wakeColors.secondary, onSecondary = wakeColors.onSecondary,
+            secondaryContainer = wakeColors.secondaryContainer, onSecondaryContainer = wakeColors.onSecondaryContainer,
+            tertiary = wakeColors.tertiary, onTertiary = wakeColors.onTertiary,
+            tertiaryContainer = wakeColors.tertiaryContainer, onTertiaryContainer = wakeColors.onTertiaryContainer,
+            background = wakeColors.background, onBackground = wakeColors.onBackground,
+            surface = wakeColors.surface, onSurface = wakeColors.onSurface,
+            surfaceVariant = wakeColors.surfaceVariant, onSurfaceVariant = wakeColors.onSurfaceVariant,
+            surfaceContainerLowest = wakeColors.surfaceContainerLowest,
+            surfaceContainerLow = wakeColors.surfaceContainerLow,
+            surfaceContainer = wakeColors.surfaceContainer,
+            surfaceContainerHigh = wakeColors.surfaceContainerHigh,
+            surfaceContainerHighest = wakeColors.surfaceContainerHighest,
+            outline = wakeColors.outline, outlineVariant = wakeColors.outlineVariant, scrim = wakeColors.scrim,
+            error = wakeColors.error, onError = wakeColors.onError,
+            errorContainer = wakeColors.errorContainer, onErrorContainer = wakeColors.onErrorContainer
+        )
     }
 
     CompositionLocalProvider(
         LocalWakeUpColors provides wakeColors,
-        LocalCoursePalette provides palette
+        LocalCoursePalette provides if (darkTheme) DarkCoursePalette else LightCoursePalette,
+        LocalWedoAccent provides accent,
+        LocalWedoDark provides darkTheme
     ) {
         // 系统栏外观随应用主题联动(官方 edge-to-edge 指南): enableEdgeToEdge 是一次性
         // API, onCreate 只调一次时 isAppearanceLightStatusBars 停在启动时的系统深浅判定,

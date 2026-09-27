@@ -660,6 +660,10 @@
     <string name="theme_mode_light">浅色</string>
     <string name="theme_mode_dark">深色</string>
     <string name="appearance_section_theme">主题色彩</string>
+    <!-- Apple 化：主题色从「5 套预设」改为「12 个 iOS 系统色的强调色选择」 -->
+    <string name="appearance_accent_title">强调色</string>
+    <string name="appearance_accent_desc">选中态、链接与主按钮使用的颜色</string>
+    <string name="appearance_accent_preview">预览</string>
     <string name="appearance_section_display">课程显示</string>
     <string name="appearance_section_widget">小组件</string>
     <!-- i18n: hardcoded string extraction -->
