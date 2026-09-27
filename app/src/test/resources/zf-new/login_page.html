@@ -5,7 +5,8 @@
 <title>统一身份认证登录</title>
 </head>
 <body>
-<!-- 边界 2: 未登录被 WebView 重定向到 sso 登录页(典型 jwglxt xtgl/login_slogin.html), 无任何 kbgrid_table_0/kblist_table/table1/festival/title 等新正方课表特征 -->
+<!-- 边界 2: 未登录被 WebView 重定向到 sso 登录页(典型 jwglxt xtgl/login_slogin.html)。
+     注意: 本注释刻意不出现任何课表容器名, 否则会污染 JwNewZfParser.confidence() 的全文子串匹配。 -->
 <div class="login-container">
   <form id="loginForm" action="/jwglxt/xtgl/login_slogin.html" method="post">
     <input type="hidden" name="csrftoken" value="dummy_token" />

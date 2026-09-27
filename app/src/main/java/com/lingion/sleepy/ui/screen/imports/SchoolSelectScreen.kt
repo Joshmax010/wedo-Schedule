@@ -66,8 +66,8 @@ private data class SchoolSection(
 
 /**
  * 生成学校的完整拼音排序键。
- * 使用 schools.json 中的 sortKeyFull 字段（完整拼音，如 "haerbingongchengdaxue"），
- * 保证同首字母内严格按拼音字典序排列（ha < hai < hang < he ... < hua < huanan）。
+ * 用 [JwSchoolInfo.sortKeyFull]（完整拼音，如 "jilinjianzhudaxue"），
+ * 保证同首字母内严格按拼音字典序排列。
  */
 private fun schoolSortKey(s: JwSchoolInfo): String {
     val firstLetter = if (s.sortKey.isNotEmpty() && s.sortKey[0].isLetter()) {
@@ -75,8 +75,7 @@ private fun schoolSortKey(s: JwSchoolInfo): String {
     } else {
         "★"
     }
-    // sortKeyFull 由 pypinyin 预生成，如 "haerbingongchengdaxue"
-    // 缺失时 fallback 到 name
+    // sortKeyFull 为预生成拼音；缺失时 fallback 到 name
     return "$firstLetter|${s.sortKeyFull.ifBlank { s.name }}"
 }
 
@@ -101,8 +100,8 @@ private fun groupByLetter(schools: List<JwSchoolInfo>): List<SchoolSection> {
 /**
  * 学校选择页 — 教务直连第一步
  *
- * 数据来自 assets/schools.json（145 所带真 URL+type）
- * 右侧字母索引栏可点击/滑动跳转到对应分组
+ * 数据来自 [JwImportViewModel.defaultWedoSchools]。
+ * 右侧字母索引栏可点击/滑动跳转到对应分组。
  */
 @Composable
 fun SchoolSelectScreen(
@@ -365,7 +364,7 @@ private fun AlphabetIndexBar(
 @Composable
 private fun SchoolRow(school: JwSchoolInfo, onClick: () -> Unit) {
     val colors = SleepyTheme.colors
-    // T13: status 分流 — supported+有 URL 才可点; pending/legacy/no-url 不响应
+    // status 分流：supported 且有 URL 才可点；pending/legacy/无 URL 不响应
     val isClickable = school.isSupported && school.hasUrl
     Row(
         modifier = Modifier
@@ -391,7 +390,7 @@ private fun SchoolRow(school: JwSchoolInfo, onClick: () -> Unit) {
         Spacer(modifier = Modifier.size(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // T13: status badge (supported 不渲染, 避免冗余)
+                // 状态徽标（supported 不渲染，避免冗余）
                 SchoolStatusBadge(school = school)
                 Spacer(modifier = Modifier.size(6.dp))
                 Text(
@@ -413,10 +412,9 @@ private fun SchoolRow(school: JwSchoolInfo, onClick: () -> Unit) {
 }
 
 /**
- * 学校状态 badge — T13 新增。
- * supported 不渲染 badge（默认全功能）; pending=「待适配」tertiary chip;
- * grad_supported=「研究生」secondary chip; legacy=「旧版」surfaceVariant chip。
- * 文案消费 strings.xml 既有 jw_pending_* 键（此前 0 引用的 dead 字符串）。
+ * 学校状态徽标。
+ *
+ * supported 不渲染徽标（默认全功能）；pending 显示「待适配」。
  */
 @Composable
 private fun SchoolStatusBadge(school: JwSchoolInfo) {
@@ -427,21 +425,6 @@ private fun SchoolStatusBadge(school: JwSchoolInfo) {
             stringResource(R.string.jw_pending_pending),
             colors.tertiaryContainer,
             colors.onTertiaryContainer
-        )
-        JwSchoolInfo.STATUS_GRAD_PENDING -> Triple(
-            stringResource(R.string.jw_pending_pending) + " · " + stringResource(R.string.jw_pending_grad),
-            colors.tertiaryContainer,
-            colors.onTertiaryContainer
-        )
-        JwSchoolInfo.STATUS_GRAD_SUPPORTED -> Triple(
-            stringResource(R.string.jw_pending_grad),
-            colors.secondaryContainer,
-            colors.onSecondaryContainer
-        )
-        JwSchoolInfo.STATUS_LEGACY -> Triple(
-            stringResource(R.string.jw_pending_legacy),
-            colors.surfaceVariant,
-            colors.onSurfaceVariant
         )
         else -> return
     }

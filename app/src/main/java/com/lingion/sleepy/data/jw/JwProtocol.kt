@@ -1,244 +1,94 @@
 package com.lingion.sleepy.data.jw
 
 /**
- * 教务系统协议类型枚举。
+ * 教务系统协议类型。
  *
- * 基于 dIT8Zv/WakeupSchedule_BUPT (Apache-2.0) 的 Common.kt 协议类型常量
- * 简化而来，保留 sleepy v1.0.8 实际用到的子集：
- *   - QZ 强智 5 变体（HEU 用 QZ_CRAZY）
- *   - ZF 正方 3 变体
- *   - URP 2 变体
- *   - PKU 北大 / CF 青果 / BNUZ 北师珠
- *   - HELP / LOGIN / MAINTAIN 标记
- *
- * 完整 17 类 + 强智变体的语义见 https://github.com/dIT8Zv/WakeupSchedule_BUPT
- * 中 `app/src/main/java/com/suda/yzune/wakeupschedule/schedule_import/Common.kt`。
+ * wedo 目前只支持新版正方 `jwglxt`（吉林建筑大学在用的那套）。
+ * 常量保留成对象而非 enum，是为了让持久化过的字符串（SharedPreferences、
+ * 数据库里的历史值）在反序列化时不会崩 —— 遇到未知值一律回落
+ * [TYPE_ZF_NEW] 交给 [JwParserRegistry] 处理。
  */
 object JwProtocol {
 
-    const val TYPE_HELP = "help"
-    const val TYPE_ZF = "zf"
-    const val TYPE_ZF_1 = "zf_1"
+    /** 新版正方 `jwglxt`：个人课表接口返回含 `kbList` 的 JSON。 */
     const val TYPE_ZF_NEW = "zf_new"
-    const val TYPE_URP = "urp"
-    const val TYPE_URP_NEW = "urp_new"
-    const val TYPE_QZ = "qz"
-    const val TYPE_QZ_OLD = "qz_old"
-    const val TYPE_QZ_CRAZY = "qz_crazy"
-    const val TYPE_QZ_BR = "qz_br"
-    const val TYPE_QZ_WITH_NODE = "qz_with_node"
-    const val TYPE_CF = "cf"
-    const val TYPE_PKU = "pku"
-    const val TYPE_BNUZ = "bnuz"
-    const val TYPE_LOGIN = "login"
-    const val TYPE_MAINTAIN = "maintain"
 
-    /** 金智 Wisedu jwapp 微应用平台（JSON API 直连，非 HTML 解析）。如：哈尔滨工程大学 jwgl.hrbeu.edu.cn */
-    const val TYPE_WISEDU = "wisedu"
+    /** 未识别的占位值。UI 上显示为「未知教务系统」。 */
+    const val TYPE_UNKNOWN = "unknown"
 
     /**
-     * 重庆大学自建统一门户 my.cqu.edu.cn（REST API + Bearer token，非 HTML 解析）。
-     * WebView 登录统一身份认证（2026-06 起需动态验证码双因素，人工登录不受影响）后，
-     * 从 localStorage 取 cqu_edu_ACCESS_TOKEN，fetch 四个接口：
-     *   GET  /api/resourceapi/session/info-detail          当前学期
-     *   GET  /api/resourceapi/session/info/{termId}        学期起始日
-     *   GET  /api/workspace/time-pattern/session-time-pattern  节次时间
-     *   POST /api/timetable/class/timetable/student/my-table-detail?sessionId=…  课表
-     * 外部佐证：时光课程表 cqu.js 适配器（茵符草）、321CQU/pymycqu。
+     * URL 级判型：只看 host 与路径锚点，不做网络请求。
+     *
+     * 新版正方的部署形态差异很大（子域、端口、反向代理路径都可能不同），
+     * 因此锚点刻意取宽：命中 `jwglxt` 或 `/xtgl/` 即认为是新版正方。
+     * CAS 网关页（`/cas/login`、`/authserver/login`）只是一跳中转，
+     * 其 `service=` 参数里带的业务路径不作为指纹，返回 null 交给页面级判定。
+     *
+     * @param url 已经 lowercase 过的 URL
      */
-    const val TYPE_CQU = "cqu"
-
-    /**
-     * 湖南科大教务（正方青春版/强智混合自建，kdjw.hnust.cn / xxjw.hnust.cn）。
-     * schools.json 已有 3 所 type="hnust" 的学校；T3 移植 HNUSTParser，T6 先补常量
-     * 使 displayName/category 不落入 else 分支。
-     */
-    const val TYPE_HNUST = "hnust"
-
-    /** T8 新加：upstream Common.kt 历史常量，暂未启用；T13 启用 */
-    const val TYPE_HNIU = "hniu"
-
-    /**
-     * 强智 iEAS 网络版 (`/ieas2.1/...`) — ASP.NET MVC 框架, 课表 endpoint = `/ieas2.1/kbcx/queryGrkb` 返回 HTML (非 JSON)。
-     * 学校样本: 北京航空航天大学 jwxt.buaa.edu.cn:7001/ieas2.1。
-     * 与 TYPE_QZ (`/jsxsd/` 强智 jxb) 同源, 但 URL 路径不同, 需独立锚点。
-     */
-    const val TYPE_QZ_IEAS = "qz_ieas"
-
-    /**
-     * 强智移动教务 SPA（qzdatasoft 移动端，`/dist/#/login` 单页应用 + `/njwhd` JSON API）。
-     * 首校: 河北资源环境职业技术学院 (jwpt.hebzyhj.edu.cn:1233, schoolCode 50139,
-     * 2026-09-09 学生回传采集包实锤)。登录态 = sessionStorage.Token (JWT)，请求头
-     * `token: <JWT>`；课表 POST /njwhd/student/curriculum?week=&kbjcmsid= 一次性返回
-     * 全学期 courses[]: classTime = 星期+起止节 (WDDSS EE, 如 "10304"=周一3-4节)、
-     * classWeek "1-4,6-19" 区间串、classWeekDetails 逗号位图串、ktmc 班级名。
-     * API 前缀 (/njwhd) 各校部署可不同 → fetch JS 先 GET /dist/serverconfig.json
-     * (免鉴权) 发现 ApiUrl，禁止硬编码。同 host 常并存经典强智 /jsxsd/ (serverconfig
-     * SelectUrl)，但移动端账号体系独立，不走经典 HTML 网格。
-     * 上游协议形态: 时光课程表 qz 移动端适配器形态（仅字段形态参考，算法自写）。
-     */
-    const val TYPE_QZ_APP = "qz_app"
-
-    /** 中国科学院大学选课系统：personSchedule 服务端 HTML 课表网格。 */
-    const val TYPE_UCAS = "ucas"
-
-    /**
-     * 合肥工业大学教务 (金智 EAMS5, eams5-student 系列, jxglstu.hfut.edu.cn)。
-     * WebView 内 fetch 三段 (CAS→course-table→lessons→POST schedule-table/datum) 拿课表 JSON。
-     * 上游协议形态: Chiu-xaH/HFUT-Schedule (MIT) 全链路参考。
-     */
-    const val TYPE_EAMS5 = "eams5"
-
-    /**
-     * 东南大学教务 (正方 URP 系, newxk.urp.seu.edu.cn, 用户粘 JSON 后 fetch 课表)。
-     * JSON 字段集 {KCM,SKJS,JASMC,SKXQ,KSJC,JSJC,ZCMC,KCH,JXBQH} — 与 WakeupSchedule_BUPT
-     * 强智系字段形态高度同构, 但走 JSON 而非 HTML; v1 单次 POST 拿全表, 无周次 bitmap 压缩。
-     * 上游协议形态: sakimidare/SEUTimetable (Apache-2.0) TableParserUtils.kt parseWeekRange
-     * 算法参考 (代码自写, 只复用逻辑)。
-     */
-    const val TYPE_SEU = "seu"
-
-    /**
-     * 浙江大学教务 (正方新版 zf_new, zdbk.zju.edu.cn, CAS = zjuam.zju.edu.cn RSA 加密登录)。
-     * 字段集 {xkkh, xqj, dsz, djj, skcd, kcb, xxq} — kcb 字符串含 \\n 分隔的课名/周次串/老师/教室,
-     * dsz="0"单/"1"双/"2"全周, djj=起始节, skcd=节次长度。
-     * 上游协议形态: Xecades/zju-ical-py (LGPL-2.1) zjuam/ugrs.py + course/ugrs_course.py;
-     * 字段映射参考, kcb 解析逻辑代码自写。
-     */
-    const val TYPE_ZJU = "zju"
-
-    /**
-     * 中国科学技术大学教务 (自研新版, jw.ustc.edu.cn, CAS = passport.ustc.edu.cn 图形验证码)。
-     * JSON 路径: x.studentTableVm.activities[] — 字段 {courseName, room, teachers[], weeksStr,
-     * weekday, startDate, endDate}。weeksStr "1-16"/"1-16单"/"1-16双" 一次性给完整范围 (EAMS5 优势项)。
-     * 上游协议形态: 1970633640/USTC-timetable-to-ics (无 license) json_version.py — 算法参考。
-     * CAS 验证码 → WebView session 必走。
-     */
-    const val TYPE_USTC = "ustc"
-
-    /**
-     * 四川大学教务 (scu.edu.cn 自建门户, 强智框架但走 mobile JSON 接口)。
-     * JSON 路径: x.dateList[0].selectCourseList[].timeAndPlaceList[] — 字段 {courseName,
-     * attendClassTeacher, weekDescription, classSessions, continuingSession, classDay,
-     * teachingBuildingName, classroomName}。weekDescription 纯文本"周次段"; 单/双信息
-     * upstream 协议丢失 (replaceAll 剥非数字/横/逗) → 本 parser 强制 type=0 (上游限制)。
-     * classDay 0-6 → day 1-7; raw 7 → 1 (周日推回周一, 上游罕见边界, KDoc 留口)。
-     * 上游协议形态: Z-P-J/ScuTimetable (无 license) TimetableHelper.java — 算法自写。
-     */
-    const val TYPE_SCU = "scu"
-
-    /**
-     * 东北大学教务 (jwxt.neu.edu.cn 强智新版 mobile JSON)。
-     * JSON 路径: x.datas.arrangedList[] — 字段 {courseName, dayOfWeek, beginSection, endSection,
-     * weeksAndTeachers, titleDetail[]}。titleDetail[0]=汇总; titleDetail[1..]= "周数串 教室"。
-     * teacher 从 weeksAndTeachers "/"  段剥 [主讲] 标记。
-     * 单/双周 upstream 协议层丢失 (replace /[()]/g), 本 parser 强制 type=0; 端点修正 (单/双) 无意义。
-     * 上游协议形态: CreamPig233/neu_wisedu2wakeup (无 license) extract_schedule.js — 算法自写。
-     */
-    const val TYPE_NEU = "neu"
-
-    /**
-     * 超星学习通「综合教务管理系统」(Powered by ChaoXing)。
-     * 自建 REST: GET /pkgl/xskb/queryKbGrdb (个人课表, 无参按会话) +
-     * GET /admin/api/getZclistByXnxq (节次时间/学期)。
-     * 字段: kcmc/xjc/xingqi/rqxl/zcstr/tmc/croommc, 单节粒度行。
-     * 首校: 吉林工商学院 (jwxt.jlbtc.edu.cn, 2026-09-05 采集包实锤)。
-     */
-    const val TYPE_CHAOXING = "chaoxing"
-
-    /**
-     * 武汉理工大学教务 (jwxt.whut.edu.cn, 金智 jwapp 变体)。
-     * 课表走 kcbcxby 微应用 cxxskcb.do (响应 datas.cxxskcb.rows[], 字段与 HEU
-     * xskcb 同名同义); 解析内核复用 JwWiseduParser。WHUT 特有: 节次 DM ≠
-     * 物理节次 (6/7/13 缺位), JwWhutParser.SECTION_DM_TO_NODE 映射兜底。
-     * 上游协议形态: shiguang_warehouse (MIT) whut_01.js + iwut (AGPL, 仅引形态)。
-     */
-    const val TYPE_WHUT = "whut"
-
-    /**
-     * 经典金智/树维 EAMS (courseTableForStd!courseTable.action 系列, HTML+内嵌 JS)。
-     * 课表数据在页面内嵌脚本块: new TaskActivity(教师,课名,...,周次位图) + index=D*unitCount+P;
-     * HTML 表格 #manualArrangeCourseTable 是空壳 (JS 端 fillTable 渲染), 禁走 DOM。
-     * 周次位图下标 0 占位, 下标 i=1 即第 i 周; unitCount 每校不一 (12/13/11), 禁写死。
-     * 适配 (2026-09 211 批量收录): 电子科大 / 上财 / 湖南师大 / 南航 (南航入口是
-     * courseTableStudent!* 但脚本块同构)。
-     * 上游协议形态: shiguang_warehouse (MIT) hunnu/uestc/hpu.js + WakeupSchedule_Kotlin
-     * (Apache-2.0); 代码自写。
-     */
-    const val TYPE_CLASSIC_EAMS = "classic_eams"
-
-    /**
-     * T6 协议识别置信度（仅内部诊断，不进 UI）。
-     *  HIGH = URL 唯一锚点（jwapp/sys/、jwglxt、default2.aspx ...）
-     *  PAGE_HIGH = HTML 页面级唯一锚点（zftal-ui-、__VIEWSTATE+Table1 ...）
-     *  LOW = 弱锚点（仅 host 子串）
-     */
-    enum class DetectConfidence { HIGH, PAGE_HIGH, LOW }
-
-    /**
-     * T8 新增：所有协议族常量的有序列表（用于 Registry 兜底遍历顺序）。
-     * 顺序按 TYPE_PRIORITY 优先级：wisedu > pku > bnuz > cf > hnust > hniu >
-     *                            zf > zf_1 > urp > urp_new > zf_new >
-     *                            qz > qz_crazy > qz_br > qz_with_node > qz_old
-     */
-    val ALL_TYPES: List<String> = listOf(
-        TYPE_WISEDU, TYPE_CQU, TYPE_CHAOXING, TYPE_EAMS5, TYPE_CLASSIC_EAMS, TYPE_PKU, TYPE_BNUZ,
-        TYPE_CF, TYPE_HNUST, TYPE_HNIU,
-        TYPE_SEU, TYPE_ZJU, TYPE_USTC, TYPE_SCU, TYPE_NEU, TYPE_WHUT,
-        TYPE_ZF, TYPE_ZF_1, TYPE_URP, TYPE_URP_NEW, TYPE_ZF_NEW,
-        TYPE_QZ, TYPE_QZ_CRAZY, TYPE_QZ_BR, TYPE_QZ_WITH_NODE, TYPE_QZ_IEAS, TYPE_QZ_APP, TYPE_UCAS, TYPE_QZ_OLD,
-    )
-
-    /**
-     * 协议显示名（用于 UI 提示）
-     */
-    fun displayName(type: String?): String = when (type) {
-        TYPE_QZ, TYPE_QZ_OLD, TYPE_QZ_CRAZY, TYPE_QZ_BR, TYPE_QZ_WITH_NODE -> "强智教务"
-        TYPE_QZ_APP -> "强智移动教务"
-        TYPE_QZ_IEAS -> "强智教务（iEAS 网络版）"
-        TYPE_UCAS -> "国科大选课系统"
-        TYPE_ZF, TYPE_ZF_1, TYPE_ZF_NEW -> "正方教务"
-        TYPE_URP, TYPE_URP_NEW -> "URP 教务"
-        TYPE_CF -> "青果教务"
-        TYPE_PKU -> "北京大学"
-        TYPE_BNUZ -> "北师珠"
-        TYPE_WISEDU -> "金智教务（直连）"
-        TYPE_CQU -> "重庆大学门户"
-        TYPE_CHAOXING -> "超星综合教务"
-        TYPE_HNUST -> "湖南科大教务"
-        TYPE_HNIU -> "湖南信息职业技术学院"
-        TYPE_EAMS5 -> "合工大教务 (EAMS5)"
-        TYPE_CLASSIC_EAMS -> "金智教务（经典 EAMS）"
-        TYPE_SEU -> "东南大学"
-        TYPE_ZJU -> "浙江大学"
-        TYPE_USTC -> "中国科学技术大学"
-        TYPE_SCU -> "四川大学"
-        TYPE_NEU -> "东北大学"
-        TYPE_WHUT -> "武汉理工大学"
-        TYPE_LOGIN -> "特殊登录（v1 暂不支持）"
-        TYPE_HELP -> "如何选择教务类型"
-        TYPE_MAINTAIN -> "维护中"
-        else -> type ?: ""
+    fun detect(url: String): String? {
+        if (url.isBlank()) return null
+        if (url.contains("/cas/login") || url.contains("/authserver/login")) return null
+        return when {
+            url.contains("jwglxt") -> TYPE_ZF_NEW
+            url.matches(Regex(""".*/xtgl(/|$).*""")) -> TYPE_ZF_NEW
+            url.contains("/kbcx/") -> TYPE_ZF_NEW
+            url.contains("xskbcx_cx") -> TYPE_ZF_NEW
+            else -> null
+        }
     }
 
     /**
-     * 协议大类，用于 WebViewLogin UI 上的提示文案分类
+     * 页级判型：URL 判不出来时看页面特征。
+     *
+     * `zftal-ui-` 是新版正方的前端资源前缀，`教学管理信息服务平台` 是其页面标题，
+     * 这两个是最稳的锚点。老版本正方的 `__VIEWSTATE` 不作为命中依据 ——
+     * 它太通用，很多 .NET 站点都有。
+     *
+     * @param html 原始 HTML
      */
-    fun category(type: String?): String = when (type) {
-        TYPE_QZ, TYPE_QZ_OLD, TYPE_QZ_CRAZY, TYPE_QZ_BR, TYPE_QZ_WITH_NODE, TYPE_QZ_APP -> "qz"
-        TYPE_QZ_IEAS -> "qz"
-        TYPE_UCAS -> "other"
-        TYPE_ZF, TYPE_ZF_1, TYPE_ZF_NEW -> "zf"
-        TYPE_URP, TYPE_URP_NEW -> "urp"
-        TYPE_WISEDU -> "wisedu"
-        TYPE_CQU -> "cqu"
-        TYPE_CHAOXING -> "chaoxing"
-        TYPE_EAMS5 -> "eams5"
-        TYPE_CLASSIC_EAMS -> "other"
-        TYPE_SEU, TYPE_ZJU, TYPE_USTC, TYPE_SCU, TYPE_NEU, TYPE_WHUT -> "other"
-        TYPE_HNUST, TYPE_HNIU -> "hnust"
-        TYPE_CF -> "cf"
-        TYPE_PKU, TYPE_BNUZ -> "other"
-        else -> "other"
+    fun detectFromHtml(html: String): String? {
+        if (html.isBlank()) return null
+        val lower = html.lowercase()
+        return when {
+            lower.contains("zftal-ui-") -> TYPE_ZF_NEW
+            extractTitle(html).contains("教学管理信息服务平台") -> TYPE_ZF_NEW
+            lower.contains("login_slogin.html") -> TYPE_ZF_NEW
+            else -> null
+        }
+    }
+
+    /** 抽 `<title>` 文本；无标题返回空串。大文档用 indexOf 截窗，不引入 HTML 解析库。 */
+    fun extractTitle(html: String): String {
+        val start = html.indexOf("<title", ignoreCase = true)
+        if (start < 0) return ""
+        val openEnd = html.indexOf('>', start)
+        if (openEnd < 0) return ""
+        val closeStart = html.indexOf("</title>", openEnd + 1, ignoreCase = true)
+        if (closeStart < 0) return ""
+        return html.substring(openEnd + 1, closeStart).trim()
+    }
+
+    /** 命中的指纹特征，供导入失败时的诊断文案使用。 */
+    fun hitFeatures(html: String): List<String> {
+        if (html.isBlank()) return emptyList()
+        val lower = html.lowercase()
+        val title = extractTitle(html)
+        val hits = mutableListOf<String>()
+        if (lower.contains("zftal-ui-")) hits += "zftal-ui-"
+        if (title.contains("教学管理信息服务平台")) hits += "title:教学管理信息服务平台"
+        if (lower.contains("login_slogin.html")) hits += "login_slogin.html"
+        if (lower.contains("jwglxt")) hits += "jwglxt"
+        if (lower.contains("\"kblist\"")) hits += "kbList"
+        if (lower.contains("kblist_table")) hits += "kblist_table"
+        if (lower.contains("kbgrid_table_0")) hits += "kbgrid_table_0"
+        return hits
+    }
+
+    /** UI 展示名。 */
+    fun displayName(type: String?): String = when (type) {
+        TYPE_ZF_NEW -> "正方教务（新版）"
+        TYPE_UNKNOWN -> "未知教务系统"
+        else -> type ?: ""
     }
 }

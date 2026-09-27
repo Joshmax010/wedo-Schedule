@@ -3,46 +3,32 @@ package com.lingion.sleepy.data.jw
 import com.lingion.sleepy.data.entity.CourseEntity
 
 /**
- * 教务系统 HTML 解析器抽象基类。
+ * 教务来源解析器基类。
  *
- * 设计来自 dIT8Zv/WakeupSchedule_BUPT (Apache-2.0) 的 Parser.kt
- * (https://github.com/dIT8Zv/WakeupSchedule_BUPT/blob/master/app/src/main/java/com/suda/yzune/wakeupschedule/schedule_import/parser/Parser.kt)
- *
- * 简化点：
- *   - 去掉了 [saveCourse] / [convertCourse] 中对 wakeup 私有 bean 的依赖
- *   - 改成直接输出 List<JwCourse>，由 [JwImportViewModel] 统一转 [CourseEntity]
- *   - 去掉了 Context 依赖（颜色生成等放到 ViewModel 层）
+ * 约定：
+ *   - 输入是登录态下从教务页面抓到的源码（HTML 或内嵌 JSON 字符串），
+ *     由 WebView 侧的 fetch 脚本透传，不在此层做网络请求。
+ *   - 输出是统一的 [JwCourse] 列表，转换与落库交给 [JwImportViewModel]。
+ *   - 不依赖 Android Context —— 颜色、资源等表现层逻辑留在 ViewModel。
  *
  * 用法：
  *   ```
- *   val courses = JwQzCrazyParser(html).generateCourseList()
+ *   val courses = JwNewZfParser(payload).generateCourseList()
  *   ```
  */
 abstract class JwParser(val source: String) {
 
-    /**
-     * 解析教务 HTML 源码，输出统一结构的课程列表
-     */
+    /** 解析源码，输出统一结构的课程列表。 */
     abstract fun generateCourseList(): List<JwCourse>
 
     /**
-     * T8 新增：基于 HTML 结构锚点的命中置信度（0..100）。
+     * 基于源码结构锚点的命中置信度（0..100）。
      *
-     * 规则：
-     *   - 命中协议族唯一锚点（如 Table1 / kbtable / kbxx / datagrid）：80..100
-     *   - 命中协议族常见锚点（font[title=老师] 等单元格级）：50..79
-     *   - 仅靠解析结果反推（无法证伪）：0..49
-     *   - 兜底返回 0
-     *
-     * 实现要点：
-     *   - confidence 不调 generateCourseList（避免 N+1），只看 HTML 静态特征
-     *   - confidence 不依赖协议类型上下文（Registry 层做优先级裁决）
+     * 只允许检查静态特征，**禁止**在内部调用 [generateCourseList]（避免重复解析）。
+     * 兜底返回 0。
      */
     open fun confidence(): Int = 0
 
-    /**
-     * T8 新增：本 parser 实际命中的 HTML 锚点列表（用于诊断输出）。
-     * 默认空，子类按需覆盖。
-     */
+    /** 实际命中的结构锚点列表，供诊断输出。默认空，子类按需覆盖。 */
     open fun matchedFeatures(): List<String> = emptyList()
 }

@@ -6,7 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * T13 — JwSchoolInfo status 字段语义测试（isSupported/isGrad/isPending/hasUrl）。
+ * [JwSchoolInfo] 的 status 语义与派生属性。
  */
 class JwSchoolInfoTest {
 
@@ -16,71 +16,40 @@ class JwSchoolInfoTest {
     )
 
     @Test
-    fun `supported status is supported and clickable`() {
+    fun `supported 状态可点且非待适配`() {
         val s = school(JwSchoolInfo.STATUS_SUPPORTED)
         assertTrue(s.isSupported)
-        assertFalse(s.isGrad)
         assertFalse(s.isPending)
         assertTrue(s.hasUrl)
     }
 
     @Test
-    fun `pending status is not supported`() {
+    fun `pending 状态不可点且标记待适配`() {
         val s = school(JwSchoolInfo.STATUS_PENDING)
         assertFalse(s.isSupported)
-        assertFalse(s.isGrad)
         assertTrue(s.isPending)
     }
 
     @Test
-    fun `grad_supported is supported and grad`() {
-        val s = school(JwSchoolInfo.STATUS_GRAD_SUPPORTED)
-        assertTrue(s.isSupported)
-        assertTrue(s.isGrad)
-        assertFalse(s.isPending)
-    }
-
-    @Test
-    fun `grad_pending is pending and grad`() {
-        val s = school(JwSchoolInfo.STATUS_GRAD_PENDING)
-        assertFalse(s.isSupported)
-        assertTrue(s.isGrad)
-        assertTrue(s.isPending)
-    }
-
-    @Test
-    fun `legacy status is not supported`() {
-        val s = school(JwSchoolInfo.STATUS_LEGACY)
-        assertFalse(s.isSupported)
-        assertFalse(s.isGrad)
-        assertFalse(s.isPending)
-    }
-
-    @Test
-    fun `blank url means not clickable`() {
+    fun `URL 为空则不可点但状态仍为 supported`() {
         val s = school(JwSchoolInfo.STATUS_SUPPORTED, url = "")
         assertFalse("URL 为空的学校不可点", s.hasUrl)
-        assertTrue(s.isSupported) // 但 status 仍是 supported
+        assertTrue(s.isSupported)
     }
 
     @Test
-    fun `status constants match lifecycle vocabulary`() {
-        // 前瞻闸: 5 个生命周期常量与 strings.xml/T9 词表一致
+    fun `status 常量仅两个生命周期取值`() {
+        // 单校产品：只有「已支持」和「待适配」两种状态
         assertEquals(
-            setOf("supported", "pending", "grad_supported", "grad_pending", "legacy"),
-            setOf(
-                JwSchoolInfo.STATUS_SUPPORTED, JwSchoolInfo.STATUS_PENDING,
-                JwSchoolInfo.STATUS_GRAD_SUPPORTED, JwSchoolInfo.STATUS_GRAD_PENDING,
-                JwSchoolInfo.STATUS_LEGACY
-            )
+            setOf("supported", "pending"),
+            setOf(JwSchoolInfo.STATUS_SUPPORTED, JwSchoolInfo.STATUS_PENDING)
         )
     }
 
     @Test
-    fun `enableFetch defaults false and copies preserve it`() {
+    fun `enableFetch 默认 false 且 copy 保留`() {
         val s = JwSchoolInfo("T", "测试", "https://a.edu", JwProtocol.TYPE_ZF_NEW)
         assertFalse("enableFetch 默认 false", s.enableFetch)
-        val enabled = s.copy(enableFetch = true)
-        assertTrue(enabled.enableFetch)
+        assertTrue(s.copy(enableFetch = true).enableFetch)
     }
 }

@@ -3,7 +3,7 @@ package com.lingion.sleepy.data.jw
 import org.jsoup.Jsoup
 
 /**
- * 教务直连导入失败诊断 — T9
+ * 教务直连导入失败诊断。
  *
  * 负责在 parser 调用之上做一次"分类嗅探"：区分
  *   - 会话过期 / 登录页（HTTP 200 渲染的是登录页 HTML）
@@ -11,7 +11,7 @@ import org.jsoup.Jsoup
  *   - 有容器但组头缺失（合并行 / OCR 截图 / 图片课表）
  *   - 有容器有组头但课程格全空（图片课表 / 本学期无课）
  *   - 可信空课表（页面文本含"暂无课表"/"未产生课表数据"）
- *   - 抓取协议不匹配（parser 解析为 0 课但页面是其他协议 — T8 兜底失败）
+ *   - 抓取到的页面不是课表页（parser 解析为 0 课但页面结构不符）
  *
  * 关键约束：**绝不** 把学号 / 姓名 / Cookie / token / 完整 HTML 写入 userMessage 或 Log。
  * 只输出"指纹片段"这种用户能看懂、技术人员也能定位的信息。
@@ -173,30 +173,19 @@ object JwParseDiagnostics {
             )
         }
 
-        // 6) 抓取协议不匹配
-        val schoolType = school?.type
-        val expectedFamily = when (schoolType) {
-            JwProtocol.TYPE_ZF, JwProtocol.TYPE_ZF_1 -> setOf("id=Table1")
-            JwProtocol.TYPE_ZF_NEW -> setOf("kbList", "kbgrid", "kblist")
-            JwProtocol.TYPE_QZ, JwProtocol.TYPE_QZ_CRAZY, JwProtocol.TYPE_QZ_BR,
-            JwProtocol.TYPE_QZ_WITH_NODE, JwProtocol.TYPE_QZ_OLD -> setOf("id=kbtable")
-            JwProtocol.TYPE_URP_NEW -> setOf("dateList")
-            JwProtocol.TYPE_URP -> setOf("displayTag")
-            JwProtocol.TYPE_CF -> setOf("kbxx")
-            JwProtocol.TYPE_PKU -> setOf("datagrid")
-            JwProtocol.TYPE_BNUZ -> setOf("id=table1", "id=Table1")
-            else -> null
-        }
-        if (expectedFamily != null && containerHits.none { it in expectedFamily }) {
+        // 6) 抓取内容与预期结构不符
+        //    新版正方的个人课表接口返回 kbList JSON，渲染后落成 kbgrid/kblist 表格。
+        //    三者都没有 → 抓到的多半不是课表页。
+        val expectedFamily = setOf("kbList", "kbgrid", "kblist")
+        if (containerHits.none { it in expectedFamily }) {
             return Result(
                 category = Category.WRONG_PROTOCOL,
                 attempts = parsersAttempted,
                 matchedFeatures = matched,
                 courseCount = 0,
-                userMessage = "抓取协议与学校配置不一致：学校标注 $schoolType，" +
-                    "但页面容器为 ${containerHits.joinToString("/")}。" +
-                    "可能原因：①学校已切换教务系统，请反馈开发者更新 schools.json；" +
-                    "②抓取时机过早；③页面为图片课表"
+                userMessage = "抓到的页面不含课表数据（未发现 kbList / kbgrid / kblist）。" +
+                    "可能原因：①未停留在「个人课表」页；②抓取时机过早，数据尚未加载；" +
+                    "③学校已更换教务系统，请反馈开发者"
             )
         }
 

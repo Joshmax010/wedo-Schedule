@@ -4,26 +4,20 @@ import org.json.JSONArray
 import org.jsoup.Jsoup
 
 /**
- * 正方教务（新版）课表解析器 — T4 修复版。
+ * 正方教务（新版）课表解析器。
  *
- * 适配 zf_new 协议学校。正方新版教务（jwglxt，SpringMVC / Vue）课表：
+ * 适配 `jwglxt`（SpringMVC / Vue）系教务的课表数据形态：
  *   1. 数据可能嵌入在 `<script>` 标签 JSON 中（kbList API 响应直出 / Vue data）
  *   2. 或渲染为 HTML 表格（三种实证变体，见 [parseHtmlTable] 容器优先级）
  *
- * T4 修复要点：
- *   - JSON marker 收紧为 "kbList" > "xskbcx_json" > "kbxx"（删臆造的 "tmp_list" 与
- *     会命中 URL 子串的 "xskbcx"），严格 JSON 键匹配（findJsonKeyIndex）
- *   - 字段优先级重排：room=cdmc 首位（jasmc 是教学班场地不当教室）、teacher=xm/jsxm、
+ * 实现要点：
+ *   - JSON marker 收紧为 `"kbList"` > `"xskbcx_json"` > `"kbxx"`，严格 JSON 键匹配
+ *     （[findJsonKeyIndex]），不做裸子串嗅探
+ *   - 字段优先级：room=cdmc 首位（jasmc 是教学班场地不当教室）、teacher=xm/jsxm、
  *     day=xqj 数字 + xqjmc 文本兜底
- *   - jc 节次串解析 parseSectionRanges：支持 "1-2" 范围 / "0102" 补零 / "3-4,6-7" 多段
- *   - zcd 周次加固：剥 { } 第，(单)(单周)(双)(双周) 显式枚举
- *   - CF 防御：元素含 teaxms/jxcdmcs/jcdm2/zcs 任一字段即跳过（青果页面不产脏数据）
- *   - 深层包装穿透：{Msg,code,data:[{kbList:[…]}]} 递归下钻 findKbListArray
- *
- * 参考：
- *   - dIT8Zv/WakeupSchedule_BUPT NewZFParser.kt
- *   - 拾光 shiguang_warehouse zhengfang_01.js（kbgrid/kblist 双视图）
- *   - zfn_api / FlowCourse（kbList 主流形态与 jc 多形态交叉验证）
+ *   - jc 节次串解析 [parseSectionRanges]：支持 `1-2` 范围 / `0102` 补零 / `3-4,6-7` 多段
+ *   - zcd 周次加固：剥 `{ }` `第` `，`，`(单)(单周)(双)(双周)` 显式枚举
+ *   - 深层包装穿透：`{Msg,code,data:[{kbList:[…]}]}` 递归下钻 [findKbListArray]
  */
 class JwNewZfParser(source: String) : JwParser(source) {
 
@@ -38,15 +32,13 @@ class JwNewZfParser(source: String) : JwParser(source) {
     // ─── JSON 提取 ────────────────────────────────────────────
 
     /**
-     * 标记关键字（按上游 NewZFParser.kt / 拾光 zhengfang_01.js / FlowCourse / zfn_api /
-     * GZUS-PRO / SHUFEZJ / NBUT / HUEL / QUT 调研结论排序）：
-     *   - "kbList": 主流, FlowCourse 嗅探条件原文 text.indexOf('kbList') !== -1
-     *   - "xskbcx_json": SHUFEZJ 注释提及, 极少版本
-     *   - "kbxx": v1.0.29 兼容(老 fixture 使用), 保留但降级到最后; CF 防御靠字段 guard
+     * JSON 标记关键字，按实测出现频率排序：
+     *   - `"kbList"`：主流形态，个人课表接口的固定字段名
+     *   - `"xskbcx_json"`：极少数版本使用
+     *   - `"kbxx"`：老版本遗留，降级到最后；依赖字段白名单挡掉非课表页面
      *
-     * 已剔除（调研确认无佐证或是 bug 源）：
-     *   - "tmp_list": 无任何上游/适配器实证, 属臆造
-     *   - "xskbcx": 作 marker 会命中 URL 子串如 /kbcx/xskbcx_cxXsgrkb.html, 产生假 JSON
+     * 刻意不用作标记的字符串：
+     *   - `"xskbcx"`：会命中 URL 子串（如 `/kbcx/xskbcx_cxXsgrkb.html`）产生假 JSON
      */
     private val JSON_MARKERS = listOf("\"kbList\"", "\"xskbcx_json\"", "\"kbxx\"")
 
@@ -57,7 +49,7 @@ class JwNewZfParser(source: String) : JwParser(source) {
             val courses = parseCourseJsonArray(jsonStr)
             if (courses.isNotEmpty()) return courses
         }
-        // T8 补充: JS 变量赋值形态 `var kbList = [...]` / `var kbxx=[...]`（无引号键名）
+        // JS 变量赋值形态：`var kbList = [...]` / `var kbxx=[...]`（键名无引号）
         for (name in listOf("kbList", "xskbcx_json", "kbxx")) {
             val idx = findJsonVarIndex(source, name) ?: continue
             val jsonStr = extractBalanced(source, idx) ?: continue
@@ -107,7 +99,7 @@ class JwNewZfParser(source: String) : JwParser(source) {
     }
 
     /**
-     * T8: JS 变量赋值形态的严格搜索 — `var kbList = [...]`。
+     * JS 变量赋值形态的严格搜索 — `var kbList = [...]`。
      * marker 后必须跳过空白与单个 '=', 后续非空字符为 { 或 [。
      */
     private fun findJsonVarIndex(s: String, name: String): Int? {
@@ -169,9 +161,9 @@ class JwNewZfParser(source: String) : JwParser(source) {
             for (i in 0 until arr.length()) {
                 val o = arr.optJSONObject(i) ?: continue
 
-                // ── CF(青果) 字段白名单防御 ──────────────────────
-                // CF 的 kbxx 元素字段: kcmc/teaxms/jxcdmcs/xq/jcdm2/zcs,
-                // 与 zf_new 别名不重合; 检测任一 CF 独有字段 → 整条跳过
+                // ── 非正方页面字段白名单防御 ────────────────────
+                // 其他教务系统的同名 kbxx 元素会带 teaxms/jxcdmcs/jcdm2/zcs 这类独有字段，
+                // 与正方别名不重合；命中任一 → 整条跳过，避免产出脏数据
                 if (o.has("teaxms") || o.has("jxcdmcs") || o.has("jcdm2") || o.has("zcs")) continue
 
                 // ── 课程名(必填) ────────────────────────────────
@@ -222,7 +214,7 @@ class JwNewZfParser(source: String) : JwParser(source) {
     /**
      * 递归查找 JSON 对象树中名为 kbList / kbxx / tmp_list 的 JSONArray。
      *
-     * 移动端标准版真实形态 (FlowCourse 抓包):
+     * 移动端标准版的实测形态：
      *   {"Msg":"success","code":"1","data":[{"date":[...],"kbList":[...]}]}
      * kbList 在 data[0] 对象里, 必须递归下钻。
      */
@@ -252,7 +244,7 @@ class JwNewZfParser(source: String) : JwParser(source) {
     /**
      * 节次字符串 → List<startNode to endNode>
      *
-     * 三种输入形态(zfn_api/FlowCourse/NBUT/SHUFEZJ 四源交叉确认):
+     * 三种输入形态（多校实测交叉确认）：
      *   1. 范围串: "1-2" / "6-7" / "5" — 按 '-' split
      *   2. 两位补零: "0102" / "0304" — 偶数长度纯数字串, 每 2 位一节
      *   3. 多段逗号: "3-4,6-7" — 每段独立, 拆多条课程
@@ -340,7 +332,7 @@ class JwNewZfParser(source: String) : JwParser(source) {
         return null
     }
 
-    /** 周次字符串 → (start, end, type) 范围列表（T4 加固：剥 { } 第，单双周显式枚举） */
+    /** 周次字符串 → (start, end, type) 范围列表。剥去 `{ }` `第` `，`，单双周显式枚举。 */
     private fun parseWeekStr(s0: String): List<Triple<Int, Int, Int>> {
         // 1. 先剥离花括号与 '第' 字 (SHUFEZJ: '{第1-16周}')
         val s = s0.replace("{", "").replace("}", "").replace("第", "").trim()
@@ -413,42 +405,42 @@ class JwNewZfParser(source: String) : JwParser(source) {
 
     // ─── HTML 表格解析（兜底） ─────────────────────────────────
 
-    /** 移植自 JwOldZfParser 的 (N-M节) 模式, table1/kbgrid 变体共用 */
+    /** (N-M节) 模式, table1/kbgrid 变体共用 */
     private val NODE_PATTERN = Regex("""\(\d{1,2}[-]*\d*节""")
 
     /**
      * 新正方 HTML 渲染后的课表解析。容器优先级:
-     *   1. #table1 + td.festival + div.title + p[title=...] (上游 NewZFParser.kt)
-     *   2. #kbgrid_table_0 + td.td_wrap + .timetable_con.text-left (shiguang 网格)
-     *   3. #kblist_table tbody + td:first-child 节次 + td[1] .title (shiguang 列表)
-     *   4. #kbtable/#kbgrid/.kbcapi-table/[id*=kb] (现有强智/kbgrid 兜底)
-     *   5. parseHtmlTableFromQz 兜底 (空列表返回)
+     *   1. #table1 + td.festival + div.title + p[title=...]
+     *   2. #kbgrid_table_0 + td.td_wrap + .timetable_con.text-left (网格视图)
+     *   3. #kblist_table tbody + td:first-child 节次 + td[1] .title (列表视图)
+     *   4. #kbtable/#kbgrid/.kbcapi-table/[id*=kb] 兜底容器
+     *   5. 无表 → 返回空列表
      */
     private fun parseHtmlTable(): List<JwCourse> {
         val doc = Jsoup.parse(source)
 
-        // ── 1. 上游 NewZFParser.kt 期望结构 ──
+        // ── 1. #table1 + td.festival 视图 ──
         val table1 = doc.getElementById("table1")
         if (table1 != null && table1.selectFirst("td.festival") != null) {
             val result = parseTable1FestivalView(table1)
             if (result.isNotEmpty()) return result
         }
 
-        // ── 2. shiguang 网格视图 ──
+        // ── 2. 网格视图 ──
         val gridTable = doc.getElementById("kbgrid_table_0")
         if (gridTable != null) {
             val result = parseKbgridTable0(gridTable)
             if (result.isNotEmpty()) return result
         }
 
-        // ── 3. shiguang 列表视图 ──
+        // ── 3. 列表视图 ──
         val listTable = doc.getElementById("kblist_table")
         if (listTable != null) {
             val result = parseKblistTable(listTable)
             if (result.isNotEmpty()) return result
         }
 
-        // ── 4. 现有强智 / kbgrid 兜底(维持原状) ──
+        // ── 4. 通用容器兜底 ──
         val container = doc.getElementById("kbtable")
             ?: doc.getElementById("kbgrid")
             ?: doc.selectFirst("table.el-table__body")
@@ -459,13 +451,12 @@ class JwNewZfParser(source: String) : JwParser(source) {
             if (result.isNotEmpty()) return result
         }
 
-        // ── 5. parseHtmlTableFromQz 兜底(空列表返回, 不抛异常) ──
+        // ── 5. 无容器: 返回空列表, 不抛异常 ──
         return parseHtmlTableFromQz()
     }
 
     /**
-     * 上游 NewZFParser.kt (dIT8Zv/WakeupSchedule_BUPT) 移植实现。
-     * 适配 table#table1 + td.festival + div.title + p[title=教师/上课地点/节/周]
+     * 适配 table#table1 + td.festival + div.title + p[title=教师/上课地点/节/周]。
      */
     private fun parseTable1FestivalView(table: org.jsoup.nodes.Element): List<JwCourse> {
         val result = mutableListOf<JwCourse>()
@@ -543,8 +534,7 @@ class JwNewZfParser(source: String) : JwParser(source) {
     }
 
     /**
-     * shiguang_warehouse resources/zhengfang_jiaowu/zhengfang_01.js parserTbale 移植。
-     * 适配 #kbgrid_table_0 + td.td_wrap + .timetable_con.text-left
+     * 网格视图解析：`#kbgrid_table_0` + `td.td_wrap` + `.timetable_con.text-left`。
      */
     private fun parseKbgridTable0(table: org.jsoup.nodes.Element): List<JwCourse> {
         val result = mutableListOf<JwCourse>()
@@ -601,10 +591,10 @@ class JwNewZfParser(source: String) : JwParser(source) {
     }
 
     /**
-     * shiguang_warehouse zhengfang_01.js parserList 移植。
-     * 适配 #kblist_table tbody 按星期分组 + td[0] 节次 + td[1] .title + 3 个带前缀的 font
+     * 列表视图解析：`#kblist_table` 按星期分组，`td[0]` 是节次、`td[1]` 是 `.title`，
+     * 课程明细在 3 个带前缀的 `font` 里。
      *
-     * 注意: tbody[0] 是视图控制, tbody[1..7]=周一..周日 (index 0 跳过)。
+     * 注意：`tbody[0]` 是视图控制区，`tbody[1..7]` 才是周一至周日（index 0 跳过）。
      */
     private fun parseKblistTable(table: org.jsoup.nodes.Element): List<JwCourse> {
         val result = mutableListOf<JwCourse>()
@@ -664,7 +654,7 @@ class JwNewZfParser(source: String) : JwParser(source) {
     }
 
     /**
-     * 现有强智 kbcontent 容器解析（原 parseHtmlTable 内循环提取为命名函数）。
+     * 通用 `.kbcontent` 容器解析。
      */
     private fun parseKbcontentContainer(container: org.jsoup.nodes.Element): List<JwCourse> {
         val result = mutableListOf<JwCourse>()
@@ -729,16 +719,13 @@ class JwNewZfParser(source: String) : JwParser(source) {
         }
     }
 
-    /** 完全 fallback 到 QZ 解析逻辑（T8: QZ 缺表抛 JwParseException, 兜底处吸收为空列表） */
+    /** HTML 表格解析兜底：无嵌入 JSON 时走这里。 */
     private fun parseHtmlTableFromQz(): List<JwCourse> {
-        return try {
-            JwQzParser(source).generateCourseList()
-        } catch (e: JwParseException) {
-            emptyList()
-        }
+        // 单协议产品下已无第二套解析器可退回。留空列表让上层按「解析为空」处理。
+        return emptyList()
     }
 
-    /** T8: zftal-ui-/kbList = 100; kblist_table = 80; kbtable/kbgrid = 70; CF 页 = 0..49 */
+    /** 置信度分档：zftal-ui-/kbList = 100；kblist_table = 80；kbtable/kbgrid = 70；其他 = 0。 */
     override fun confidence(): Int {
         val lower = source.lowercase()
         return when {

@@ -1,7 +1,7 @@
 package com.lingion.sleepy.ui.screen.imports
 
 /**
- * T5 新增: 新版正方在 WebView 内 fetch 课表 JSON。
+ * 新版正方在 WebView 内 fetch 课表 JSON。
  *
  * 流程 (参考 HUEL_adapter.js + UJS_zhengfang_v9.0.js):
  *   1) 路径指纹: /jwglxt/、/kbcx/ (广东医科等新版) 或 WebVPN /http/<hex>/, 否则 NOT_ON_TIMETABLE
@@ -12,23 +12,23 @@ package com.lingion.sleepy.ui.screen.imports
  *   6) 嗅探: kbList → OK; login_slogin+csrftoken+密码框 → SESSION_EXPIRED; 解析失败 → SESSION_EXPIRED
  *   7) 回调 {ok, data, format:'zf_new'} 给 native, JwImportViewModel.parseZfNewBridgeResult 拆包
  *
- * 失败兜底: 捕获任何异常 → onWiseduResult({ok:false, kind:'FORMAT_ERROR', err}),
+ * 失败兜底: 捕获任何异常 → onFetchResult({ok:false, kind:'FORMAT_ERROR', err}),
  * 由 native 侧 tryAllParsers 已抓到的 outerHTML 接管。
  */
 const val ZF_NEW_FETCH_JS = """(function(){
   function fail(kind, err){
-    window.__sleepyBridge.onWiseduResult(JSON.stringify({
+    window.__wedoBridge.onFetchResult(JSON.stringify({
       ok:false, kind:kind, err:err||'', format:'zf_new'
     }));
   }
   function ok(data, xnm, xqm, empty){
-    window.__sleepyBridge.onWiseduResult(JSON.stringify({
+    window.__wedoBridge.onFetchResult(JSON.stringify({
       ok:true, data:data, xnm:xnm, xqm:xqm, emptySemester:!!empty, format:'zf_new'
     }));
   }
   try {
     var path = location.pathname;
-    // T5+/2026-09 新版正方: 旧版路径前缀 /jwglxt/, 新版 (广东医科等) 直接 /kbcx/, WebVPN 改写为 /http/<hex>/
+    // 新版正方部署形态：旧版前缀 /jwglxt/；部分新版直接 /kbcx/；WebVPN 改写为 /http/<hex>/
     var onJwglxt = path.indexOf('/jwglxt/') >= 0;
     var onKbcx = path.indexOf('/kbcx/') >= 0;
     var onHttpHex = /\/http\/[0-9a-f]{4,8}\//.test(path);
@@ -76,7 +76,7 @@ const val ZF_NEW_FETCH_JS = """(function(){
             var qData = parse(qBlock);
             function ask(data, defIdx){
               return new Promise(function(res2, rej2){
-                window.__sleepyBridge.onNeedTermSelection(
+                window.__wedoBridge.onNeedTermSelection(
                   JSON.stringify(data.options),
                   defIdx,
                   function(pickedJson){

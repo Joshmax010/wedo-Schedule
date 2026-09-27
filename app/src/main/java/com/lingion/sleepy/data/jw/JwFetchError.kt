@@ -5,11 +5,11 @@ import com.lingion.sleepy.R
 import org.json.JSONObject
 
 /**
- * T11: WebView 内 fetch 模式的错误分类与桥协议。
+ * WebView 内 fetch 模式的错误分类与桥协议。
  *
- * ZF_NEW_FETCH_JS 与 QZ_FETCH_JS 把错误分成四类
- * (会话过期 / 解析失败 / 网络异常 / 学期无课)，而不是笼统 ok:false。
- * when over sealed class 强制穷尽，switch 漏分支编译期就会报错。
+ * [ZF_NEW_FETCH_JS] 把错误分成四类（会话过期 / 解析失败 / 网络异常 / 学期无课），
+ * 而不是笼统的 `ok:false`。[FetchErrorKind] 用 sealed class 保证 when 穷尽，
+ * 漏分支在编译期就会报错。
  */
 sealed class FetchErrorKind {
     /** 后端返回 HTML 登录页 / 302 CAS / JSON.parse 抛异常 —— 文案:重新登录 */

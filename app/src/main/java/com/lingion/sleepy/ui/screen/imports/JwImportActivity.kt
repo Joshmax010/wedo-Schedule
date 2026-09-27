@@ -45,7 +45,6 @@ import com.lingion.sleepy.data.jw.JwImportViewModel
 import com.lingion.sleepy.data.jw.JwParseDiagnostics
 import com.lingion.sleepy.data.jw.JwProtocol
 import com.lingion.sleepy.data.jw.JwSchoolInfo
-import com.lingion.sleepy.data.jw.UcasDetailFetch
 import com.lingion.sleepy.data.parser.ScheduleParser
 import com.lingion.sleepy.ui.component.DatePickerField
 import com.lingion.sleepy.ui.component.TimeSlotEditor
@@ -63,9 +62,7 @@ import com.lingion.sleepy.R
 /**
  * 教务直连导入主屏
  *
- * 流程：学校选择 → WebView 登录抓 HTML → 解析 → 复用 ImportScreen 现有预览 → 落库
- *
- * HEU 走 WISEDU 金智教务协议；其他学校按学校配置的协议类型选择 parser。
+ * 流程：选择学校 → WebView 登录并抓取课表数据 → 解析 → 复用 ImportScreen 预览 → 落库
  */
 class JwImportActivity : ComponentActivity() {
 
@@ -249,52 +246,30 @@ class JwImportActivity : ComponentActivity() {
                         } else {
                             JwWebViewLoginScreen(
                                 school = school,
-                                onHtmlCaptured = { html, sch, periods ->
-                                    // T6 双层判定：sch.type 已知直接用；空 → HTML/URL 组合兜底
-                                    val rawType = sch.type
-                                    val effectiveType = rawType?.takeIf { it.isNotBlank() }
-                                        ?: jwViewModel.detectProtocol(html, sch.url.ifBlank { null })
-                                    Log.d("JwImport", "onHtmlCaptured htmlLen=${html.length} rawType=$rawType effectiveType=$effectiveType periods=${periods.size}")
+                                onPayloadCaptured = { payload, sch ->
+                                    val effectiveType = sch.type?.takeIf { it.isNotBlank() }
+                                        ?: JwProtocol.detectFromHtml(payload)
+                                    Log.d("JwImport", "payload captured len=${payload.length} effectiveType=$effectiveType")
                                     statusMsg = getString(R.string.import_parsing)
                                     scope.launch {
                                         try {
-                                            // #18 UCAS: 课程格链到跨源详情站 xkcts:8443 (WebView fetch 被 CORS
-                                            // 挡), 详情页免登录 → 原生 HTTP 逐课直抓补全周次/教室; 失败降级原 HTML
-                                            // (parser 落 1-16 占位, 与既有行为一致)
-                                            val htmlForParse = if (effectiveType == JwProtocol.TYPE_UCAS) {
-                                                runCatching { UcasDetailFetch.enrich(html) }.getOrDefault(html)
-                                            } else html
-                                            val courses = jwViewModel.parseHtml(htmlForParse, effectiveType ?: "")
+                                            val courses = jwViewModel.parseHtml(payload, effectiveType ?: "")
                                             Log.d("JwImport", "parseHtml returned ${courses.size} courses")
                                             if (courses.isEmpty()) {
-                                                // T9 诊断壳: classify 拿精确分类再选文案
-                                                val diag = try {
-                                                    JwParseDiagnostics.classify(
-                                                        html = html, url = "", school = sch,
-                                                        parsersAttempted = jwViewModel.lastDiagAttempts
-                                                    )
-                                                } catch (e: Exception) { null }
-                                                errorMsg = if (diag != null) {
-                                                    DiagMapper.mapImpl(diag, sch, this@JwImportActivity)
-                                                } else {
-                                                    getString(R.string.jw_err_empty_semester)
-                                                }
+                                                errorMsg = getString(R.string.jw_err_empty_semester)
                                                 statusMsg = null
                                                 return@launch
                                             }
                                             // 不直接落库，进配置确认页
                                             parsedCourses = courses
                                             parsedSchool = sch
-                                            // 根据课程实际节次数生成行；
-                                            // 如果 WebView 抓到 periods 则预填，否则空行让用户填
+                                            // 课表页通常不带节次时间，留空行让用户在确认页填
                                             val maxNode = courses.maxOf { maxOf(it.startNode, it.endNode) }
-                                            val periodMap = periods.associate { it.first to (it.second to it.third) }
                                             configRows = (1..maxNode).map { node ->
-                                                val filled = periodMap[node]
                                                 TimeTableUtils.TimeSlotRow(
                                                     node = node,
-                                                    start = filled?.first ?: "",
-                                                    end = filled?.second ?: ""
+                                                    start = "",
+                                                    end = ""
                                                 )
                                             }
                                             configStartDate = ""
@@ -310,16 +285,9 @@ class JwImportActivity : ComponentActivity() {
                                         }
                                     }
                                 },
-                                onCaptureError = { status, _ ->
-                                    Log.w("JwImport", "capture failed status=$status")
-                                    errorMsg = when (status) {
-                                        FrameCaptureStatus.CROSS_DOMAIN_IFRAME_BLOCKED -> getString(R.string.jw_err_cross_domain_iframe, "E_CROSS_ORIGIN")
-                                        FrameCaptureStatus.CONTAINER_EMPTY_AFTER_DELAY -> getString(R.string.jw_err_container_empty_after_delay)
-                                        FrameCaptureStatus.IFRAME_NAV_PENDING          -> getString(R.string.jw_err_iframe_nav_pending)
-                                        FrameCaptureStatus.WRONG_PAGE                  -> getString(R.string.jw_err_wrong_page)
-                                        FrameCaptureStatus.SESSION_EXPIRED             -> getString(R.string.jw_err_session_expired)
-                                        else                                           -> getString(R.string.jw_parse_empty)
-                                    }
+                                onCaptureError = { hint ->
+                                    Log.w("JwImport", "capture failed hint=$hint")
+                                    errorMsg = getString(R.string.jw_parse_empty)
                                     statusMsg = null
                                 },
                                 onBack = { stage = Stage.SelectSchool }
@@ -375,7 +343,7 @@ class JwImportActivity : ComponentActivity() {
 }
 
 /**
- * T9: 诊断结果 → 用户文案映射。
+ * 诊断结果 → 用户文案映射。
  * Activity 实例走 [mapImpl] 带 Context 拉 strings.xml；
  * 纯 JVM 单测走 [mapForTest]，context=null 时用静态拼接（VPN/hint 类提示不依赖资源）。
  */
@@ -386,7 +354,12 @@ internal object DiagMapper {
     fun mapForTest(diag: JwParseDiagnostics.Result, school: com.lingion.sleepy.data.jw.JwSchoolInfo): String =
         mapImpl(diag, school, context = null)
 
-    /** 内部实现 — context 非空时用 strings 资源, 为 null 时用内置兜底文案 */
+    /**
+     * 诊断分类 → 用户可读文案。
+     *
+     * 单校场景下不再需要按学校域名给差异化提示 —— 教务入口只有一个，
+     * 学生遇到的绝大多数情况就是「没登录」或「没停在课表页」。
+     */
     fun mapImpl(
         diag: JwParseDiagnostics.Result,
         school: com.lingion.sleepy.data.jw.JwSchoolInfo,
@@ -398,15 +371,15 @@ internal object DiagMapper {
                     R.string.jw_diag_session_expired ->
                         "${school.name} 的会话已过期或未登录。请重新登录后停留到「个人课表」页再点抓取"
                     R.string.jw_diag_no_container ->
-                        "${school.name} 的页面未找到课表容器。可能原因：①抓取时机过早课表未加载；②页面为图片课表或跨域 iframe；③教务系统已升级"
+                        "${school.name} 的页面未找到课表数据。可能原因：①抓取时机过早，数据未加载完；②未停留在「个人课表」页"
                     R.string.jw_diag_header_no_node ->
-                        "${school.name} 的课表缺少逐节行头。可能为图片课表或组头合并"
+                        "${school.name} 的课表缺少逐节行头。请确认当前是课表页面"
                     R.string.jw_diag_image_cells ->
-                        "${school.name} 的课表单元格为图片，无法识别。请改用文件导入或手动添加课程"
+                        "${school.name} 的课表内容无法识别。请改用文件导入或手动添加课程"
                     R.string.jw_diag_empty_semester ->
                         "${school.name} 的页面声明本学期暂无课程。请确认已选对学期"
                     R.string.jw_diag_wrong_protocol ->
-                        "${school.name} 的学校标注协议与实际页面不一致。请反馈开发者"
+                        "${school.name} 抓到的页面不含课表数据。请停留在「个人课表」页后重试"
                     else ->
                         "${school.name} 解析结果为空。诊断特征：${diag.matchedFeatures.take(5).joinToString("/")}"
                 }
@@ -420,52 +393,11 @@ internal object DiagMapper {
             JwParseDiagnostics.Category.UNKNOWN_EMPTY -> R.string.jw_diag_unknown_empty
         }
         val base = str(catResId, school.name)
-        // 特殊学校 hint: 临沂大学(校园网限制) / 强智系(会话踢下线) / B 档 985 校(校外多须 VPN/WebVPN)
-        val schoolHint = when {
-            school.url.contains("jwgl.lyu.edu.cn") ||
-            school.url.contains("jwxt.lyu.edu.cn") ||
-            // v1.0.46 B 档新 985 校: 教务域名普遍校外受限, 0 课兜底文案易被误读为学期选错
-            school.url.contains("jwxt.neu.edu.cn") ||        // 东北大学
-            school.url.contains("newxk.urp.seu.edu.cn") ||   // 东南大学
-            school.url.contains("xsjw2018.jw.scut.edu.cn") ||// 华南理工大学
-            school.url.contains("jxglstu.hfut.edu.cn") ||    // 合肥工业大学
-            school.url.contains("zdbk.zju.edu.cn") ||        // 浙江大学
-            school.url.contains("jw.ustc.edu.cn") ||         // 中国科学技术大学
-            school.url == "https://scu.edu.cn/" ||           // 四川大学 (条目 URL 即门户域)
-            school.url.contains("jwms.bit.edu.cn") ||        // 北京理工大学 (legacy URL 兼容)
-            school.url.contains("jxzxehallapp.bit.edu.cn") || // 北京理工大学 (现行 URL)
-            school.url.contains("csujwc.its.csu.edu.cn") ||  // 中南大学
-            school.url.contains("jwxt.whut.edu.cn") ||       // 武汉理工大学 (登录后偶发限流, 提示换网络)
-            // 2026-09 211 批量收录: 海外探测超时率高/域名校内受限的新校, 0 课兜底文案易误读为学期选错
-            school.url.contains("jwxt.scnu.edu.cn") ||       // 华南师范大学
-            school.url.contains("hdjw.hnu.edu.cn") ||        // 湖南大学 (Njw2017)
-            school.url.contains("jw.ruc.edu.cn") ||          // 中国人民大学 (Njw2017)
-            school.url.contains("jw.dhu.edu.cn") ||          // 东华大学
-            school.url.contains("jw.ahu.edu.cn") ||          // 安徽大学 (supwisdom 新版)
-            school.url.contains("jwxt.cumtb.edu.cn") ||      // 矿大北京 (supwisdom 新版)
-            school.url.contains("jwxt.ybu.edu.cn") ||        // 延边大学
-            school.url.contains("jwgl.shzu.edu.cn") ||       // 石河子大学
-            school.url.contains("eams.uestc.edu.cn") ||      // 电子科技大学 (经典 EAMS, 202 鉴权)
-            school.url.contains("eams.sufe.edu.cn") ||       // 上海财经大学 (经典 EAMS)
-            school.url.contains("jwglnew.hunnu.edu.cn") ||   // 湖南师范大学 (经典 EAMS, iframe)
-            school.url.contains("aao-eas.nuaa.edu.cn") ||    // 南京航空航天大学 (经典 EAMS)
-            school.url.contains("jwgl.gzhmu.edu.cn") ->      // 广州医科大学 (强智, 教务域公网不解析, 校外须 VPN/WebVPN)
-                "该校教务系统仅校内可访问。若在校外，请先连接校园网或 VPN 后再试"
-            school.type in setOf(
-                com.lingion.sleepy.data.jw.JwProtocol.TYPE_QZ,
-                com.lingion.sleepy.data.jw.JwProtocol.TYPE_QZ_CRAZY,
-                com.lingion.sleepy.data.jw.JwProtocol.TYPE_QZ_BR,
-                com.lingion.sleepy.data.jw.JwProtocol.TYPE_QZ_WITH_NODE,
-                com.lingion.sleepy.data.jw.JwProtocol.TYPE_QZ_OLD
-            ) -> "若强智教务长时间无法加载，多为会话被踢或校外网络限制，请重新登录或换网络"
-            else -> ""
-        }
-        val hintPart = if (schoolHint.isNotBlank()) "\n\n$schoolHint" else ""
-        // UNKNOWN_EMPTY 应回显诊断特征
+        // UNKNOWN_EMPTY 回显诊断特征，便于定位
         return if (diag.category == JwParseDiagnostics.Category.UNKNOWN_EMPTY) {
-            "$base（${diag.matchedFeatures.take(5).joinToString("/")}）$hintPart"
+            "$base（${diag.matchedFeatures.take(5).joinToString("/")}）"
         } else {
-            base + hintPart
+            base
         }
     }
 }

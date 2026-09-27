@@ -1,13 +1,11 @@
 package com.lingion.sleepy.data.jw
 
 /**
- * 解析中间结构：教务系统 HTML 解析后的一条课程记录
+ * 解析中间结构：一条课程记录。
  *
- * 此结构是 wakeup (Apache-2.0) `Course` 数据类的精简复刻。
- * 字段名/语义与 wakeup 原版保持一致，方便直接喂给 [JwParser] 的子类
- * （如 [JwQzParser] / [JwQzCrazyParser]）。
- *
- * 后续通过 [JwImportViewModel.toCourseEntities] 转成 [com.lingion.sleepy.data.entity.CourseEntity]
+ * 与落库结构 [com.lingion.sleepy.data.entity.CourseEntity] 的区别在于：
+ * 这里用 startNode/endNode 表达节次区间，落库时换算成 startNode + step。
+ * 由 [JwImportViewModel.toCourseEntities] 完成转换。
  */
 data class JwCourse(
     val name: String,

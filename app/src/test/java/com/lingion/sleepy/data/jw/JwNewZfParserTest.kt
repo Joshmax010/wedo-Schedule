@@ -16,8 +16,7 @@ import org.junit.Test
  *   - HTML 三种变体: table1+festival / kbgrid_table_0 / kblist_table
  *   - 边界: 空学期 / 缺字段 / 登录页
  *
- * 测试数据来自 /tmp/jw_fixtures/zf-new-kblist 与 /tmp/jw_fixtures/zf-new-html
- * (每对 fixture 有 .expected.json 可对比)
+ * 测试数据在 src/test/resources/zf-new/（每对 fixture 有 .expected.json 可对比）
  *
  * 纯 JVM, 不依赖 Android。
  */
@@ -161,6 +160,23 @@ class JwNewZfParserTest {
         val src = readFixture("table1_festival_view.html")
         val courses = JwNewZfParser(src).generateCourseList()
         assertCourses("table1_festival_view", courses)
+    }
+
+    // ════════════════════════════════════════════════════════
+    // 置信度（导入失败时用于判定"抓到的到底是不是课表页"）
+    // ════════════════════════════════════════════════════════
+
+    @Test
+    fun `kbList 课表页置信度达到高置信档`() {
+        val src = readFixture("kblist_single_double_weeks.json")
+        val conf = JwNewZfParser(src).confidence()
+        assertTrue("含 kbList 的页面置信度应 >= 80, 实际 $conf", conf >= 80)
+    }
+
+    @Test
+    fun `登录页置信度为 0`() {
+        val src = readFixture("login_page.html")
+        assertEquals("登录页不应被认作课表页", 0, JwNewZfParser(src).confidence())
     }
 
     @Test
