@@ -1,15 +1,26 @@
 <resources>
     <string name="app_name">wedo課表</string>
     <string name="widget_today_label">今日課程</string>
-    <string name="widget_week_list_label">本週課表（列表）</string>
     <string name="widget_week_grid_label">本週課表（網格）</string>
-    <string name="widget_twoday_label">最近兩天</string>
-    <string name="widget_week_view_label">本週課表（週檢視）</string>
 
     <string name="tab_schedule">課表</string>
-    <string name="tab_today">今日</string>
+    <string name="tab_today">今天</string>
+    <string name="tab_settings">設定</string>
     <string name="tab_mine">我的</string>
     <string name="tab_manage">課表管理</string>
+
+    <!-- Today screen (P1) -->
+    <string name="today_next_class">下一節課</string>
+    <string name="today_in_progress">進行中</string>
+    <string name="today_countdown">還有 %1$d 分鐘</string>
+    <string name="today_countdown_soon">即將開始</string>
+    <string name="today_running_remaining">上課中 · 還剩 %1$d 分鐘</string>
+    <string name="today_running_soon_end">上課中 · 即將下課</string>
+    <string name="today_no_more_class">今天的課都上完啦</string>
+    <string name="today_no_table_title">還沒有課表</string>
+    <string name="today_no_table_hint">支援教務直連、檔案匯入與手動新增</string>
+    <string name="today_import_cta">匯入課表</string>
+    <string name="today_week_has_days">本週還有 %1$d 天有課</string>
 
     <string name="schedule_empty">還沒有課表</string>
     <string name="schedule_empty_hint">前往「課表管理」匯入，或手動建立第一門課。</string>
@@ -17,7 +28,6 @@
     <string name="schedule_manual_first">手動建立第一門課</string>
     <string name="schedule_add_course">新增課程</string>
     <string name="share_sheet_title">分享課表</string>
-    <string name="schedule_share_table">分享課表</string>
     <string name="exit_press_back_again">再按一次返回退出</string>
     <string name="schedule_current_week">第 %1$d 週</string>
     <string name="schedule_no_course_today">今天沒有課</string>
@@ -59,7 +69,6 @@
     <string name="import_paste">貼上課表文字</string>
     <string name="import_paste_hint">貼上課表文字…</string>
     <string name="import_file">從檔案匯入</string>
-    <string name="import_qr">掃碼匯入</string>
     <string name="import_jw">教務直連</string>
     <string name="import_manual">手動新增</string>
     <string name="import_success">匯入成功</string>
@@ -464,7 +473,6 @@
     <string name="about_feedback_detail">透過 GitHub Issue 回報問題或提出想法，或以電子郵件聯絡作者</string>
     <string name="about_feedback_github">GitHub Issue</string>
     <string name="about_title">關於</string>
-    <string name="about_update">取得更新</string>
     <string name="about_update_checking">正在檢查更新…</string>
     <string name="about_update_detail">GitHub 主站不可用時，自動回退鏡像下載</string>
     <string name="about_version">版本資訊</string>
@@ -511,14 +519,8 @@
     <string name="notif_before_class_title">課前提醒</string>
     <string name="notif_channel_before_class">課前提醒</string>
     <string name="notif_channel_before_class_desc">每節課開始前推送下節課資訊</string>
-    <string name="notif_channel_daily">每日課程提醒</string>
-    <string name="notif_channel_daily_desc">每天在指定時間推送今日課程摘要</string>
-    <string name="notif_channel_fluid">流體雲 / 超級島</string>
-    <string name="notif_channel_fluid_desc">課前顯示可展開的課程即時卡片</string>
-    <string name="notif_daily_text_first">第一節課 %1$s 於 %2$s 在 %3$s 上課</string>
-    <string name="notif_daily_text_no_course">好好休息，享受一天！</string>
-    <string name="notif_daily_title">今日 %1$d 號，您有 %2$d 節課</string>
-    <string name="notif_daily_title_no_course">今日 %1$d 號，今天沒有課程</string>
+    <string name="notif_channel_before_class_silent">課前提醒（靜音）</string>
+    <string name="notif_channel_before_class_silent_desc">每節課開始前推送下節課資訊（不彈出懸浮橫幅）</string>
     <string name="notif_room_unknown">未知教室</string>
     <string name="reminder_banner_sub">在系統通知欄顯示課前橫幅</string>
     <string name="reminder_banner_title">橫幅提醒</string>
@@ -527,22 +529,8 @@
     <string name="reminder_before_class_title">每節課前提醒</string>
     <string name="reminder_before_minutes_label">提前</string>
     <string name="reminder_before_minutes_unit">分鐘</string>
-    <string name="reminder_daily_preview">範例：今日 15 號 您有 3 節課 第一節課 高等數學 於 08:00 在 教學樓A101 上課</string>
-    <string name="reminder_daily_sub">每天在指定時間推送今日課程摘要</string>
-    <string name="reminder_daily_time_label">提醒時間</string>
-    <string name="reminder_daily_title">每日提醒</string>
-    <string name="reminder_fluid_field_name">課程名稱</string>
-    <string name="reminder_fluid_field_room">上課地點</string>
-    <string name="reminder_fluid_field_teacher">任課老師</string>
-    <string name="reminder_fluid_field_time">上課時間</string>
-    <string name="reminder_fluid_fields">膠囊主顯示內容</string>
-    <string name="reminder_fluid_fields_hint">選擇一個主顯示內容</string>
-    <string name="reminder_fluid_note">點擊通知後可展開課程詳情。具體是否顯示為流體雲/超級島由手機系統、通知權限和廠商服務資格決定。</string>
-    <string name="reminder_fluid_sub">在支援的小米、OPPO 手機上顯示即時課程卡片</string>
-    <string name="reminder_fluid_title">流體雲 / 超級島</string>
     <string name="reminder_master_sub">允許 wedo 發送課程通知</string>
     <string name="reminder_master_title">開啟提醒</string>
-    <string name="reminder_pick_time">選擇提醒時間</string>
     <string name="reminder_title">提醒</string>
     <string name="school_count_supported">已支援 %1$d</string>
     <string name="school_count_total">共 %1$d 所</string>
@@ -644,4 +632,54 @@
     <string name="edge_insert_start_label">起始時間</string>
     <string name="edge_insert_end_label">結束時間</string>
     <string name="edge_insert_ok">新增</string>
+
+    <!-- TASK-05 E-(2): 导入向导 i18n（ImportWizard.kt 去硬编码） -->
+    <string name="import_wiz_title_detail">選擇來源</string>
+    <string name="import_wiz_title_preview">預覽與確認</string>
+    <string name="import_wiz_title_done">完成</string>
+    <string name="import_wiz_close">關閉</string>
+    <string name="import_wiz_pick_way">選擇匯入方式</string>
+    <string name="import_wiz_source_jw">教務直連</string>
+    <string name="import_wiz_jw_subtitle">登入學校教務系統擷取課表</string>
+    <string name="import_wiz_source_file">從檔案匯入</string>
+    <string name="import_wiz_source_text">貼上課表文字</string>
+    <string name="import_wiz_source_manual">手動新增課程</string>
+    <string name="import_wiz_file_sub">日曆(.ics) / CSV / 文字 / HTML</string>
+    <string name="import_wiz_text_sub">複製課表文字後貼上</string>
+    <string name="import_wiz_detail_file">選擇一個課表檔案，解析後預覽</string>
+    <string name="import_wiz_detail_text">把課表文字貼到下面，解析後預覽</string>
+    <string name="import_wiz_pick_file">選擇檔案</string>
+    <string name="import_wiz_parse_preview">解析並預覽</string>
+    <string name="import_wiz_metric_course">課程</string>
+    <string name="import_wiz_metric_conflict">衝突</string>
+    <string name="import_wiz_view_schedule">檢視課表</string>
+    <string name="import_wiz_again">再匯入一份</string>
+
+    <!-- TASK-05 A: 设置页四组标题 -->
+    <string name="settings_group_display">顯示</string>
+    <string name="settings_group_notify">通知</string>
+    <string name="settings_privacy">隱私</string>
+    <!-- TASK-06 i18n: P3 課表面 + 匯入精靈「教務直連列」去硬編碼（循環依賴修復） -->
+    <string name="schedule_v3_empty_title">把這一週，安排得清清楚楚</string>
+    <string name="schedule_v3_empty_hint">從教務系統、日曆檔案或手動新增開始</string>
+    <string name="schedule_v3_add_cta">新增課表</string>
+    <string name="schedule_week_empty_no_courses">這份課表還沒有課程 · 點擊 ＋ 新增</string>
+    <string name="schedule_week_empty_free">本週沒有課程，好好享受自由時間</string>
+    <string name="schedule_more_export">匯出 / 分享課表</string>
+    <string name="week_header_prev">上一週</string>
+    <string name="week_header_next">下一週</string>
+    <string name="week_header_title">第 %1$d 週</string>
+    <string name="week_header_title_range">第 %1$d 週 · %2$s</string>
+    <string name="week_picker_title">選擇週次</string>
+    <string name="week_picker_progress">學期進度</string>
+    <string name="week_picker_progress_detail">第 %1$d 週 / 共 %2$d 週</string>
+    <string name="week_picker_back_to_current">回到本週</string>
+    <string name="week_picker_grid_week">第 %1$d 週</string>
+    <string name="week_picker_grid_current">第 %1$d 週，本週</string>
+    <string name="week_picker_chip_current">本週</string>
+    <string name="week_picker_chip_week">週</string>
+    <string name="week_range_long_format">%1$d月%2$d日 – %3$d月%4$d日</string>
+    <string name="settings_privacy_dialog_title">隱私與安全說明</string>
+    <string name="settings_privacy_dialog_body">登入在學校官方網頁中完成，應用不讀取或儲存密碼。\n\n解析後的課表只儲存在本機，不上傳到專案維護者伺服器，也不進入系統雲端備份。\n\n應用只存取經過驗證的教務網域，不會繞過驗證碼、憑證錯誤或學校存取控制。\n\n你可以隨時登出教務工作階段或清除本機課表。\n\n本專案與吉林建築大學不存在官方合作或授權關係，原始碼依據 GPL-3.0 公開。</string>
+    <string name="export_saved_no_app">已儲存到「下載」：%1$s（目前裝置沒有可分享的應用程式）</string>
 </resources>

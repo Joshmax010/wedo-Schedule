@@ -3,6 +3,7 @@ package com.wedo.schedule
 import android.app.Application
 import com.wedo.schedule.data.AppDatabase
 import com.wedo.schedule.data.repository.ScheduleRepository
+import com.wedo.schedule.util.AppPrefs
 import com.wedo.schedule.widget.notification.CourseNotificationScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,7 +35,9 @@ class WedoApp : Application() {
         // 拿到实例即触发异步 loadFromDisk, 不阻塞本线程。
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             runCatching {
-                getSharedPreferences("sleepy_prefs", android.content.Context.MODE_PRIVATE)
+                // 走 AppPrefs 入口而非常量：顺带在 IO 线程完成历史 sleepy_prefs 的搬迁，
+                // 不让主线程首个 getter 去做旧文件的磁盘读。
+                AppPrefs.sharedPrefs(this@WedoApp)
             }
         }
     }

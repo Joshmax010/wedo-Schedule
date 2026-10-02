@@ -28,10 +28,14 @@ class WedoPrivacyManifestContractTest {
     }
 
     @Test
-    fun `v1 only requests internet permission`() {
+    fun `only requests course-schedule permissions`() {
         val permissions = Regex("<uses-permission[^>]+>").findAll(manifest).map { it.value }.toList()
         assertTrue(permissions.any { it.contains("android.permission.INTERNET") })
-        assertFalse(permissions.any { it.contains("POST_NOTIFICATIONS") })
+        // REQ-P5-03：课前提醒需在 Android 13+ 申请通知权限。
+        assertTrue(permissions.any { it.contains("android.permission.POST_NOTIFICATIONS") })
+        // REQ-P5-04：开机 / 应用更新后重排课前提醒。
+        assertTrue(permissions.any { it.contains("android.permission.RECEIVE_BOOT_COMPLETED") })
+        // 仍然不得申请越权 / 危险权限（精确闹钟走 canScheduleExactAlarms() 降级，不申请）。
         assertFalse(permissions.any { it.contains("REQUEST_INSTALL_PACKAGES") })
         assertFalse(permissions.any { it.contains("SCHEDULE_EXACT_ALARM") })
     }

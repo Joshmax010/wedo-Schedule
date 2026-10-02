@@ -407,8 +407,18 @@ internal suspend fun exportAndShare(
                 putExtra(Intent.EXTRA_SUBJECT, displayName)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            ctx.startActivity(Intent.createChooser(send, ctx.getString(R.string.export_share_chooser)))
-            onResult(ctx.getString(R.string.export_saved_to, fileName))
+            // 2026-10-02 真机反馈：设备上没有能接收该 MIME 的应用时，
+            // Intent.createChooser 会抛 ActivityNotFoundException，系统弹「没有应用可执行此操作」，
+            // 而**文件其实已经写进「下载」目录**——异常把成功提示也一起吞了，用户以为啥都没发生。
+            // 这里兜住异常，明确告知「已保存到下载」，让用户知道去哪儿找。
+            val chooser = Intent.createChooser(send, ctx.getString(R.string.export_share_chooser))
+            val shared = runCatching { ctx.startActivity(chooser) }.isSuccess
+            onResult(
+                ctx.getString(
+                    if (shared) R.string.export_saved_to else R.string.export_saved_no_app,
+                    fileName
+                )
+            )
         }
     }
 }
@@ -474,6 +484,16 @@ internal suspend fun shareText(
         putExtra(Intent.EXTRA_TEXT, content)
         putExtra(Intent.EXTRA_SUBJECT, subject)
     }
-    ctx.startActivity(Intent.createChooser(intent, ctx.getString(R.string.export_share_chooser)))
+    // 同 exportAndShare：无接收方时 createChooser 会抛异常并弹系统提示。
+    // 纯文本没有落盘兜底，故失败时**复制到剪贴板**，让 export_copied_hint 这句提示名副其实。
+    val shared = runCatching {
+        ctx.startActivity(Intent.createChooser(intent, ctx.getString(R.string.export_share_chooser)))
+    }.isSuccess
+    if (!shared) {
+        runCatching {
+            val cm = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            cm.setPrimaryClip(android.content.ClipData.newPlainText(subject, content))
+        }
+    }
     onResult(ctx.getString(R.string.export_copied_hint))
 }

@@ -1,146 +1,117 @@
 package com.wedo.schedule.ui.screen.schedule
 
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ChevronLeft
-import androidx.compose.material.icons.outlined.ChevronRight
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.outlined.IosShare
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.wedo.schedule.ui.component.*
-import com.wedo.schedule.ui.theme.*
-import java.time.LocalDate
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
+import com.wedo.schedule.R
+import com.wedo.schedule.ui.component.WedoIconButton
+import com.wedo.schedule.ui.component.wedoPress
+import com.wedo.schedule.ui.theme.WedoAppleDimensions
+import com.wedo.schedule.ui.theme.WedoAppleType
+import com.wedo.schedule.ui.theme.WedoTheme
 
 /**
- * 周次栏。
+ * 课表页顶栏（2026-10-02 真机反馈**重做**）。
  *
- * Apple 化改造：**去掉玻璃底与容器**。iOS 的导航区不是「浮在内容上的玻璃板」，
- * 而是**与背景同色的空白**，靠留白和字重划出层次 —— 这属于 HIG 的 Deference
- * （界面让位于内容）。所以这里只剩一行：左右箭头 + 居中的「第 N 周」。
+ * 用户原话：「把第 5 周和这个日期放到左上角，跟那个加号和三个点放在同一个高度」。
+ * 于是从「两行（动作行 + 大标题块）」压成**单行**：
  *
- * 中间的「第 N 周 / 日期」整块可点，点开周次选择器；点击区高度守住 44pt。
+ * ```
+ * ┌──────────────────────────────────────────┐
+ * │ 第 5 周                       ＋    ⋯     │
+ * │ 9月28日 – 10月4日                          │
+ * └──────────────────────────────────────────┘
+ * ```
+ *
+ * 移除的东西及理由：
+ *  - **大标题块（LargeTitle 34sp + 滚动收起）**：占掉近 90dp 垂直空间，用户嫌「上面留白太多」；
+ *  - **左右翻周箭头**：换周靠左右滑动即可，与 WakeUp 一致，箭头纯属冗余；
+ *  - 「第 N 周」区块**整体可点** → 打开全屏周次选择器（20 周时靠滑动翻太慢，
+ *    选择器保留，只是不再占 ⋯ 菜单项）。
+ *
+ * 动作仍在导航区右侧，属 HIG 允许的「内容层动作」，与「底栏只导航」不冲突。
  */
 @Composable
-fun WedoWeekHeader(week: Int, maxWeek: Int, select: (Int) -> Unit) {
-    val collapsed = LocalWedoCollapsed.current
-    val display = LocalWedoDisplay.current
-    val headerHeight by animateDpAsState(
-        if (collapsed) 44.dp else 60.dp,
-        if (display.motion) spring(dampingRatio = .9f) else snap(),
-        label = "headerHeight"
-    )
-    var picker by remember { mutableStateOf(false) }
-    var today by remember { mutableStateOf(LocalDate.now(ZoneId.of("Asia/Shanghai"))) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            today = LocalDate.now(ZoneId.of("Asia/Shanghai"))
-            kotlinx.coroutines.delay(60_000)
-        }
-    }
+fun WedoWeekHeader(
+    week: Int,
+    startDate: String,
+    onOpenPicker: () -> Unit,
+    onAdd: () -> Unit,
+    onShare: () -> Unit
+) {
     val colors = WedoTheme.colors
+    val dateRange = weekDateRangeLong(startDate, week)
 
-    Column(Modifier.fillMaxWidth().padding(horizontal = WedoAppleDimensions.pageMargin)) {
-        Row(
-            Modifier.fillMaxWidth().height(headerHeight),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            WeekChevron(Icons.Outlined.ChevronLeft, "上一周", week > 1) { select(week - 1) }
-
-            // 中间信息区：整块可点，唤起周次选择器
-            Column(
-                Modifier.weight(1f).fillMaxHeight().wedoPress { picker = true },
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    "第 $week 周",
-                    fontSize = if (collapsed) 20.sp else 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colors.onSurface
-                )
-                Text(
-                    today.format(DateTimeFormatter.ofPattern("M月d日 EEEE", Locale.SIMPLIFIED_CHINESE)),
-                    style = WedoAppleType.footnote(),
-                    color = colors.onSurfaceVariant
-                )
-            }
-
-            WeekChevron(Icons.Outlined.ChevronRight, "下一周", week < maxWeek) { select(week + 1) }
-        }
-    }
-
-    if (picker) {
-        ModalBottomSheet(
-            onDismissRequest = { picker = false },
-            // 去掉玻璃容器，使用 Apple 的二级分组背景色
-            containerColor = colors.surfaceContainerLow
+    Row(
+        Modifier.fillMaxWidth()
+            .height(WedoAppleDimensions.minTouchTarget)
+            .padding(start = WedoAppleDimensions.pageMargin, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // 左：周次 + 日期范围（整块可点 → 全屏周次选择器）
+        Column(
+            Modifier
+                .weight(1f)
+                .wedoPress { onOpenPicker() }
         ) {
             Text(
-                "选择周次",
-                Modifier.padding(horizontal = WedoAppleDimensions.pageMargin, vertical = 8.dp),
-                style = WedoAppleType.title2(),
-                color = colors.onSurface
+                stringResource(R.string.week_header_title, week),
+                fontSize = 20.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
-            LazyVerticalGrid(
-                GridCells.Adaptive(64.dp),
-                Modifier.fillMaxWidth().heightIn(max = 360.dp),
-                contentPadding = PaddingValues(WedoAppleDimensions.pageMargin)
-            ) {
-                items(maxWeek) { index ->
-                    val selected = index + 1 == week
-                    // 用「淡色底 + 强调色字」表达选中态，而非玻璃高光
-                    TextButton(
-                        onClick = { select(index + 1); picker = false },
-                        modifier = Modifier.padding(4.dp).heightIn(min = WedoAppleDimensions.minTouchTarget),
-                        colors = if (selected) {
-                            ButtonDefaults.textButtonColors(
-                                containerColor = WedoApple.accent.copy(alpha = WedoTheme.Alpha.tinted),
-                                contentColor = WedoApple.accentText
-                            )
-                        } else {
-                            ButtonDefaults.textButtonColors(contentColor = colors.onSurface)
-                        }
-                    ) {
-                        Text("第 ${index + 1} 周", style = WedoAppleType.body())
-                    }
-                }
+            if (dateRange.isNotBlank()) {
+                Text(
+                    dateRange,
+                    style = WedoAppleType.caption1(),
+                    color = colors.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
+        // 右：添加课程 / 更多
+        // 右侧：＋（添加/导入）与 分享（2026-10-02 真机反馈：原「⋯」底部弹窗改为直达导出页）
+        WedoIconButton(Icons.Outlined.Add, stringResource(R.string.schedule_add_course), onClick = onAdd)
+        Spacer(Modifier.width(2.dp))
+        WedoIconButton(Icons.Outlined.IosShare, stringResource(R.string.schedule_more_export), onClick = onShare)
+        Spacer(Modifier.size(4.dp))
     }
 }
 
 /**
- * 前进/后退周的箭头按钮。
+ * 第 N 周的日期范围（如「9月28日 – 10月4日」）。
  *
- * 不用 Material 的 IconButton 默认样式（48dp + 涟漪圆底），改为 Apple 的
- * 纯图标 + 44pt 触控区：视觉上只是一个细箭头，没有容器感。
+ * 原定义在 `SemesterOverview.kt` 内，该文件已随「三视图」一并删除（2026-10-02 真机反馈），
+ * 遂迁至本文件——顶栏是它唯一的消费方。
  */
 @Composable
-private fun WeekChevron(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    description: String,
-    enabled: Boolean,
-    onClick: () -> Unit
-) {
-    val tint = if (enabled) {
-        WedoApple.accent
-    } else {
-        WedoTheme.colors.onSurfaceVariant.copy(alpha = WedoTheme.Alpha.inactive)
-    }
-    IconButton(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = Modifier.size(WedoAppleDimensions.minTouchTarget)
-    ) {
-        Icon(icon, contentDescription = description, tint = tint)
-    }
+internal fun weekDateRangeLong(startDate: String, week: Int): String {
+    val start = runCatching { com.wedo.schedule.util.DateUtils.dateOfWeek(startDate, week, 1) }.getOrNull()
+        ?: return ""
+    val end = runCatching { com.wedo.schedule.util.DateUtils.dateOfWeek(startDate, week, 7) }.getOrNull()
+        ?: return ""
+    return stringResource(
+        R.string.week_range_long_format,
+        start.monthValue, start.dayOfMonth, end.monthValue, end.dayOfMonth
+    )
 }

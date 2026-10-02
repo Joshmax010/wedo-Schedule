@@ -26,10 +26,9 @@ class PinWidgetActivity : ComponentActivity() {
         val awm = AppWidgetManager.getInstance(this)
         val supported = awm.isRequestPinAppWidgetSupported
         val type = intent.getStringExtra(EXTRA_WIDGET) ?: "weekgrid"
+        // V3 重设计后仅存 2 种 widget：今日课程 / 本周课表·网格。
         val cn = when (type) {
             "today" -> ComponentName(this, TodayWidgetReceiver::class.java)
-            "twoday" -> ComponentName(this, TwoDayWidgetReceiver::class.java)
-            "weeklist" -> ComponentName(this, WeekListWidgetReceiver::class.java)
             else -> ComponentName(this, WeekGridWidgetProvider::class.java)
         }
         Log.d("PinWidget", "supported=$supported, provider=$cn")

@@ -118,6 +118,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-process:2.8.7")
+    // LifecycleEventEffect / LifecycleResumeEffect — 课表页在 ON_RESUME 重算"当前周"
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
 
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.8.3")

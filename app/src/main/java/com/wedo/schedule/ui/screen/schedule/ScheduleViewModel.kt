@@ -236,6 +236,36 @@ class ScheduleViewModel : ViewModel() {
     }
 
     /**
+     * 用"当前时刻"重新计算真实周，并校正 selectedWeek。
+     *
+     * **为什么必须有这个函数**：`currentWeek` 原先只在 `loadCourses` 里课程流 emit 时算一次。
+     * 结果是 App 退到后台过了一夜、暑假结束、或者就是跨过周一凌晨再打开，
+     * 顶部仍显示上次加载那天算出的周次 —— 用户看到的就是"不会随日期变动"。
+     * 真正的周次信息一直躺在 `startDate` 里，只是没人去重算它。
+     *
+     * 由 UI 层在 ON_RESUME / ON_START 时调用（见 `ScheduleScreen` 的 LifecycleEventEffect）。
+     *
+     * 两条校正规则：
+     *  1. `currentWeek` 无条件刷新 —— 它是"今天是第几周"的客观事实，与用户翻到哪一周无关；
+     *  2. `selectedWeek` **只在用户还没手动翻过周时**跟随。
+     *     一旦用户翻到第 8 周去看后面的课，切出去再回来不该把他拽回本周。
+     *     判据用 `selectedWeek == 旧 currentWeek`（用户停留在"本周"这个跟随态）。
+     */
+    fun refreshCurrentWeek() {
+        _state.update { st ->
+            val table = st.tables.find { it.id == st.selectedTableId } ?: return@update st
+            val realWeek = DateUtils.currentWeek(table.startDate)
+            if (realWeek == st.currentWeek) return@update st
+            // 用户此前停在"本周"→ 跟随刷新；否则尊重用户手动选的周
+            val following = st.selectedWeek == st.currentWeek
+            st.copy(
+                currentWeek = realWeek,
+                selectedWeek = if (following) realWeek else st.selectedWeek
+            )
+        }
+    }
+
+    /**
      * v7.10.16 撤回最近一次数据改动(导入/加课/编辑/删课/删表/建表...)。
      * 返回 false = 没有可撤回的操作(调用方 toast 提示)。
      */

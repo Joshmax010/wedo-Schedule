@@ -55,21 +55,6 @@ import kotlinx.coroutines.launch
 private const val FETCH_TIMEOUT_MS = 20_000L
 
 /**
- * 证据确认过的认证主机白名单。
- *
- * 这些主机可能渲染登录 UI，但**绝不**接收原生 JS Bridge —— 凭据只走它们自己的表单。
- */
-private val VERIFIED_AUTH_HOSTS: Set<String> = setOf(
-    "lxr.jlju.edu.cn",
-    "cas.jlju.edu.cn",
-)
-
-/** 证据确认过、可以安装 JS Bridge 的教务主机。 */
-private val VERIFIED_JS_BRIDGE_HOSTS: Set<String> = setOf(
-    "jwxt.jlju.edu.cn",
-)
-
-/**
  * 教务 WebView 登录页。
  *
  * 安全约定：
@@ -77,6 +62,10 @@ private val VERIFIED_JS_BRIDGE_HOSTS: Set<String> = setOf(
  *   - 顶层页面落到已确认的教务主机后，才以随机接口名安装 Bridge 并重载一次。
  *   - 只在教务主机上执行同源 fetch；离开该主机立即移除 Bridge。
  *   - SSL 错误一律 cancel，不做任何例外放行。
+ *
+ * 白名单（`authHosts` / `jsBridgeHosts`）已**下沉数据层**（ADR-4 / §4.3），
+ * 本 UI 层不再硬编码任何主机名，改从传入的 [JwSchoolInfo] 读取 —— 仅保留局部名
+ * `VERIFIED_AUTH_HOSTS` / `VERIFIED_JS_BRIDGE_HOSTS` 以最小化改动面。
  *
  * 流程：加载入口 → 用户输账号密码 + 验证码 → 导航到个人课表 → 点「导入此页」
  *      → 页内 fetch 拿 kbList JSON → 桥回调 → 解析落库
@@ -197,7 +186,7 @@ fun JwWebViewLoginScreen(
         containerColor = colors.background
     ) { padding ->
         JwWebView(
-            url = school.url,
+            school = school,
             onWebViewCreated = { wv -> webViewRef = wv },
             onFetchResult = handleFetchResult
         )
@@ -207,10 +196,14 @@ fun JwWebViewLoginScreen(
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 private fun JwWebView(
-    url: String,
+    school: JwSchoolInfo,
     onWebViewCreated: (WebView) -> Unit,
     onFetchResult: (String) -> Unit,
 ) {
+    // 白名单来自数据层（ADR-4 / §4.3）；保留局部名，改动面最小。
+    val url = school.url
+    val VERIFIED_AUTH_HOSTS: Set<String> = school.authHosts
+    val VERIFIED_JS_BRIDGE_HOSTS: Set<String> = school.jsBridgeHosts
     AndroidView(
         modifier = Modifier.fillMaxSize(),
         factory = { context ->

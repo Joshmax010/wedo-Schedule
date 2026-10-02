@@ -27,8 +27,6 @@ object HolidayManager {
     const val TYPE_TRANSFER_WORKDAY = "transfer_workday"
 
     private const val BASE_URL = "https://unpkg.com/holiday-calendar/data/CN/"
-    /** 与 AppPrefs 同一个 SharedPreferences 文件 */
-    private const val PREFS_NAME = "sleepy_prefs"
     private const val CONNECT_TIMEOUT_MS = 5000
     private const val READ_TIMEOUT_MS = 5000
     private val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd")
@@ -47,7 +45,8 @@ object HolidayManager {
     private fun loadedKey(year: Int) = cacheKey(year) + CACHE_LOADED_SUFFIX
 
     private fun diskCache(ctx: Context, year: Int): List<HolidayEntry>? {
-        val prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        // 与 AppPrefs 共用同一份偏好文件（含历史文件名搬迁），不要再自行开名字
+        val prefs = AppPrefs.sharedPrefs(ctx)
         // loaded 标记与数据同写: 空年份(该年确实无数据)也视为已缓存, 否则每次启动都会重复请求
         if (!prefs.getBoolean(loadedKey(year), false)) return null
         val json = prefs.getString(cacheKey(year), null) ?: return null
@@ -64,7 +63,7 @@ object HolidayManager {
         entries.forEach { e ->
             arr.put(org.json.JSONObject().put("date", e.date.toString()).put("name", e.name).put("type", e.type))
         }
-        ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        AppPrefs.sharedPrefs(ctx)
             .edit()
             .putString(cacheKey(year), arr.toString())
             .putBoolean(loadedKey(year), true)

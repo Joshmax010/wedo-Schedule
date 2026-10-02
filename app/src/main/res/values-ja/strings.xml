@@ -1,15 +1,26 @@
 <resources>
     <string name="app_name">wedo 時間割</string>
     <string name="widget_today_label">今日の授業</string>
-    <string name="widget_week_list_label">今週の時間割（リスト）</string>
     <string name="widget_week_grid_label">今週の時間割（グリッド）</string>
-    <string name="widget_twoday_label">直近2日</string>
-    <string name="widget_week_view_label">今週の時間割（ビュー）</string>
 
     <string name="tab_schedule">時間割</string>
     <string name="tab_today">今日</string>
+    <string name="tab_settings">設定</string>
     <string name="tab_mine">マイ</string>
     <string name="tab_manage">管理</string>
+
+    <!-- Today screen (P1) -->
+    <string name="today_next_class">次の授業</string>
+    <string name="today_in_progress">進行中</string>
+    <string name="today_countdown">あと%1$d分</string>
+    <string name="today_countdown_soon">まもなく開始</string>
+    <string name="today_running_remaining">授業中 · 残り%1$d分</string>
+    <string name="today_running_soon_end">授業中 · まもなく終了</string>
+    <string name="today_no_more_class">今日の授業は終わりです</string>
+    <string name="today_no_table_title">時間割がまだありません</string>
+    <string name="today_no_table_hint">教務連携・ファイル取込・手動追加に対応</string>
+    <string name="today_import_cta">時間割をインポート</string>
+    <string name="today_week_has_days">今週はあと%1$d日授業があります</string>
 
     <string name="schedule_empty">時間割がまだありません</string>
     <string name="schedule_empty_hint">「管理」からインポートするか、最初の授業を手動で作成してください。</string>
@@ -17,7 +28,6 @@
     <string name="schedule_manual_first">最初の授業を作成</string>
     <string name="schedule_add_course">授業を追加</string>
     <string name="share_sheet_title">時間割を共有</string>
-    <string name="schedule_share_table">時間割を共有</string>
     <string name="exit_press_back_again">もう一度戻るボタンを押すと終了します</string>
     <string name="schedule_current_week">第 %1$d 週</string>
     <string name="schedule_no_course_today">今日は授業がありません</string>
@@ -59,7 +69,6 @@
     <string name="import_paste">テキストを貼り付け</string>
     <string name="import_paste_hint">時間割テキストを貼り付け…</string>
     <string name="import_file">ファイルから</string>
-    <string name="import_qr">QRスキャン</string>
     <string name="import_jw">学校システムへ接続</string>
     <string name="import_manual">手動追加</string>
     <string name="import_success">インポート成功</string>
@@ -464,7 +473,6 @@
     <string name="about_feedback_detail">GitHub Issue でバグやアイデアを報告するか、メールで作者に連絡できます</string>
     <string name="about_feedback_github">GitHub Issue</string>
     <string name="about_title">について</string>
-    <string name="about_update">更新を確認</string>
     <string name="about_update_checking">更新を確認中…</string>
     <string name="about_update_detail">GitHub が利用できない場合は、自動でミラーにフォールバックします</string>
     <string name="about_version">バージョン情報</string>
@@ -511,14 +519,8 @@
     <string name="notif_before_class_title">授業前リマインダー</string>
     <string name="notif_channel_before_class">授業前リマインダー</string>
     <string name="notif_channel_before_class_desc">各授業の開始前に次の授業情報を通知します</string>
-    <string name="notif_channel_daily">毎日の時間割リマインダー</string>
-    <string name="notif_channel_daily_desc">指定した時刻に毎日の授業サマリーを通知します</string>
-    <string name="notif_channel_fluid">Fluid Cloud / Super Island</string>
-    <string name="notif_channel_fluid_desc">授業前に展開可能なリアルタイム授業カードを表示</string>
-    <string name="notif_daily_text_first">最初の授業：%1$s %2$s @ %3$s</string>
-    <string name="notif_daily_text_no_course">ゆっくり休んで、一日を楽しんでください！</string>
-    <string name="notif_daily_title">今日は %1$d 日、授業は %2$d コマです</string>
-    <string name="notif_daily_title_no_course">今日は %1$d 日、授業はありません</string>
+    <string name="notif_channel_before_class_silent">授業前リマインダー（サイレント）</string>
+    <string name="notif_channel_before_class_silent_desc">各授業の開始前に次の授業情報を通知します（バナーなし）</string>
     <string name="notif_room_unknown">教室不明</string>
     <string name="reminder_banner_sub">通知バーに授業前のバナーを表示</string>
     <string name="reminder_banner_title">バナーリマインダー</string>
@@ -527,22 +529,8 @@
     <string name="reminder_before_class_title">授業前リマインダー</string>
     <string name="reminder_before_minutes_label">事前</string>
     <string name="reminder_before_minutes_unit">分</string>
-    <string name="reminder_daily_preview">例：今日 15 日、授業は 3 コマ。最初の授業 高等数学 08:00 @ 教学棟A101</string>
-    <string name="reminder_daily_sub">指定した時刻に毎日の授業サマリーを通知</string>
-    <string name="reminder_daily_time_label">リマインダー時刻</string>
-    <string name="reminder_daily_title">毎日リマインダー</string>
-    <string name="reminder_fluid_field_name">授業名</string>
-    <string name="reminder_fluid_field_room">教室</string>
-    <string name="reminder_fluid_field_teacher">担当教員</string>
-    <string name="reminder_fluid_field_time">時刻</string>
-    <string name="reminder_fluid_fields">カプセルメイン表示内容</string>
-    <string name="reminder_fluid_fields_hint">メイン表示内容を選択</string>
-    <string name="reminder_fluid_note">通知をタップすると授業詳細を展開できます。Fluid Cloud / Super Island として表示されるかどうかは、スマホのシステム、通知権限、メーカーのサービス資格によって決まります。</string>
-    <string name="reminder_fluid_sub">対応する Xiaomi・OPPO スマホでリアルタイム授業カードを表示</string>
-    <string name="reminder_fluid_title">Fluid Cloud / Super Island</string>
     <string name="reminder_master_sub">wedo に授業通知の送信を許可</string>
     <string name="reminder_master_title">リマインダーを有効化</string>
-    <string name="reminder_pick_time">リマインダー時刻を選択</string>
     <string name="reminder_title">リマインダー</string>
     <string name="school_count_supported">対応 %1$d</string>
     <string name="school_count_total">全 %1$d 校</string>
@@ -644,4 +632,54 @@
     <string name="edge_insert_start_label">開始時刻</string>
     <string name="edge_insert_end_label">終了時刻</string>
     <string name="edge_insert_ok">追加</string>
+
+    <!-- TASK-05 E-(2): 导入向导 i18n（ImportWizard.kt 去硬编码） -->
+    <string name="import_wiz_title_detail">ソースを選択</string>
+    <string name="import_wiz_title_preview">プレビューと確認</string>
+    <string name="import_wiz_title_done">完了</string>
+    <string name="import_wiz_close">閉じる</string>
+    <string name="import_wiz_pick_way">インポート方法を選択</string>
+    <string name="import_wiz_source_jw">教務システム直連</string>
+    <string name="import_wiz_jw_subtitle">学校の教務システムにログインして時間割を取得</string>
+    <string name="import_wiz_source_file">ファイルからインポート</string>
+    <string name="import_wiz_source_text">時間割テキストを貼り付け</string>
+    <string name="import_wiz_source_manual">授業を手動で追加</string>
+    <string name="import_wiz_file_sub">カレンダー(.ics) / CSV / テキスト / HTML</string>
+    <string name="import_wiz_text_sub">時間割のテキストをコピーして貼り付け</string>
+    <string name="import_wiz_detail_file">時間割ファイルを選択して解析・プレビュー</string>
+    <string name="import_wiz_detail_text">時間割テキストを下に貼り付けて解析・プレビュー</string>
+    <string name="import_wiz_pick_file">ファイルを選択</string>
+    <string name="import_wiz_parse_preview">解析してプレビュー</string>
+    <string name="import_wiz_metric_course">授業</string>
+    <string name="import_wiz_metric_conflict">競合</string>
+    <string name="import_wiz_view_schedule">時間割を表示</string>
+    <string name="import_wiz_again">もう一つインポート</string>
+
+    <!-- TASK-05 A: 设置页四组标题 -->
+    <string name="settings_group_display">表示</string>
+    <string name="settings_group_notify">通知</string>
+    <string name="settings_privacy">プライバシー</string>
+    <!-- TASK-06 i18n: P3 schedule surface + import wizard JW row de-hardcoding -->
+    <string name="schedule_v3_empty_title">一週間を、すっきり整えよう</string>
+    <string name="schedule_v3_empty_hint">教務システム、カレンダーファイル、または手動追加から始めましょう</string>
+    <string name="schedule_v3_add_cta">時間割を追加</string>
+    <string name="schedule_week_empty_no_courses">この時間割にはまだ授業がありません · ＋ で追加</string>
+    <string name="schedule_week_empty_free">今週は授業なし。自由な時間を楽しもう</string>
+    <string name="schedule_more_export">エクスポート / 共有</string>
+    <string name="week_header_prev">前の週</string>
+    <string name="week_header_next">次の週</string>
+    <string name="week_header_title">第 %1$d 週</string>
+    <string name="week_header_title_range">第 %1$d 週 · %2$s</string>
+    <string name="week_picker_title">週を選択</string>
+    <string name="week_picker_progress">学期の進捗</string>
+    <string name="week_picker_progress_detail">第 %1$d 週 / 全 %2$d 週</string>
+    <string name="week_picker_back_to_current">今週に戻る</string>
+    <string name="week_picker_grid_week">第 %1$d 週</string>
+    <string name="week_picker_grid_current">第 %1$d 週、今週</string>
+    <string name="week_picker_chip_current">今週</string>
+    <string name="week_picker_chip_week">週</string>
+    <string name="week_range_long_format">%1$d月%2$d日 – %3$d月%4$d日</string>
+    <string name="settings_privacy_dialog_title">プライバシーとセキュリティ</string>
+    <string name="settings_privacy_dialog_body">ログインは学校の公式サイト上で行われ、アプリがパスワードを読み取ったり保存したりすることはありません。\n\n解析された時間割はこの端末にのみ保存されます。メンテナのサーバーへのアップロードは行われず、システムのクラウドバックアップ対象からも除外されます。\n\nアプリは検証済みの教務ドメインにのみ接続し、CAPTCHA・証明書エラー・学校のアクセス制御を回避しません。\n\n教務セッションのログアウトやローカルの時間割の削除はいつでも行えます。\n\n本プロジェクトは吉林建築大学と提携・公認関係にはありません。ソースコードは GPL-3.0 で公開されています。</string>
+    <string name="export_saved_no_app">「ダウンロード」に保存しました：%1$s（共有できるアプリがありません）</string>
 </resources>

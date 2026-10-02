@@ -5,6 +5,11 @@
     <!-- Permissions: 仅课程表所需 -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- P5 提醒复活（REQ-P5-03）：课前提醒需在 Android 13+ 申请通知权限 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- P5 提醒复活（REQ-P5-04）：开机/更新后重排课前提醒 -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <application
         android:name=".WedoApp"
         android:allowBackup="false"
@@ -45,7 +50,7 @@
         <!-- 外部 app (文件管理器、邮件附件、其他课表 app) 通过 ACTION_VIEW 打开课表文件时:
              1. OpenJsonAlias (alias of ImportReceiverActivity) 接收 intent
              2. ImportReceiverActivity 读取文件内容并透传到 MainActivity
-             3. MainActivity 解析后挂到 companion.pendingImportText, ImportSheet 自动弹预览
+             3. MainActivity 解析后挂到 companion.pendingImportText, 由全屏 ImportWizard 自动弹出预览
              单独拆分避免 MainActivity 既有 LAUNCHER 又有 VIEW 时的 launchMode/singleTask 边界问题
              MIME 覆盖 ScheduleParser 全部内容嗅探分派格式 (issue #6): 文件管理器把
              .html/.ics/.csv 报成对应 MIME 时本应用才会出现在"打开方式"候选里;
@@ -89,10 +94,10 @@
             </intent-filter>
         </activity-alias>
 
-        <!-- App Widget Receivers -->
+        <!-- App Widget Receivers — V3 重设计（REQ-P5-01）仅保留 2 种（4 变体），全部启用 -->
         <receiver
             android:name=".widget.TodayWidgetReceiver"
-            android:enabled="false"
+            android:enabled="true"
             android:exported="true"
             android:label="@string/widget_today_label">
             <intent-filter>
@@ -105,7 +110,7 @@
 
         <receiver
             android:name=".widget.TodaySmallWidgetReceiver"
-            android:enabled="false"
+            android:enabled="true"
             android:exported="true"
             android:label="@string/widget_today_small_label">
             <intent-filter>
@@ -117,60 +122,8 @@
         </receiver>
 
         <receiver
-            android:name=".widget.WeekListWidgetReceiver"
-            android:enabled="false"
-            android:exported="true"
-            android:label="@string/widget_week_list_label">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/week_list_widget_info" />
-        </receiver>
-
-        <receiver
-            android:name=".widget.WeekListSmallWidgetReceiver"
-            android:enabled="false"
-            android:exported="true"
-            android:label="@string/widget_week_list_small_label">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/week_list_small_widget_info" />
-        </receiver>
-
-        <receiver
-            android:name=".widget.WeekViewWidgetReceiver"
-            android:enabled="false"
-            android:exported="true"
-            android:label="@string/widget_week_view_label">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/week_view_widget_info" />
-        </receiver>
-
-        <receiver
-            android:name=".widget.WeekViewSmallWidgetReceiver"
-            android:enabled="false"
-            android:exported="true"
-            android:label="@string/widget_week_view_small_label">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/week_view_small_widget_info" />
-        </receiver>
-
-        <receiver
             android:name=".widget.WeekGridWidgetProvider"
-            android:enabled="false"
+            android:enabled="true"
             android:exported="true"
             android:label="@string/widget_week_grid_label">
             <intent-filter>
@@ -183,7 +136,7 @@
 
         <receiver
             android:name=".widget.WeekGridSmallWidgetProvider"
-            android:enabled="false"
+            android:enabled="true"
             android:exported="true"
             android:label="@string/widget_week_grid_small_label">
             <intent-filter>
@@ -194,36 +147,10 @@
                 android:resource="@xml/week_grid_small_widget_info" />
         </receiver>
 
-        <receiver
-            android:name=".widget.TwoDayWidgetReceiver"
-            android:enabled="false"
-            android:exported="true"
-            android:label="@string/widget_twoday_label">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/twoday_widget_info" />
-        </receiver>
-
-        <receiver
-            android:name=".widget.TwoDaySmallWidgetReceiver"
-            android:enabled="false"
-            android:exported="true"
-            android:label="@string/widget_twoday_small_label">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/twoday_small_widget_info" />
-        </receiver>
-
-        <!-- Daily boot receiver: reschedule notifications -->
+        <!-- P5 提醒复活（REQ-P5-04）：开机/应用更新后重排课前提醒 -->
         <receiver
             android:name=".widget.notification.BootReceiver"
-            android:enabled="false"
+            android:enabled="true"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
@@ -231,22 +158,16 @@
             </intent-filter>
         </receiver>
 
-        <!-- Daily course notification receiver (alarm target) -->
-        <receiver
-            android:name=".widget.notification.DailyNotifyReceiver"
-            android:enabled="false"
-            android:exported="false" />
-
-        <!-- Before-class midnight scheduler -->
+        <!-- P5 提醒复活（REQ-P5-03）：课前提醒每日凌晨调度器 -->
         <receiver
             android:name=".widget.notification.BeforeClassScheduleReceiver"
-            android:enabled="false"
+            android:enabled="true"
             android:exported="false" />
 
-        <!-- Individual before-class notification -->
+        <!-- P5 提醒复活（REQ-P5-03）：单节课前通知 -->
         <receiver
             android:name=".widget.notification.BeforeClassNotifyReceiver"
-            android:enabled="false"
+            android:enabled="true"
             android:exported="true" />
 
         <!-- 教务直连导入 Activity (v1.0.8 新增) -->
@@ -264,10 +185,10 @@
             android:label="Widget 预览"
             android:theme="@style/Theme.Wedo" />
 
-        <!-- Native launcher entry for editing an existing widget -->
+        <!-- Native launcher entry for editing an existing widget (REQ-P5-02: 启用) -->
         <activity
             android:name=".widget.WidgetConfigureActivity"
-            android:enabled="false"
+            android:enabled="true"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.Wedo" />
@@ -291,20 +212,6 @@
 
         <!-- debug 组件（DebugImportReceiver / DebugScheduleReceiver）已移至 src/debug 源集，
              仅 debug 构建包含，release APK 完全不含这些测试入口。 -->
-
-        <!-- Fluid cloud foreground service carrier -->
-        <service
-            android:name=".widget.notification.FluidCloudService"
-            android:enabled="false"
-            android:exported="false"
-            android:foregroundServiceType="specialUse" />
-
-        <!-- 可滚动 widget (v1.0.36): 条带 RemoteViewsService, Launcher 绑定拉行 -->
-        <service
-            android:name=".widget.ScrollStripService"
-            android:enabled="false"
-            android:exported="true"
-            android:permission="android.permission.BIND_REMOTEVIEWS" />
 
     </application>
 

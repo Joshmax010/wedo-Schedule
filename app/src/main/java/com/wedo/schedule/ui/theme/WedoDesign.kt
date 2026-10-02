@@ -37,6 +37,14 @@ object WedoPreferences {
 }
 
 val LocalWedoDisplay = staticCompositionLocalOf { WedoDisplay() }
+
+/**
+ * 顶栏/底栏是否处于「收起」态。
+ *
+ * V3 重设计 P0（ADR-2）：原「下滑收起 Dock」联动已删除，本值在 [com.wedo.schedule.MainActivity]
+ * 中**恒提供 `false`**；`WedoWeekHeader` 暂零改动消费该值。P3 由课表页顶栏的
+ * 大标题滚动收起（标准行为）接手，届时本 CompositionLocal 可移除。
+ */
 val LocalWedoCollapsed = staticCompositionLocalOf { false }
 
 @Composable

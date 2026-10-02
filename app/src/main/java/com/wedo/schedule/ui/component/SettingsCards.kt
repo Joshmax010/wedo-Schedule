@@ -61,11 +61,19 @@ import com.wedo.schedule.ui.theme.noRippleClickable
 @Composable
 fun WedoToggle(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     val colors = WedoTheme.colors
+    val display = com.wedo.schedule.ui.theme.LocalWedoDisplay.current
     val trackOn = WedoApple.accent
     // iOS 关闭态轨道: 浅色 #E9E9EA / 深色 #39393D
     val trackOff = if (WedoApple.isDark) Color(0xFF39393D) else Color(0xFFE9E9EA)
+    // 2026-10-01 真机反馈（开关观感）：颜色渐变保留，滑块位移改为**弹簧**——
+    // 原 animateDpAsState 默认补间是匀速，iOS 开关的手感是「滑块甩过去再回弹」。
+    val animSpec = if (display.motion) {
+        androidx.compose.animation.core.spring<androidx.compose.ui.unit.Dp>(dampingRatio = 0.62f, stiffness = 520f)
+    } else {
+        androidx.compose.animation.core.snap()
+    }
     val track by animateColorAsState(if (checked) trackOn else trackOff, label = "wedoToggleTrack")
-    val knob by animateDpAsState(if (checked) 24.dp else 2.dp, label = "wedoToggleKnob")
+    val knob by animateDpAsState(if (checked) 24.dp else 2.dp, animationSpec = animSpec, label = "wedoToggleKnob")
 
     Box(
         modifier = Modifier

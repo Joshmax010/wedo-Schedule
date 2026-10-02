@@ -21,6 +21,8 @@ import android.widget.RemoteViews
 import com.wedo.schedule.MainActivity
 import com.wedo.schedule.R
 import com.wedo.schedule.WedoApp
+import com.wedo.schedule.ui.theme.AppleNeutralLight
+import com.wedo.schedule.ui.theme.WedoAppleDimensions
 import com.wedo.schedule.util.AppPrefs
 import com.wedo.schedule.util.CourseColorUtil
 import com.wedo.schedule.util.DateUtils
@@ -160,8 +162,9 @@ open class WeekGridWidgetProvider : AppWidgetProvider() {
             val density = context.resources.displayMetrics.density
             val isDark = data.isDark
 
-            // ── 颜色 (跟随主题: resolveSchemePublic 支持 system=动态取色) ──
-            // 之前硬编码紫色十六进制 → 小组件永远紫色, 不跟随 app / 系统壁纸取色
+            // ── 颜色 (Apple 语义: 与 App 内 WedoThemeProvider 同源) ──
+            // resolveSchemePublic 现在按强调色名取 WedoSystemColor → appleScheme；
+            // 历史实现走的是 ThemePresets/动态取色，与 App 已脱节（小组件永远紫），已修正。
             val scheme = resolveSchemePublic(context, data.themeKey, isDark)
             fun androidx.compose.ui.graphics.Color.toIntArgb(): Int =
                 (0xFF shl 24) or ((this.red * 255).toInt() shl 16) or
@@ -172,7 +175,8 @@ open class WeekGridWidgetProvider : AppWidgetProvider() {
             val fgPrimary       = scheme.primary.toIntArgb()
             val fgOnSurface     = scheme.onSurface.toIntArgb()
             val fgOnSurfaceVar  = scheme.onSurfaceVariant.toIntArgb()
-            val gridLine        = scheme.surfaceVariant.toIntArgb()
+            // 「无色模式」课程块的灰底 —— 用填充色而不是分隔线色（分隔线带透明度，压在卡片上会显脏）
+            val colorlessFill   = scheme.surfaceVariant.toIntArgb()
             val colorless       = AppPrefs.isWidgetColorless(context)
 
             // v23: 课程颜色完全对齐 CourseTableView — 黄金角 HSL 分配
@@ -221,10 +225,11 @@ open class WeekGridWidgetProvider : AppWidgetProvider() {
             val c = Canvas(bmp)
             val p = Paint(Paint.ANTI_ALIAS_FLAG)
 
-            // 背景: 圆角容器
+            // 背景: 圆角容器 —— 圆角取 Apple 尺寸令牌，与其余小组件统一
             p.color = bgContainer
             val containerRect = RectF(0f, 0f, wPx.toFloat(), hPx.toFloat())
-            c.drawRoundRect(containerRect, dp(18f).toFloat(), dp(18f).toFloat(), p)
+            val widgetCorner = dp(WedoAppleDimensions.widgetCorner.value)
+            c.drawRoundRect(containerRect, widgetCorner.toFloat(), widgetCorner.toFloat(), p)
 
             // 空状态: 无课表时显示占位提示, 不渲染空白网格
             // 学期后课程被清空 → 落到这分支; 学期状态文案优先于"去创建课表"
@@ -266,8 +271,8 @@ open class WeekGridWidgetProvider : AppWidgetProvider() {
 
             // time column 角落
             p.color = bgSurface
-            c.drawRoundRect(RectF(x, y, x + timeW, y + headH),
-                dp(14f).toFloat(), dp(14f).toFloat(), p)
+            val cellCorner = dp(WedoAppleDimensions.widgetCellCorner.value).toFloat()
+            c.drawRoundRect(RectF(x, y, x + timeW, y + headH), cellCorner, cellCorner, p)
 
             // 学期前(课照常显示供预习): 角落画学期状态, 用户知道现在学期没开始
             if (data.semesterStatus == DateUtils.SemesterStatus.BEFORE_START) {
@@ -288,8 +293,7 @@ open class WeekGridWidgetProvider : AppWidgetProvider() {
                 val dateStr = if (data.showDate && dayData != null) DateUtils.shortDate(dayData.date) else null
 
                 p.color = if (isToday) bgToday else bgSurface
-                c.drawRoundRect(RectF(cellX, y, cellX + dayW, y + headH),
-                    dp(14f).toFloat(), dp(14f).toFloat(), p)
+                c.drawRoundRect(RectF(cellX, y, cellX + dayW, y + headH), cellCorner, cellCorner, p)
 
                 // day name 字号 = headH * 0.24 (降比例, 防溢出 cell)
                 val dayName = DateUtils.localizedDay(dow, WedoApp.get())
@@ -408,14 +412,15 @@ open class WeekGridWidgetProvider : AppWidgetProvider() {
                     val cardRect = RectF(laneX, cardTop, laneX + laneW, cardTop + cardH)
 
                     // 卡片背景色 (v19e: 对齐 CourseTableView palette) — 统一入口 CourseColorUtil (决策 D3)
-                    // colorless 灰底传 gridLine(即 surfaceVariant 的 Int), 与原实现一致
+                    // colorless 灰底传无色填充色(即 surfaceVariant 的 Int), 与原实现一致
                     val baseColor = CourseColorUtil.pickCourseColorIntWithGroupRows(
                         course, allCourses.filter { it.groupId == course.groupId },
-                        isDark, gridLine, colorless
+                        isDark, colorlessFill, colorless
                     )
                     p.color = baseColor
                     p.alpha = 200
-                    c.drawRoundRect(cardRect, dp(10f).toFloat(), dp(10f).toFloat(), p)
+                    val cardCorner = dp(WedoAppleDimensions.cardCorner.value).toFloat()
+                    c.drawRoundRect(cardRect, cardCorner, cardCorner, p)
                     p.alpha = 255
 
                     // border
@@ -423,13 +428,16 @@ open class WeekGridWidgetProvider : AppWidgetProvider() {
                     p.strokeWidth = dp(0.5f).toFloat()
                     p.color = baseColor
                     p.alpha = 80
-                    c.drawRoundRect(cardRect, dp(10f).toFloat(), dp(10f).toFloat(), p)
+                    c.drawRoundRect(cardRect, cardCorner, cardCorner, p)
                     p.style = Paint.Style.FILL
                     p.alpha = 255
 
                     // v19k: 课名居中独占主体, 教室做底部小字角标
                     // 卡片窄(~40dp), 双列并排挤死 → 改成: 课名竖排居中 + 教室缩到 0.6× 字号横排在底部
-                    val textColor = if (isDarkOn(baseColor)) Color.WHITE else 0xFF1D1B20.toInt()
+                    // 卡片底色是粉彩浅色时才走深字分支，故这里用 Apple label 的深色档，
+                    // 不能取 scheme.onSurface —— 深色模式的下 onSurface 是白的，
+                    // 一旦某门课的基色在深色模式下仍是浅色，白字会直接消失。
+                    val textColor = if (isDarkOn(baseColor)) Color.WHITE else AppleNeutralLight.label.toIntArgb()
                     p.color = textColor
                     p.textAlign = Paint.Align.CENTER
 

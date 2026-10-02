@@ -217,29 +217,9 @@ fun CardsGridView(
 
                 Column(Modifier.fillMaxWidth().then(if (wedo) Modifier.weight(1f).testTag("week-grid-scroll-$currentWeek").verticalScroll(scrollState) else Modifier)) {
                 // ---- Grid 主体：固定高度 Box，内部全用 Modifier.offset 绝对定位 ----
-                Box(modifier = Modifier.fillMaxWidth().height(gridH).drawBehind {
-                    if (wedo) {
-                        // Apple 化：网格线从 1px 改为 0.5px，并大幅降低不透明度。
-                        // 原来横线 32% / 竖线 18% 的 1px 线，整体看是一片「表格网」，
-                        // 界面显钝。iOS 的分隔线是 0.5pt 极淡 —— 隐约可辨即可，
-                        // 让视线落在内容上而不是格子上。
-                        val hairline = WedoAppleDimensions.hairline.toPx()
-                        val rowStroke = colors.outlineVariant.copy(alpha = .22f)
-                        val colStroke = colors.outlineVariant.copy(alpha = .12f)
-                        for (i in 0..timeSlots.size) {
-                            drawLine(
-                                rowStroke,
-                                Offset(timeW.toPx(), (rowH * i).toPx()),
-                                Offset(size.width, (rowH * i).toPx()),
-                                hairline
-                            )
-                        }
-                        for (i in 0..dayCount) {
-                            val x = (timeW + gapW + (colW + gapW) * i).toPx()
-                            drawLine(colStroke, Offset(x, 0f), Offset(x, size.height), hairline)
-                        }
-                    }
-                }) {
+                // 2026-10-01 真机反馈：横竖格子线**全部移除**——空课表时满屏空格严重影响观感，
+                // 课程块自身靠色块界定位置，时间/星期锚点由左侧节次标签与顶部星期行承担。
+                Box(modifier = Modifier.fillMaxWidth().height(gridH)) {
                     // 时间栏：每个节次一个 Row，用 offset 定位到正确 y
                     for ((i, slot) in timeSlots.withIndex()) {
                         Row(

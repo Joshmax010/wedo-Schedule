@@ -1,7 +1,5 @@
 package com.wedo.schedule
 
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.unit.dp
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -11,54 +9,55 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.lifecycleScope
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Today
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Today
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import android.widget.Toast
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.wedo.schedule.ui.screen.schedule.ScheduleViewModel
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.wedo.schedule.data.entity.CourseEntity
+import com.wedo.schedule.ui.component.LocalNavExtraBottomPadding
+import com.wedo.schedule.ui.component.WedoBackground
+import com.wedo.schedule.ui.component.WedoTabBar
+import com.wedo.schedule.ui.component.WedoTabBarDefaults
 import com.wedo.schedule.ui.screen.edit.AddCourseScreen
-import androidx.compose.ui.Alignment
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.ui.platform.LocalDensity
-import com.wedo.schedule.ui.screen.manage.ManagementPage
+import com.wedo.schedule.ui.screen.imports.ImportWizard
+import com.wedo.schedule.ui.screen.imports.JwImportActivity
 import com.wedo.schedule.ui.screen.mine.AllTablesScreen
 import com.wedo.schedule.ui.screen.mine.AppearanceScreen
-import com.wedo.schedule.ui.screen.mine.MineScreen
 import com.wedo.schedule.ui.screen.mine.EditTableScreen
-import com.wedo.schedule.ui.screen.mine.GeneralSettingsScreen
 import com.wedo.schedule.ui.screen.mine.ExportScreen
-import com.wedo.schedule.ui.screen.mine.WedoAboutScreen
+import com.wedo.schedule.ui.screen.mine.GeneralSettingsScreen
+import com.wedo.schedule.ui.screen.mine.HolidaySettingsScreen
 import com.wedo.schedule.ui.screen.mine.LicenseScreen
+import com.wedo.schedule.ui.screen.mine.ReminderScreen
+import com.wedo.schedule.ui.screen.mine.WedoSettingsScreen
 import com.wedo.schedule.ui.screen.schedule.ScheduleScreen
+import com.wedo.schedule.ui.screen.schedule.ScheduleViewModel
 import com.wedo.schedule.ui.screen.today.TodayScreen
-import com.wedo.schedule.ui.theme.WedoTheme
+import com.wedo.schedule.ui.theme.LocalWedoCollapsed
 import com.wedo.schedule.ui.theme.WedoThemeProvider
 import com.wedo.schedule.util.AppPrefs
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import android.widget.Toast
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -72,18 +71,68 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         const val EXTRA_COURSE_ID = "extra_course_id"
+
+        /**
+         * REQ-P2-03：教务导入失败页 → 直接打开**全屏导入向导**（`ImportWizard`）。
+         * 失败页与主界面不在同一 Activity，须经本 extra 通道跨 Activity 请求覆盖页。
+         */
+        const val EXTRA_OPEN_IMPORT = "extra_open_import"
+
+        /** REQ-P2-03：教务导入失败页 → 直接打开**手动添加课程**（`AddCourse`）。 */
+        const val EXTRA_OPEN_ADD_COURSE = "extra_open_add_course"
+
+        /** [pendingOverlayRequest] 的取值：打开导入向导。 */
+        const val PENDING_OVERLAY_IMPORT = "import"
+
+        /** [pendingOverlayRequest] 的取值：打开发手动添加课程。 */
+        const val PENDING_OVERLAY_ADD_COURSE = "add_course"
+
         fun intentForCourse(context: Context, courseId: Long): Intent {
             return Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 putExtra(EXTRA_COURSE_ID, courseId)
             }
         }
+
+        /**
+         * REQ-P2-03：教务失败页「改用文件导入」→ 打开导入向导。
+         *
+         * MainActivity 为 `singleTask`：CLEAR_TOP + SINGLE_TOP 会把既有实例带到前台
+         * 并回调 [MainActivity.onNewIntent]，不新建 Activity。
+         */
+        fun intentForImportWizard(context: Context): Intent {
+            return Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra(EXTRA_OPEN_IMPORT, true)
+            }
+        }
+
+        /** REQ-P2-03：教务失败页「手动添加课程」→ 打开 AddCourse（同样复用既有实例）。 */
+        fun intentForManualAdd(context: Context): Intent {
+            return Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra(EXTRA_OPEN_ADD_COURSE, true)
+            }
+        }
+
         val pendingImportTextState: androidx.compose.runtime.MutableState<String?> =
             androidx.compose.runtime.mutableStateOf(null)
         @Volatile var incomingImportText: String? = null
         var pendingImportText: String?
             get() = pendingImportTextState.value
             set(v) { pendingImportTextState.value = v }
+
+        /**
+         * REQ-P2-03：跨 Activity 的**覆盖页请求**（导入向导 / 手动添加）。
+         *
+         * 与 [pendingImportText] 同为 companion 快照状态：`onNewIntent` 写入、`AppRoot` 读取并消费。
+         * 消费后置 null，避免重组重复压栈。
+         */
+        val pendingOverlayRequestState: androidx.compose.runtime.MutableState<String?> =
+            androidx.compose.runtime.mutableStateOf(null)
+        var pendingOverlayRequest: String?
+            get() = pendingOverlayRequestState.value
+            set(v) { pendingOverlayRequestState.value = v }
     }
 
     private val editingCourseFromIntent = MutableStateFlow<CourseEntity?>(null)
@@ -123,7 +172,9 @@ class MainActivity : ComponentActivity() {
                         deepLinkCourse = deepLinkCourse,
                         onDeepLinkConsumed = { editingCourseFromIntent.value = null },
                         pendingImportText = pendingImportText,
-                        consumePendingImportText = { MainActivity.pendingImportText = null }
+                        consumePendingImportText = { MainActivity.pendingImportText = null },
+                        pendingOverlayRequest = pendingOverlayRequest,
+                        consumePendingOverlayRequest = { MainActivity.pendingOverlayRequest = null }
                     )
                 } else {
                     WedoPrivacyConsent(
@@ -147,6 +198,15 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleDeepLinkIntent(intent: Intent?) {
+        // REQ-P2-03：教务导入失败页经 extra 通道请求打开覆盖页（导入向导 / 手动添加）。
+        if (intent?.getBooleanExtra(EXTRA_OPEN_IMPORT, false) == true) {
+            pendingOverlayRequest = PENDING_OVERLAY_IMPORT
+            intent.removeExtra(EXTRA_OPEN_IMPORT)
+        }
+        if (intent?.getBooleanExtra(EXTRA_OPEN_ADD_COURSE, false) == true) {
+            pendingOverlayRequest = PENDING_OVERLAY_ADD_COURSE
+            intent.removeExtra(EXTRA_OPEN_ADD_COURSE)
+        }
         val importText = intent?.getStringExtra(
             com.wedo.schedule.ui.screen.imports.ImportReceiverActivity.EXTRA_IMPORT_TEXT
         ) ?: com.wedo.schedule.MainActivity.incomingImportText
@@ -169,14 +229,39 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Tab(val labelRes: Int, val icon: ImageVector) {
-    Schedule(R.string.tab_schedule, Icons.Outlined.CalendarMonth),
-    Manage(R.string.tab_manage, Icons.Outlined.Settings),
-    Mine(R.string.tab_mine, Icons.Outlined.Person)
+/**
+ * 底部导航三轴（V3 重设计 REQ-P0-01）。
+ *
+ * 由 `Schedule/Manage/Mine` 换轴为 `Today/Schedule/Settings`：
+ *  - 首项 `Today` 为默认首屏（Q3 拍板：最高频需求「我下一节在哪」零点击直达）。
+ *  - 标签键复用 `tab_today` / `tab_schedule`，并新增 `tab_settings`（6 语言）。
+ *  - 图标统一**填充态**（HIG: *Prefer filled symbols*）。
+ *
+ * 枚举与原 `MainTabs` 同处根包；`WedoTabBar`（`ui.component`）读取本枚举的标签键与图标，
+ * 故本枚举为 `public`（跨包可见）。
+ */
+enum class Tab(val labelRes: Int, val icon: ImageVector) {
+    // 2026-10-01 真机反馈：课表是主角，「今天」是从课表衍生的待办视图。
+    // 顺序与默认首屏统一为课表（原 V3「时间尺度」设计的第一原则被真机使用逻辑推翻）。
+    Schedule(R.string.tab_schedule, Icons.Filled.CalendarMonth),
+    Today(R.string.tab_today, Icons.Filled.Today),
+    Settings(R.string.tab_settings, Icons.Filled.Settings)
 }
 
+/**
+ * 覆盖页栈的页面标识（TASK-05 重置）。
+ *
+ * 旧 P0 的**过渡项 `Manage` 已移除** —— P4 已把「课表管理」的全部能力并入设置页
+ * 四组（课表 / 显示 / 通知 / 关于），`ManagementPage` 与过渡入口一并删除。
+ *
+ * `Import` 是全屏导入向导（取代旧底部 `ImportSheet`，后者已删除）：今天页 CTA 与
+ * 课表页 `＋` 都进此页。`Holiday` / `Reminder` 是 P4 设置页「显示 / 通知」两组进入的
+ * 二级页（原为不可达页面，本批接入设置后复活）。
+ */
 private enum class OverlayScreen {
-    AddCourse, AllTables, EditTable, Theme, General, Export, About, License
+    // 2026-10-01 真机反馈：`About` 中间页已删——设置「关于」组四项各自直达
+    // （更新原地弹结果 / 隐私应用内弹层 / 反馈开 GitHub Issues / 许可 License 页）。
+    AddCourse, AllTables, EditTable, Theme, General, Export, License, Import, Holiday, Reminder
 }
 
 @Composable
@@ -186,8 +271,12 @@ private fun AppRoot(
     deepLinkCourse: CourseEntity? = null,
     onDeepLinkConsumed: () -> Unit = {},
     pendingImportText: String? = null,
-    consumePendingImportText: () -> Unit = {}
+    consumePendingImportText: () -> Unit = {},
+    pendingOverlayRequest: String? = null,
+    consumePendingOverlayRequest: () -> Unit = {}
 ) {
+    // 默认首屏 = 课表（2026-10-01 真机反馈定调：打开就是为了看课表）。
+    // 返回键「非课表 → 回课表」「课表 → 双击退出」的既有逻辑因此天然成立。
     var currentTab by remember { mutableStateOf(Tab.Schedule) }
     var editingCourse by remember { mutableStateOf<CourseEntity?>(null) }
     // v7.10.8 返回键分层修复: overlayScreen 从单变量改成导航栈 —
@@ -216,7 +305,6 @@ private fun AppRoot(
     var pendingNewTableId by rememberSaveable { mutableStateOf<Long?>(null) }
     var previousDefaultTableId by rememberSaveable { mutableStateOf<Long?>(null) }
     var autoImportTriggered by remember { mutableStateOf(false) }
-    var showAddSheet by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val mainScope = rememberCoroutineScope()
     val mainVm: ScheduleViewModel = viewModel()
@@ -225,7 +313,21 @@ private fun AppRoot(
         if (deepLinkCourse != null) { editingCourse = deepLinkCourse; onDeepLinkConsumed() }
     }
     androidx.compose.runtime.LaunchedEffect(pendingImportText) {
-        if (!autoImportTriggered && pendingImportText != null) { autoImportTriggered = true; showAddSheet = true }
+        if (!autoImportTriggered && pendingImportText != null) { autoImportTriggered = true; pushOverlay(OverlayScreen.Import) }
+    }
+    // REQ-P2-03：教务失败页经 extra 通道请求打开覆盖页（导入向导 / 手动添加）。
+    androidx.compose.runtime.LaunchedEffect(pendingOverlayRequest) {
+        when (pendingOverlayRequest) {
+            MainActivity.PENDING_OVERLAY_IMPORT -> {
+                pushOverlay(OverlayScreen.Import)
+                consumePendingOverlayRequest()
+            }
+            MainActivity.PENDING_OVERLAY_ADD_COURSE -> {
+                editingCourse = null
+                pushOverlay(OverlayScreen.AddCourse)
+                consumePendingOverlayRequest()
+            }
+        }
     }
 
     // 返回键: 只处理"有 overlay 在栈上"或"编辑课程"两种拦截; 主页面留给双击退出
@@ -241,7 +343,7 @@ private fun AppRoot(
 
     // v7.10.8 主页面双击返回退出 — 第一次按 Toast 提示, 2 秒内再按才真退。
     // enabled 条件与上面互斥: 栈空且无编辑会话时才接管。
-    // v7.10.9: 课表页 = 首页 — 其他 Tab(今日/管理/我的)按返回先回课表页,
+    // v7.10.9: 课表页 = 首页 — 其他 Tab(今天/设置)按返回先回课表页,
     // 只有课表页本身才触发双击退出(用户 2026-09-02)。
     val ctxForExit = LocalContext.current
     var lastBackAt by remember { mutableStateOf(0L) }
@@ -296,81 +398,65 @@ private fun AppRoot(
         ExportScreen(onBack = { popOverlay() })
         return
     }
-    if (topOverlay() == OverlayScreen.About) {
-        WedoAboutScreen(onBack = { popOverlay() }, onOpenLicense = { pushOverlay(OverlayScreen.License) })
-        return
-    }
     if (topOverlay() == OverlayScreen.License) {
         LicenseScreen(onBack = { popOverlay() })
         return
     }
-    var collapsed by remember { mutableStateOf(false) }
-    val display = com.wedo.schedule.ui.theme.LocalWedoDisplay.current
-    androidx.compose.runtime.LaunchedEffect(currentTab) { collapsed = false }
-    val scrollConnection = remember {
-        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
-            override fun onPostScroll(
-                consumed: androidx.compose.ui.geometry.Offset,
-                available: androidx.compose.ui.geometry.Offset,
-                source: androidx.compose.ui.input.nestedscroll.NestedScrollSource
-            ): androidx.compose.ui.geometry.Offset {
-                if (consumed.y < -2f) collapsed = true
-                if (consumed.y > 2f || available.y > 2f) collapsed = false
-                return androidx.compose.ui.geometry.Offset.Zero
-            }
-        }
+    // REQ-P4-01：设置页「显示」组 → 节假日与补班日二级页（原页面复活的接入点）。
+    if (topOverlay() == OverlayScreen.Holiday) {
+        HolidaySettingsScreen(onBack = { popOverlay() })
+        return
     }
-    com.wedo.schedule.ui.component.WedoBackground(Modifier.fillMaxSize()) {
+    // REQ-P4-01 / REQ-P5-03：设置页「通知」组 → 提醒二级页（课前提醒 + 通知权限）。
+    if (topOverlay() == OverlayScreen.Reminder) {
+        ReminderScreen(onBack = { popOverlay() })
+        return
+    }
+    // REQ-P2-01: 全屏分步导入向导（取代旧底部 ImportSheet）。
+    // 今天页 CTA「从教务系统导入」与课表页 ＋ 都经 pushOverlay(Import) 进此页。
+    if (topOverlay() == OverlayScreen.Import) {
+        ImportWizard(
+            onDismiss = { popOverlay() },
+            onFinish = { popOverlay(); currentTab = Tab.Schedule },
+            // 手动添加: 先退掉向导再进 AddCourse（顺序不可换，否则 popOverlay 会把刚推入的 AddCourse 弹掉）。
+            onManualAdd = { popOverlay(); pushOverlay(OverlayScreen.AddCourse) },
+            // 教务直连: 关掉向导 + 落回课表页, 交给 JwImportActivity（导入成功自行入库后 finish 返回）。
+            onJwImport = {
+                popOverlay()
+                currentTab = Tab.Schedule
+                context.startActivity(Intent(context, JwImportActivity::class.java))
+            },
+            viewModel = mainVm
+        )
+        return
+    }
+
+    // 内容区底部留白 = tab bar 本体(52dp) + 系统导航栏安全区。
+    // tab bar 以覆盖层形式常驻底部(见下), 内容滚动到屏幕边缘时最后一行会被其遮挡,
+    // 故各页 contentPadding 需加上本值; 安全区高度与 tab bar 内部的 navigationBarsPadding
+    // 同源, 保证「不遮挡内容末行」在带手势条/三键导航的设备上都成立。
+    val navBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    WedoBackground(Modifier.fillMaxSize()) {
         androidx.compose.runtime.CompositionLocalProvider(
-            com.wedo.schedule.ui.component.LocalNavExtraBottomPadding provides 52.dp,
-            com.wedo.schedule.ui.theme.LocalWedoCollapsed provides collapsed
+            LocalNavExtraBottomPadding provides (WedoTabBarDefaults.contentHeight + navBarBottom),
+            // P0 决策(ADR-2): 移除「下滑收起」后 collapsed 恒为 false;
+            // WedoWeekHeader 暂消费该值(零改动编译), P3 由顶栏大标题滚动收起接手。
+            LocalWedoCollapsed provides false
         ) {
-            Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars).nestedScroll(scrollConnection)) {
+            Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars)) {
                 MainTabs(
-                    currentTab = currentTab, setCurrentTab = { currentTab = it },
-                    pushOverlay = ::pushOverlay, editingCourse = { editingCourse = it },
-                    onAdd = { showAddSheet = true },
-                    onCreateNewTable = {
-                        mainScope.launch {
-                            val previousId = mainVm.state.value.currentTable?.id
-                            val newId = mainVm.createEmptyTable(commitSelection = false)
-                            previousDefaultTableId = previousId; pendingNewTableId = newId
-                            editTableId = newId; pushOverlay(OverlayScreen.EditTable)
-                        }
-                    }
+                    currentTab = currentTab,
+                    pushOverlay = ::pushOverlay,
+                    editingCourse = { editingCourse = it },
+                    onAdd = { pushOverlay(OverlayScreen.Import) }
                 )
             }
         }
-        androidx.compose.animation.AnimatedVisibility(
-            visible = !collapsed,
-            modifier = Modifier.align(Alignment.BottomCenter),
-            enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically(
-                animationSpec = if (display.motion) androidx.compose.animation.core.spring(dampingRatio = .76f)
-                    else androidx.compose.animation.core.snap(), initialOffsetY = { it }),
-            exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutVertically(
-                animationSpec = if (display.motion) androidx.compose.animation.core.spring(dampingRatio = .9f)
-                    else androidx.compose.animation.core.snap(), targetOffsetY = { it })
-        ) {
-            com.wedo.schedule.ui.component.WedoDock(
-                settings = currentTab != Tab.Schedule,
-                onSchedule = { currentTab = Tab.Schedule },
-                onAdd = { showAddSheet = true },
-                onSettings = { currentTab = Tab.Mine }
-            )
-        }
-    }
-    if (showAddSheet) {
-        com.wedo.schedule.ui.screen.imports.ImportSheet(
-            sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            onDismiss = { showAddSheet = false },
-            onJwImportRequested = {
-                showAddSheet = false
-                currentTab = Tab.Schedule
-                context.startActivity(Intent(context, com.wedo.schedule.ui.screen.imports.JwImportActivity::class.java))
-            },
-            onImported = { showAddSheet = false; currentTab = Tab.Schedule },
-            onManualAdd = { showAddSheet = false; pushOverlay(OverlayScreen.AddCourse) },
-            viewModel = mainVm
+        // 常驻底部 tab bar（不隐藏、不收起）—— 取代原浮动 Dock + 下滑收起联动。
+        WedoTabBar(
+            current = currentTab,
+            onSelect = { currentTab = it },
+            modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
 }
@@ -378,27 +464,28 @@ private fun AppRoot(
 @Composable
 private fun MainTabs(
     currentTab: Tab,
-    setCurrentTab: (Tab) -> Unit,
     pushOverlay: (OverlayScreen) -> Unit,
     editingCourse: (CourseEntity?) -> Unit,
-    onCreateNewTable: () -> Unit,
     onAdd: () -> Unit
 ) {
     when (currentTab) {
+        Tab.Today -> TodayScreen(onOpenImport = onAdd, onEditCourse = { editingCourse(it) })
         Tab.Schedule -> ScheduleScreen(onGoImport = onAdd,
-            onManualAdd = { pushOverlay(OverlayScreen.AddCourse) }, onEditCourse = { editingCourse(it) })
-        Tab.Manage -> {
-            val ctx = LocalContext.current
-            ManagementPage(onJwImportRequested = { ctx.startActivity(Intent(ctx, com.wedo.schedule.ui.screen.imports.JwImportActivity::class.java)) },
-                onCreateNewTableRequested = onCreateNewTable, onManualAdd = { pushOverlay(OverlayScreen.AddCourse) },
-                onEditCurrentTable = { pushOverlay(OverlayScreen.EditTable) }, onImported = { setCurrentTab(Tab.Schedule) })
-        }
-        Tab.Mine -> com.wedo.schedule.ui.screen.mine.WedoSettingsScreen(
-            onManage = { setCurrentTab(Tab.Manage) },
+            onManualAdd = { pushOverlay(OverlayScreen.AddCourse) },
+            onGoExport = { pushOverlay(OverlayScreen.Export) },
+            onEditCourse = { editingCourse(it) })
+        // REQ-P4-01：设置页合并为四组（课表 / 显示 / 通知 / 关于）；全部「进入下一页」
+        // 动作经覆盖页栈（pushOverlay），返回键逐层只退一级。
+        Tab.Settings -> WedoSettingsScreen(
             onOpenAllTables = { pushOverlay(OverlayScreen.AllTables) },
             onOpenAppearance = { pushOverlay(OverlayScreen.Theme) },
             onOpenGeneral = { pushOverlay(OverlayScreen.General) },
             onOpenExport = { pushOverlay(OverlayScreen.Export) },
-            onOpenAbout = { pushOverlay(OverlayScreen.About) })
+            onOpenLicense = { pushOverlay(OverlayScreen.License) },
+            onOpenImport = { pushOverlay(OverlayScreen.Import) },
+            onManualAdd = { pushOverlay(OverlayScreen.AddCourse) },
+            onEditCurrentTable = { pushOverlay(OverlayScreen.EditTable) },
+            onOpenReminder = { pushOverlay(OverlayScreen.Reminder) },
+            onOpenHoliday = { pushOverlay(OverlayScreen.Holiday) })
     }
 }

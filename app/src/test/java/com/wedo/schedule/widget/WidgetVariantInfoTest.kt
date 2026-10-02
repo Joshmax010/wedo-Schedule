@@ -7,15 +7,18 @@ import org.junit.Test
 
 /**
  * Pure-JVM tests for [WidgetVariantInfo] — shared metadata describing the
- * 10 widget variants. The list is the single source of truth for both the
- * refresh broadcast in [WidgetUpdater] and the management screen UI; this
- * test pins that contract.
+ * 4 widget variants (2 kinds × base/small). The list is the single source of
+ * truth for both the refresh broadcast in [WidgetUpdater] and the widget
+ * config UI; this test pins that contract.
+ *
+ * REQ-P5-01：V3 重设计把小组件从 5 种（10 变体）收敛为 **2 种（4 变体）**：
+ * Today / WeekGrid，各含 base + small。
  */
 class WidgetVariantInfoTest {
 
     @Test
-    fun `ALL_WIDGET_VARIANTS has exactly 10 entries`() {
-        assertEquals(10, ALL_WIDGET_VARIANTS.size)
+    fun `ALL_WIDGET_VARIANTS has exactly 4 entries`() {
+        assertEquals(4, ALL_WIDGET_VARIANTS.size)
     }
 
     @Test
@@ -42,11 +45,10 @@ class WidgetVariantInfoTest {
 
     @Test
     fun `metadata includes both base and small variant for each kind`() {
-        // Five widget "kinds": Today / WeekList / WeekView / TwoDay / WeekGrid.
-        // Each must have a base + a small variant. WeekGrid uses its own
-        // provider class hierarchy (open class + subclass) so we accept either
-        // WeekGridWidgetProvider or WeekGridSmallWidgetProvider as the "small"
-        // form — both must be present.
+        // Two surviving widget "kinds": Today / WeekGrid, each with base + small.
+        // WeekGrid uses its own provider class hierarchy (open class + subclass)
+        // so we accept either WeekGridWidgetProvider or WeekGridSmallWidgetProvider
+        // as the "small" form — both must be present.
         val byKind = ALL_WIDGET_VARIANTS.map { v ->
             v.receiverClass.simpleName.removeSuffix("SmallWidgetProvider")
                 .removeSuffix("SmallWidgetReceiver")
@@ -60,11 +62,12 @@ class WidgetVariantInfoTest {
                 2, count
             )
         }
-        // And specifically: the 5 base + 5 small must be present.
+        // And specifically: the 2 base + 2 small must be present.
         assertNotEquals(0, byKind.count { it == "Today" })
-        assertNotEquals(0, byKind.count { it == "WeekList" })
-        assertNotEquals(0, byKind.count { it == "WeekView" })
-        assertNotEquals(0, byKind.count { it == "TwoDay" })
         assertNotEquals(0, byKind.count { it == "WeekGrid" })
+        // The three deleted kinds must be gone.
+        assertEquals(0, byKind.count { it == "WeekList" })
+        assertEquals(0, byKind.count { it == "WeekView" })
+        assertEquals(0, byKind.count { it == "TwoDay" })
     }
 }

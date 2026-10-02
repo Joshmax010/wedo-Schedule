@@ -405,8 +405,25 @@ class JwNewZfParser(source: String) : JwParser(source) {
 
     // ─── HTML 表格解析（兜底） ─────────────────────────────────
 
-    /** (N-M节) 模式, table1/kbgrid 变体共用 */
-    private val NODE_PATTERN = Regex("""\(\d{1,2}[-]*\d*节""")
+    /**
+     * 节次标记 `(N-M节)` / `(N节)`，兼容全角括号与 `－`/`—` 连字符。
+     *
+     * 捕获组 1 = 起始节，组 2 = 结束节（缺省时与起始节相同）。
+     * 用捕获组而不是「先 find 再 substring(1)+removeSuffix("节")+split("-")」，
+     * 因为后者在全角括号、`(第5节)` 这类变体上会切出空串。
+     */
+    private val NODE_SPAN = Regex("""[（(]\s*(\d{1,2})\s*(?:[-－—]\s*(\d{1,2}))?\s*节""")
+
+    /** 节次标记的命中结果。[raw] 保留原文，供从周次串里剥离。 */
+    private data class NodeSpan(val start: Int, val end: Int, val raw: String)
+
+    /** 从任意含节次标记的文本里取出区间；无标记或起始节不可解析时返回 null。 */
+    private fun findNodeSpan(text: String): NodeSpan? {
+        val m = NODE_SPAN.find(text) ?: return null
+        val start = m.groupValues[1].toIntOrNull() ?: return null
+        val end = m.groupValues[2].toIntOrNull() ?: start
+        return NodeSpan(start, end, m.value)
+    }
 
     /**
      * 新正方 HTML 渲染后的课表解析。容器优先级:
@@ -429,14 +446,14 @@ class JwNewZfParser(source: String) : JwParser(source) {
         // ── 2. 网格视图 ──
         val gridTable = doc.getElementById("kbgrid_table_0")
         if (gridTable != null) {
-            val result = parseKbgridTable0(gridTable)
+            val result = parseKbGridCells(gridTable)
             if (result.isNotEmpty()) return result
         }
 
         // ── 3. 列表视图 ──
         val listTable = doc.getElementById("kblist_table")
         if (listTable != null) {
-            val result = parseKblistTable(listTable)
+            val result = parseKbListRows(listTable)
             if (result.isNotEmpty()) return result
         }
 
@@ -500,15 +517,14 @@ class JwNewZfParser(source: String) : JwParser(source) {
                     if (timeStr.isEmpty()) continue
 
                     // 节/周文本解析: "(N-M节)X-Y周(单),A-B周(双)"
-                    val nodeInfo = NODE_PATTERN.find(timeStr)?.value ?: continue
-                    val nodes = nodeInfo.substring(1).removeSuffix("节").split("-")
-                    var startNode = nodes.getOrNull(0)?.toIntOrNull() ?: continue
-                    val endNode = nodes.getOrNull(1)?.toIntOrNull() ?: startNode
+                    val span = findNodeSpan(timeStr) ?: continue
+                    var startNode = span.start
+                    val endNode = span.end
                     // (N-M节) 优先, 行头 rowNode 仅作缺省
                     if (startNode <= 0) startNode = rowNode
 
                     // 周次段
-                    val weekList = NODE_PATTERN.replace(timeStr, "").split(",")
+                    val weekList = timeStr.replace(span.raw, "").split(",")
                     for (weekPart in weekList) {
                         val trimmed = weekPart.trim()
                         if (trimmed.isEmpty()) continue
@@ -534,127 +550,172 @@ class JwNewZfParser(source: String) : JwParser(source) {
     }
 
     /**
-     * 网格视图解析：`#kbgrid_table_0` + `td.td_wrap` + `.timetable_con.text-left`。
+     * 网格视图解析：`#kbgrid_table_0` 的单元格 → 课程。
      *
-     * 数据结构取自 shiguang_warehouse（MIT）zhengfang_01.js 的 parserTbale 实现。
+     * 页面契约（依据本仓脱敏夹具 `src/test/resources/zf-new/grid_*.html` 逐条比对确认）：
+     *   - 列由 `td[id="<星期>-<大节>"]` 标识，星期取 id 中连字符之前的数字
+     *   - 同一单元格内 `.timetable_con` 可能不止一个（一格塞多门课）
+     *   - 课名在 `.title`；`(N-M节)` 与周次串同段出现
+     *   - 该段之后依次是地点、教师两段；**缺任一段则整块丢弃**，页面残缺时不产脏数据
      */
-    private fun parseKbgridTable0(table: org.jsoup.nodes.Element): List<JwCourse> {
+    private fun parseKbGridCells(table: org.jsoup.nodes.Element): List<JwCourse> {
         val result = mutableListOf<JwCourse>()
-        val trs = table.getElementsByTag("tr")
-        for (tr in trs) {
-            val tds = tr.getElementsByTag("td")
-            for (td in tds) {
-                val tdId = td.attr("id")
-                if (tdId.isEmpty()) continue
-                val day = tdId.split("-").getOrNull(0)?.toIntOrNull() ?: continue
-                if (day !in 1..7) continue
+        for (cell in table.getElementsByTag("td")) {
+            val day = dayOfGridCell(cell.attr("id")) ?: continue
+            for (block in cell.getElementsByClass("timetable_con")) {
+                result += gridBlockCourses(block, day)
+            }
+        }
+        return result
+    }
 
-                val timetableCons = td.getElementsByClass("timetable_con")
-                for (tc in timetableCons) {
-                    val titleDiv = tc.getElementsByClass("title").firstOrNull()
-                    val name = titleDiv?.text()?.trim().orEmpty()
-                    if (name.isEmpty()) continue
+    /** 网格单元格 id 形如 `2-1`；返回其中的星期（1..7），不可解析时 null。 */
+    private fun dayOfGridCell(id: String): Int? {
+        if (id.isEmpty()) return null
+        return id.takeWhile { it.isDigit() }.toIntOrNull()?.takeIf { it in 1..7 }
+    }
 
-                    // p[0] = 节/周; p[1] = 地点; p[2] = 教师
-                    val pList = tc.getElementsByTag("p")
-                    if (pList.size < 3) continue  // 缺字段直接跳过(对齐 grid_missing_fields 边界)
-                    val infoStr = pList[0].text().trim()
-                    val position = pList[1].text().trim()
-                    val teacher = pList[2].text().trim()
+    /**
+     * 单个 `.timetable_con` → 课程。
+     *
+     * 元信息段落**按内容定位**而不是按固定下标：先找带 `(N-M节)` 的那段，
+     * 再要求它后面至少有「地点」「教师」两段补齐。`.title` 若退化成 `<p>`
+     * 也是靠 `filterNot` 排掉，不会像按下标取那样整体错位。
+     */
+    private fun gridBlockCourses(block: org.jsoup.nodes.Element, day: Int): List<JwCourse> {
+        val name = block.getElementsByClass("title").firstOrNull()?.text()?.trim().orEmpty()
+        if (name.isEmpty()) return emptyList()
 
-                    // 节次解析: infoStr 必须含 "(N-M节)"
-                    val nodeMatch = NODE_PATTERN.find(infoStr) ?: continue
-                    val nodes = nodeMatch.value.substring(1).removeSuffix("节").split("-")
-                    val startNode = nodes.getOrNull(0)?.toIntOrNull() ?: continue
-                    val endNode = nodes.getOrNull(1)?.toIntOrNull() ?: startNode
+        val meta = block.getElementsByTag("p").filterNot { it.hasClass("title") }
+        val index = meta.indexOfFirst { NODE_SPAN.containsMatchIn(it.text()) }
+        if (index < 0) return emptyList()
+        if (meta.size - index - 1 < 2) return emptyList()
 
-                    // 周次段: 剥 (N-M节) 后按逗号拆
-                    val weekStr = NODE_PATTERN.replace(infoStr, "").trim()
-                    val ranges = parseWeekStr(weekStr)
-                    if (ranges.isEmpty()) continue
+        val schedule = meta[index].text().trim()
+        val span = findNodeSpan(schedule) ?: return emptyList()
+        val room = meta[index + 1].text().trim()
+        val teacher = meta[index + 2].text().trim()
 
-                    for (r in ranges) {
-                        result += JwCourse(
-                            name = name,
-                            room = position,
-                            teacher = teacher,
-                            day = day,
-                            startNode = startNode,
-                            endNode = endNode,
-                            startWeek = r.first,
-                            endWeek = r.second,
-                            type = r.third
-                        )
-                    }
-                }
+        val ranges = parseWeekStr(schedule.replace(span.raw, "").trim())
+        if (ranges.isEmpty()) return emptyList()
+
+        return ranges.map { r ->
+            JwCourse(
+                name = name,
+                room = room,
+                teacher = teacher,
+                day = day,
+                startNode = span.start,
+                endNode = span.end,
+                startWeek = r.first,
+                endWeek = r.second,
+                type = r.third
+            )
+        }
+    }
+
+    /**
+     * 列表视图解析：`#kblist_table` → 课程。
+     *
+     * 页面契约（依据本仓脱敏夹具 `src/test/resources/zf-new/list_*.html` 逐条比对确认）：
+     *   - 每个 `<tbody>` 承载一天；第 0 个是视图控制区，第 1..7 个依次是周一至周日
+     *   - 行内 `td[0]` 是节次 `N-M`，`td[1]` 内含 `.title` 课名及其后的字段段
+     *   - 字段段带中文标签（`周数：` / `上课地点：` / `教师　：`），按标签认领而不赌下标
+     */
+    private fun parseKbListRows(table: org.jsoup.nodes.Element): List<JwCourse> {
+        val result = mutableListOf<JwCourse>()
+        for ((index, body) in kbListBodies(table).withIndex()) {
+            val day = index  // 1=周一, 2=周二, ..., 7=周日
+            if (day !in 1..7) continue
+            for (row in body.getElementsByTag("tr")) {
+                result += listRowCourses(row, day)
             }
         }
         return result
     }
 
     /**
-     * 列表视图解析：`#kblist_table` 按星期分组，`td[0]` 是节次、`td[1]` 是 `.title`，
-     * 课程明细在 3 个带前缀的 `font` 里。
+     * `#kblist_table` 下的日期 `<tbody>` 序列。
      *
-     * 数据结构取自 shiguang_warehouse（MIT）zhengfang_01.js 的 parserList 实现。
-     *
-     * 注意：`tbody[0]` 是视图控制区，`tbody[1..7]` 才是周一至周日（index 0 跳过）。
+     * 优先取直接子节点 —— 用全后代选择器会把嵌套表格里的 tbody 也算进来，令日期整体错位；
+     * 只有页面把 tbody 包在别的容器里（极端形态）才回退到全后代。
      */
-    private fun parseKblistTable(table: org.jsoup.nodes.Element): List<JwCourse> {
-        val result = mutableListOf<JwCourse>()
-        val tbodies = table.getElementsByTag("tbody")
-        for ((index, tbody) in tbodies.withIndex()) {
-            if (index == 0) continue
-            if (index > 7) break  // 防御越界
-            val day = index  // 1=周一, 2=周二, ..., 7=周日
+    private fun kbListBodies(table: org.jsoup.nodes.Element): List<org.jsoup.nodes.Element> {
+        val direct = table.children().filter { it.normalName() == "tbody" }
+        return direct.ifEmpty { table.getElementsByTag("tbody") }
+    }
 
-            val trs = tbody.getElementsByTag("tr")
-            for (tr in trs) {
-                val tds = tr.getElementsByTag("td")
-                if (tds.size < 2) continue  // 表头行 th-only 无 td, 跳过
-                val sectionStr = tds[0].text().trim()
-                if (sectionStr.isEmpty()) continue
-                // 解析节次: "1-2" / "5-6" → (start, end)
-                val nodes = sectionStr.split("-", limit = 2)
-                val startNode = nodes.getOrNull(0)?.trim()?.toIntOrNull() ?: continue
-                val endNode = nodes.getOrNull(1)?.trim()?.toIntOrNull() ?: startNode
+    /** 列表视图一行的字段：周数 / 地点 / 教师，未出现时为空串。 */
+    private data class ListRowFields(val week: String, val room: String, val teacher: String)
 
-                // td[1] 内 .title div
-                val titleDiv = tds[1].getElementsByClass("title").firstOrNull()
-                val name = titleDiv?.text()?.trim().orEmpty()
-                if (name.isEmpty()) continue
+    private fun listRowCourses(row: org.jsoup.nodes.Element, day: Int): List<JwCourse> {
+        val cells = row.getElementsByTag("td")
+        if (cells.size < 2) return emptyList()  // 纯表头行(th-only)没有 td
+        val span = sectionSpanOf(cells[0].text()) ?: return emptyList()
 
-                // 整块文本 + 前缀正则剥字段
-                //   周数：1-16周 / 上课地点：教学楼A101 / 教师　：张老师 (U+3000 全角空格)
-                val allText = tds[1].text()
-                val weekMatch = Regex("""周数\s*[：:]\s*(.+?)(?=上课地点|教师|$)""").find(allText)
-                val roomMatch = Regex("""上课地点\s*[：:]\s*(.+?)(?=教师|$)""").find(allText)
-                val teacherMatch = Regex("""教师[\s　]*[：:]\s*(.+?)$""").find(allText)
+        val detail = cells[1]
+        val name = detail.getElementsByClass("title").firstOrNull()?.text()?.trim().orEmpty()
+        if (name.isEmpty()) return emptyList()
 
-                val weekStr = weekMatch?.groupValues?.getOrNull(1)?.trim().orEmpty()
-                val room = roomMatch?.groupValues?.getOrNull(1)?.trim().orEmpty()
-                val teacher = teacherMatch?.groupValues?.getOrNull(1)?.trim().orEmpty()
+        val fields = labelledFields(detail)
+        if (fields.week.isEmpty()) return emptyList()
+        val ranges = parseWeekStr(fields.week)
+        if (ranges.isEmpty()) return emptyList()
 
-                if (weekStr.isEmpty()) continue
-                val ranges = parseWeekStr(weekStr)
-                if (ranges.isEmpty()) continue
+        return ranges.map { r ->
+            JwCourse(
+                name = name,
+                room = fields.room,
+                teacher = fields.teacher,
+                day = day,
+                startNode = span.first,
+                endNode = span.second,
+                startWeek = r.first,
+                endWeek = r.second,
+                type = r.third
+            )
+        }
+    }
 
-                for (r in ranges) {
-                    result += JwCourse(
-                        name = name,
-                        room = room,
-                        teacher = teacher,
-                        day = day,
-                        startNode = startNode,
-                        endNode = endNode,
-                        startWeek = r.first,
-                        endWeek = r.second,
-                        type = r.third
-                    )
-                }
+    /** `td[0]` 的节次文本 `N-M` / `N` → (start, end)；不可解析时 null。 */
+    private fun sectionSpanOf(raw: String): Pair<Int, Int>? {
+        val text = raw.trim()
+        if (text.isEmpty()) return null
+        val parts = text.split("-", limit = 2)
+        val start = parts[0].trim().toIntOrNull() ?: return null
+        val end = parts.getOrNull(1)?.trim()?.toIntOrNull() ?: start
+        return start to end
+    }
+
+    /**
+     * 按中文标签认领列表视图的周数 / 地点 / 教师。
+     *
+     * 依次看课名容器内的 `font`（无 `font` 时退化为 `p`）：以 `：`/`:` 切成标签与值，
+     * 再按标签归位。这样字段各自成段、还是并列在同一段里，都能读出来，
+     * 不必赌「第几个元素是地点」。
+     *
+     * 值里再出现冒号的一律视为串味（多个字段被拼进了同一段）而丢弃，由后续段补位。
+     */
+    private fun labelledFields(detail: org.jsoup.nodes.Element): ListRowFields {
+        val fonts = detail.getElementsByTag("font")
+        val pieces = if (fonts.isEmpty()) detail.getElementsByTag("p") else fonts
+        var week = ""
+        var room = ""
+        var teacher = ""
+        for (piece in pieces) {
+            val text = piece.text().trim()
+            val sep = text.indexOfFirst { it == '：' || it == ':' }
+            if (sep <= 0) continue
+            val label = text.substring(0, sep).trim()
+            val value = text.substring(sep + 1).trim()
+            if (value.isEmpty() || value.any { it == '：' || it == ':' }) continue
+            when {
+                week.isEmpty() && (label.contains("周数") || label.contains("周次")) -> week = value
+                room.isEmpty() && (label.contains("地点") || label.contains("教室")) -> room = value
+                teacher.isEmpty() && (label.contains("教师") || label.contains("老师")) -> teacher = value
             }
         }
-        return result
+        return ListRowFields(week, room, teacher)
     }
 
     /**

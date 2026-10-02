@@ -5,30 +5,22 @@ import android.appwidget.AppWidgetManager
 import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
-import android.view.Gravity
 import android.widget.FrameLayout
 import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
-import com.wedo.schedule.R
 import com.wedo.schedule.WedoApp
-import com.wedo.schedule.data.entity.TimeTableEntity
 import com.wedo.schedule.util.TimeTableUtils
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /**
- * 调试用 Activity：渲染 4 个桌面 Widget 样式到屏幕，并保存为 PNG 用于 README 截图。
+ * 调试用 Activity：渲染桌面 Widget 样式到屏幕，用于 README 截图 / 真机自测。
  *
- * 通过 Intent extra 指定要渲染哪个 widget：
+ * 通过 Intent extra 指定要渲染哪个 widget（V3 重设计后仅存 2 种）：
  *  - `widget=today` (250x180 dp)
- *  - `widget=twoday` (320x220 dp)
- *  - `widget=weeklist` (320x200 dp)
- *  - `widget=weekgrid` (250x300 dp)
- *  - 缺省 = weekgrid
+ *  - `widget=weekgrid` (250x360 dp) — 缺省
  *
- * 真实数据来源：当前课表（表 1 = 2026 春学期，HEU 13 节真实课表）。
+ * 真实数据来源：当前课表。
  */
 class WidgetRenderActivity : Activity() {
 
@@ -40,8 +32,6 @@ class WidgetRenderActivity : Activity() {
         val which = intent.getStringExtra("widget") ?: "weekgrid"
         val (wDp, hDp) = when (which) {
             "today" -> 250f to 180f
-            "twoday" -> 320f to 220f
-            "weeklist" -> 320f to 200f
             else -> 250f to 360f
         }
         Log.d(TAG, "rendering widget=$which, size=${wDp}x${hDp}dp")
@@ -95,49 +85,6 @@ class WidgetRenderActivity : Activity() {
                         courses = courses,
                         timeJson = table?.timeJson ?: TimeTableUtils.DEFAULT_TIME_JSON,
                         hasTable = table != null,
-                        isDark = isDark, themeKey = themeKey
-                    ),
-                    wDp, hDp
-                )
-            }
-            "twoday" -> {
-                val today = java.time.LocalDate.now()
-                val tomorrow = today.plusDays(1)
-                val table = WidgetTableResolver.resolveCurrentTable()
-                val days = if (table != null) {
-                    val week = com.wedo.schedule.util.DateUtils.currentWeek(table.startDate, today)
-                    listOf(today, tomorrow).map { date ->
-                        val dow = date.dayOfWeek.value
-                        val all = WedoApp.get().repository.getCoursesByDayOnce(table.id, dow)
-                        val visible = all.filter { it.inWeek(week) }.sortedBy { it.startNode }
-                        DayData(date = date, dayOfWeek = dow, courses = visible, timeJson = table.timeJson)
-                    }
-                } else emptyList()
-                WidgetBitmapRenderers.renderTwoDay(
-                    this,
-                    TwoDayData(
-                        days = days, hasTable = table != null,
-                        isDark = isDark, themeKey = themeKey
-                    ),
-                    wDp, hDp
-                )
-            }
-            "weeklist" -> {
-                val today = java.time.LocalDate.now()
-                val table = WidgetTableResolver.resolveCurrentTable()
-                val days = if (table != null) {
-                    val week = com.wedo.schedule.util.DateUtils.currentWeek(table.startDate, today)
-                    (1..7).map { dow ->
-                        val date = com.wedo.schedule.util.DateUtils.dateOfWeekDay(today, dow)
-                        val all = WedoApp.get().repository.getCoursesByDayOnce(table.id, dow)
-                        val visible = all.filter { it.inWeek(week) }.sortedBy { it.startNode }
-                        DayData(date = date, dayOfWeek = dow, courses = visible, timeJson = table.timeJson)
-                    }
-                } else emptyList()
-                WidgetBitmapRenderers.renderWeekList(
-                    this,
-                    WeekData(
-                        days = days, hasTable = table != null,
                         isDark = isDark, themeKey = themeKey
                     ),
                     wDp, hDp

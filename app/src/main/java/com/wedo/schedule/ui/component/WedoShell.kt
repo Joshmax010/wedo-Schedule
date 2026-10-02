@@ -7,11 +7,6 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -20,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.wedo.schedule.ui.theme.*
@@ -31,21 +25,23 @@ import com.wedo.schedule.ui.theme.*
  * 本文件原为玻璃组件（`wedoGlass()` 等），按「全面取消玻璃质感」的指令重写：
  *  - `WedoBackground` 从「蓝色渐变 + 光斑」改为 **Apple grouped 纯色背景**
  *  - `wedoGlass()` **已删除**（唯一调用点均已改为实色卡片）
- *  - `WedoDock` 从「悬浮玻璃胶囊」改为 **iOS 标准底部标签栏**
+ *  - `WedoDock` **已删除**（V3 重设计 REQ-P0-01/02：底部标签栏迁至
+ *    `WedoTabBar.kt`，并去掉「＋ 添加」动作项与「下滑收起」联动）
  *  - `wedoPress` 保留按压反馈，但改为 Apple 的缩放式（不用涟漪）
  *
  * 另：原 `PillNavigationBar.kt`（含 `NavDockSpec` / `DockNavigationBar` 悬浮玻璃胶囊）
- * 已整文件删除 —— 底栏只有 `WedoDock` 这一种形态，不再提供会渲染玻璃的第二形态。
+ * 已整文件删除 —— 底栏只有 `WedoTabBar` 这一种形态，不再提供会渲染玻璃的第二形态。
  */
 
 /**
- * 底栏占位高度 —— 供各页滚动容器在末尾留白，避免最后一项被标签栏遮住。
+ * 底栏占位高度 —— 供各页滚动容器在末尾留白，避免最后一项被底部 tab bar 遮住。
  *
- * 语义已随 `WedoDock` 变化：旧值 84dp 是为**悬浮胶囊**预留的（胶囊 64dp + 悬空 12dp
- * + 投影余量）。iOS 标准标签栏是**通栏贴底**的，不需要为「悬空」留白，只要覆盖
- * 标签栏本体（52dp）即可；安全区由 `navigationBarsPadding()` 自行吸收，不重复计入。
+ * 单一事实来源 = [WedoTabBarDefaults.contentHeight]（tab bar 本体高度，不含安全区）。
+ * `MainActivity` 在提供本值时再叠加**系统导航栏安全区**（tab bar 以覆盖层常驻底部，
+ * 内容滚动到屏幕边缘时会被其遮挡，安全区同源叠加后「不遮挡内容末行」才成立）。
+ * tab bar 内部另有 `navigationBarsPadding()` 吸收自身安全区，与本值不重复计入。
  */
-val LocalNavExtraBottomPadding = staticCompositionLocalOf { 52.dp }
+val LocalNavExtraBottomPadding = staticCompositionLocalOf { WedoTabBarDefaults.contentHeight }
 
 /**
  * Apple 分组背景。
@@ -150,7 +146,7 @@ fun WedoPrimaryButton(
 }
 
 /**
- * iOS 描边按钮（次要动作）—— 用于「取消」这类并列动作。
+ * iOS 标准描边按钮（次要动作）—— 用于「取消」这类并列动作。
  * 浅底透明、1pt 强调色描边、强调色文字。
  */
 @Composable
@@ -170,69 +166,5 @@ fun WedoSecondaryButton(
         contentAlignment = Alignment.Center
     ) {
         Text(text, style = WedoAppleType.headline(), color = accent)
-    }
-}
-
-/**
- * iOS 标准底部标签栏。
- *
- * 与原玻璃悬浮胶囊的三处差别：
- *  1. **通栏**，不是居中悬浮的 74% 宽胶囊
- *  2. **实色 + 0.5pt 顶部细线**，不是半透明玻璃
- *  3. 「添加」不再是凸起的圆形浮动按钮 —— iOS 的标签栏里没有 FAB 这个语汇
- *
- * 三个入口等宽平分（课表 / 添加 / 设置），中间「添加」用强调色图标区分。
- */
-@Composable
-fun WedoDock(settings: Boolean, onSchedule: () -> Unit, onAdd: () -> Unit, onSettings: () -> Unit) {
-    val colors = WedoTheme.colors
-    Column(
-        Modifier.testTag("wedo-dock").fillMaxWidth()
-            .background(colors.surfaceContainerLow)
-            .navigationBarsPadding()
-    ) {
-        // 顶部 0.5pt 细线 —— Apple 标签栏的分隔特征
-        HorizontalDivider(thickness = WedoAppleDimensions.hairline, color = colors.outlineVariant)
-        Row(
-            Modifier.fillMaxWidth().height(52.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            DockItem(Icons.Outlined.CalendarMonth, "课表", !settings, Modifier.weight(1f), onSchedule)
-            DockItem(Icons.Outlined.Add, "添加", false, Modifier.weight(1f), onAdd, accentIcon = true)
-            DockItem(Icons.Outlined.Settings, "设置", settings, Modifier.weight(1f), onSettings)
-        }
-    }
-}
-
-@Composable
-private fun DockItem(
-    icon: ImageVector,
-    label: String,
-    selected: Boolean,
-    modifier: Modifier,
-    action: () -> Unit,
-    accentIcon: Boolean = false
-) {
-    val colors = WedoTheme.colors
-    val inactive = colors.onSurfaceVariant
-    // 图标和标题分两档：22dp 图标按 1.4.11 走 3:1，10dp 标题是正文字号走 4.5:1。
-    // 多数色两者取值相同，只有橙色/薄荷这类才拉开 —— 但拉不开的那个位置
-    // 本来就是最需要拉开的（小字最怕对比度不够）。
-    val iconTint = when {
-        accentIcon || selected -> WedoApple.accentIcon
-        else -> inactive
-    }
-    val labelTint = when {
-        accentIcon || selected -> WedoApple.accentText
-        else -> inactive
-    }
-    Column(
-        modifier.height(WedoAppleDimensions.minTouchTarget).wedoPress(onClick = action),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(icon, contentDescription = label, tint = iconTint, modifier = Modifier.size(22.dp))
-        Spacer(Modifier.height(2.dp))
-        Text(label, style = WedoAppleType.caption2(), color = labelTint)
     }
 }

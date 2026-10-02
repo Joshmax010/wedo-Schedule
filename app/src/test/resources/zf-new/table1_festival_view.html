@@ -5,14 +5,14 @@
 <title>学生个人课表</title>
 </head>
 <body>
-<!-- 上游 NewZFParser.kt (dIT8Zv) 期望结构
+<!-- 本项目解析器读取的 table1 契约
      getElementById("table1")
      + tr.getElementsByClass("festival").text() → 节次(每 tr 一个数字)
      + td.getElementsByTag("div") 内含 .title(课程名) 与 <p title="教师/上课地点/节/周">
      + td.attr("id")[0] → 星期 (id 首字符)
-     + 节/周 文本 "(N-M节)周次" → nodePattern 提取起止节
+     + 节/周 文本 "(N-M节)周次" → 抓 (N-M节) 得起止节
      注意: .title 和 <p> 必须包在同一个 wrapper <div> 内,
-     否则上游在 div.title 层级 getElementsByTag("p") 得空, teacher/room/weekList 都拿不到 -->
+     否则在 div.title 层级 getElementsByTag("p") 得空, teacher/room/weekList 都拿不到 -->
 <table id="table1" border="0" cellspacing="0" cellpadding="0">
   <tr>
     <td align="Center">节次\星期</td>

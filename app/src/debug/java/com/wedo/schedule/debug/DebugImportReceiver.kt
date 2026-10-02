@@ -8,8 +8,6 @@ import android.util.Log
 import com.wedo.schedule.WedoApp
 import com.wedo.schedule.data.entity.TimeTableEntity
 import com.wedo.schedule.data.parser.ScheduleParser
-import com.wedo.schedule.widget.notification.FluidCloudService
-import androidx.core.content.ContextCompat
 import kotlinx.coroutines.runBlocking
 import java.io.File
 
@@ -73,41 +71,8 @@ class DebugImportReceiver : Activity() {
             return
         }
 
-        // 清流体云通知（用已过期的窗口触发 FluidCloudService 自停）
-        if (intent.getBooleanExtra("clear_fluid_notification", false)) {
-            val now = System.currentTimeMillis()
-            val expired = Intent(this, FluidCloudService::class.java).apply {
-                putExtra("courseName", "")
-                putExtra("room", "")
-                putExtra("startTime", "")
-                putExtra("notifyEpoch", now - 2_000L)
-                putExtra("classEpoch", now - 1_000L)
-            }
-            ContextCompat.startForegroundService(this, expired)
-            Log.d("CourseScheduler", "requested expired fluid service cleanup")
-            finish()
-            return
-        }
-
-        // 直接启动 FluidCloudService 测试流体云（前台服务 + Handler 循环刷进度）
-        if (intent.getBooleanExtra("test_before_class", false)) {
-            val name = intent.getStringExtra("courseName") ?: "高等数学"
-            val startTime = intent.getStringExtra("startTime") ?: "14:00"
-            val room = intent.getStringExtra("room") ?: "A101"
-            val teacher = intent.getStringExtra("teacher") ?: "张老师"
-            val now = System.currentTimeMillis()
-            val svc = Intent(this, FluidCloudService::class.java).apply {
-                putExtra("courseName", name)
-                putExtra("startTime", startTime)
-                putExtra("room", room)
-                putExtra("teacher", teacher)
-                putExtra("notifyEpoch", now)
-                putExtra("classEpoch", now + 120_000L)  // 2 分钟窗口
-            }
-            ContextCompat.startForegroundService(this, svc)
-            Thread.sleep(60_000)
-            return
-        }
+        // 流体云调试入口（clear_fluid_notification / test_before_class）已随 REQ-P4-04 删除
+        // FluidCloudService 一并移除。
 
         // 立即触发一次排课前提醒 alarm
         if (intent.getBooleanExtra("schedule_before_class_now", false)) {

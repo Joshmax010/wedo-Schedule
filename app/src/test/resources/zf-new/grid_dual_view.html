@@ -5,17 +5,16 @@
 <title>学生个人课表</title>
 </head>
 <body>
-<!-- 视图开关:grid 视图(shiguang zhengfang_01.js 真实结构) -->
+<!-- 视图开关:grid 视图 -->
 <button id="shcPDF" data-type="grid" title="导出PDF">导出</button>
 
-<!-- 新正方点击查询后渲染的网格视图
-     对照 shiguang parserTbale():
-       day       = td.attr('id').split('-')[0]
-       name      = .title font
-       infoStr   = p[0] font[1]  → 必须含 "(N-M节)" + 周次串, 如 "(1-2节)1-16周"
-       position  = p[1] font
-       teacher   = p[2] font
-     注意: .title 必须不是 <p>, 否则会占掉 p[0] 导致 infoStr 取空 -->
+<!-- 新正方点击查询后渲染的网格视图。本项目解析器读取的契约:
+       day       = td[id] 中 '-' 之前的数字 (2-1 → 周二)
+       name      = .title 的文本
+       schedule  = 含 "(N-M节)" 的段落, 同一段里跟着周次串, 如 "(1-2节)1-16周"
+       room      = schedule 段之后的第 1 段
+       teacher   = schedule 段之后的第 2 段
+     注意: .title 必须不是 <p>, 否则会与元信息段落同列, 需要靠 class 排除 -->
 <table id="kbgrid_table_0" border="0" cellspacing="0" cellpadding="0">
   <thead>
     <tr>

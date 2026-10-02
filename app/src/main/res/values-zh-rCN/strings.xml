@@ -1,16 +1,27 @@
 <resources>
     <string name="app_name">wedo课程表</string>
     <string name="widget_today_label">今日课程</string>
-    <string name="widget_week_list_label">本周课表（列表）</string>
     <string name="widget_week_grid_label">本周课表（网格）</string>
-    <string name="widget_twoday_label">最近两天</string>
-    <string name="widget_week_view_label">本周课表（周视图）</string>
 
     <!-- Tabs -->
     <string name="tab_schedule">课表</string>
-    <string name="tab_today">今日</string>
+    <string name="tab_today">今天</string>
+    <string name="tab_settings">设置</string>
     <string name="tab_mine">我的</string>
     <string name="tab_manage">课表管理</string>
+
+    <!-- Today screen (P1) -->
+    <string name="today_next_class">下一节课</string>
+    <string name="today_in_progress">进行中</string>
+    <string name="today_countdown">还有 %1$d 分钟</string>
+    <string name="today_countdown_soon">即将开始</string>
+    <string name="today_running_remaining">正在上课 · 还剩 %1$d 分钟</string>
+    <string name="today_running_soon_end">正在上课 · 即将下课</string>
+    <string name="today_no_more_class">今天的课都上完啦</string>
+    <string name="today_no_table_title">还没有课表</string>
+    <string name="today_no_table_hint">支持教务直连、文件导入与手动添加</string>
+    <string name="today_import_cta">导入课表</string>
+    <string name="today_week_has_days">本周还有 %1$d 天有课</string>
 
     <!-- Schedule screen -->
     <string name="schedule_empty">还没有课表</string>
@@ -19,7 +30,6 @@
     <string name="schedule_manual_first">手动创建第一门课</string>
     <string name="schedule_add_course">添加课程</string>
     <string name="share_sheet_title">分享课表</string>
-    <string name="schedule_share_table">分享课表</string>
     <string name="exit_press_back_again">再按一次返回退出</string>
     <string name="schedule_current_week">第 %1$d 周</string>
     <string name="schedule_no_course_today">今天没有课哦</string>
@@ -62,7 +72,6 @@
     <string name="import_paste">粘贴课表文本</string>
     <string name="import_paste_hint">粘贴课表文本…</string>
     <string name="import_file">从文件导入</string>
-    <string name="import_qr">扫码导入</string>
     <string name="import_jw">教务直连</string>
     <string name="import_manual">手动添加</string>
     <string name="import_success">导入成功</string>
@@ -510,10 +519,6 @@
     <string name="reminder_title">提醒</string>
     <string name="reminder_master_title">开启提醒</string>
     <string name="reminder_master_sub">允许 wedo 发送课程通知</string>
-    <string name="reminder_daily_title">每日提醒</string>
-    <string name="reminder_daily_sub">每天在指定时间推送今日课程摘要</string>
-    <string name="reminder_daily_time_label">提醒时间</string>
-    <string name="reminder_daily_preview">示例：今日 15 号 您有 3 节课 第一节课 高等数学 于 08:00 在 教学楼A101 上课</string>
     <string name="reminder_before_class_title">每节课前提醒</string>
     <string name="reminder_before_class_sub">在每节课开始前提醒下节课信息</string>
     <string name="reminder_before_minutes_label">提前</string>
@@ -521,30 +526,14 @@
     <string name="reminder_before_class_preview">示例：下节课 高等数学 于 08:00 在 教学楼A101 上课</string>
     <string name="reminder_banner_title">横幅提醒</string>
     <string name="reminder_banner_sub">在系统通知栏显示课前横幅</string>
-    <string name="reminder_fluid_title">流体云 / 超级岛</string>
-    <string name="reminder_fluid_sub">在支持的小米、OPPO 手机上显示实时课程卡片</string>
-    <string name="reminder_fluid_fields">胶囊主显示内容</string>
-    <string name="reminder_fluid_fields_hint">选择一个主显示内容</string>
-    <string name="reminder_fluid_field_name">课程名称</string>
-    <string name="reminder_fluid_field_time">上课时间</string>
-    <string name="reminder_fluid_field_room">上课地点</string>
-    <string name="reminder_fluid_field_teacher">任课老师</string>
-    <string name="reminder_fluid_note">点击通知后可展开课程详情。具体是否显示为流体云/超级岛由手机系统、通知权限和厂商服务资格决定。</string>
-    <string name="reminder_pick_time">选择提醒时间</string>
     <string name="action_confirm">确定</string>
     <string name="action_cancel">取消</string>
     <!-- Notification channels -->
-    <string name="notif_channel_daily">每日课程提醒</string>
-    <string name="notif_channel_daily_desc">每天在指定时间推送今日课程摘要</string>
     <string name="notif_channel_before_class">课前提醒</string>
     <string name="notif_channel_before_class_desc">每节课开始前推送下节课信息</string>
-    <string name="notif_channel_fluid">流体云 / 超级岛</string>
-    <string name="notif_channel_fluid_desc">课前显示可展开的课程实时卡片</string>
+    <string name="notif_channel_before_class_silent">课前提醒（静音）</string>
+    <string name="notif_channel_before_class_silent_desc">每节课开始前推送下节课信息（不弹出悬浮横幅）</string>
     <!-- Notification content -->
-    <string name="notif_daily_title">今日 %1$d 号，您有 %2$d 节课</string>
-    <string name="notif_daily_text_first">第一节课 %1$s 于 %2$s 在 %3$s 上课</string>
-    <string name="notif_daily_title_no_course">今日 %1$d 号，今天没有课程</string>
-    <string name="notif_daily_text_no_course">好好休息，享受一天！</string>
     <string name="notif_before_class_title">课前提醒</string>
     <string name="notif_before_class_text">下节课 %1$s 于 %2$s 在 %3$s 上课</string>
     <string name="notif_before_class_text_with_teacher">下节课 %1$s 于 %2$s 在 %3$s 上课，老师：%4$s</string>
@@ -554,7 +543,6 @@
     <string name="about_title">关于</string>
     <string name="about_version">版本信息</string>
     <string name="about_version_detail">版本 %1$s（构建 %2$d）</string>
-    <string name="about_update">获取更新</string>
     <string name="about_update_detail">GitHub 主站不可用时，自动回退镜像下载</string>
     <string name="about_update_checking">正在检查更新…</string>
     <string name="about_update_latest">当前已是最新版本 v%1$s</string>
@@ -659,4 +647,54 @@
     <string name="irregular_node_required">时段 %1$d 绑定的非常规节次无效，请重新选择</string>
     <string name="irregular_slot_edit_title">编辑第 %1$d 节默认时间</string>
     <string name="irregular_duration_label">持续时长（分钟）</string>
+
+    <!-- TASK-05 E-(2): 导入向导 i18n（ImportWizard.kt 去硬编码） -->
+    <string name="import_wiz_title_detail">选择来源</string>
+    <string name="import_wiz_title_preview">预览与确认</string>
+    <string name="import_wiz_title_done">完成</string>
+    <string name="import_wiz_close">关闭</string>
+    <string name="import_wiz_pick_way">选择导入方式</string>
+    <string name="import_wiz_source_jw">教务直连</string>
+    <string name="import_wiz_jw_subtitle">登录学校教务系统抓取课表</string>
+    <string name="import_wiz_source_file">从文件导入</string>
+    <string name="import_wiz_source_text">粘贴课表文本</string>
+    <string name="import_wiz_source_manual">手动添加课程</string>
+    <string name="import_wiz_file_sub">日历(.ics) / CSV / 文本 / HTML</string>
+    <string name="import_wiz_text_sub">复制课表文字后粘贴</string>
+    <string name="import_wiz_detail_file">选择一个课表文件，解析后预览</string>
+    <string name="import_wiz_detail_text">把课表文本粘贴到下面，解析后预览</string>
+    <string name="import_wiz_pick_file">选择文件</string>
+    <string name="import_wiz_parse_preview">解析并预览</string>
+    <string name="import_wiz_metric_course">课程</string>
+    <string name="import_wiz_metric_conflict">冲突</string>
+    <string name="import_wiz_view_schedule">查看课表</string>
+    <string name="import_wiz_again">再导入一份</string>
+
+    <!-- TASK-05 A: 设置页四组标题 -->
+    <string name="settings_group_display">显示</string>
+    <string name="settings_group_notify">通知</string>
+    <string name="settings_privacy">隐私</string>
+    <!-- TASK-06 i18n: P3 课表面 + 导入向导「教务直连行」去硬编码（循环依赖修复） -->
+    <string name="schedule_v3_empty_title">把这一周，安排得清清楚楚</string>
+    <string name="schedule_v3_empty_hint">从教务系统、日历文件或手动添加开始</string>
+    <string name="schedule_v3_add_cta">添加课表</string>
+    <string name="schedule_week_empty_no_courses">这张课表还没有课程 · 点击 ＋ 添加</string>
+    <string name="schedule_week_empty_free">本周没有课程，好好享受自由时间</string>
+    <string name="schedule_more_export">导出 / 分享课表</string>
+    <string name="week_header_prev">上一周</string>
+    <string name="week_header_next">下一周</string>
+    <string name="week_header_title">第 %1$d 周</string>
+    <string name="week_header_title_range">第 %1$d 周 · %2$s</string>
+    <string name="week_picker_title">选择周次</string>
+    <string name="week_picker_progress">学期进度</string>
+    <string name="week_picker_progress_detail">第 %1$d 周 / 共 %2$d 周</string>
+    <string name="week_picker_back_to_current">回到本周</string>
+    <string name="week_picker_grid_week">第 %1$d 周</string>
+    <string name="week_picker_grid_current">第 %1$d 周，本周</string>
+    <string name="week_picker_chip_current">本周</string>
+    <string name="week_picker_chip_week">周</string>
+    <string name="week_range_long_format">%1$d月%2$d日 – %3$d月%4$d日</string>
+    <string name="settings_privacy_dialog_title">隐私与安全说明</string>
+    <string name="settings_privacy_dialog_body">登录在学校官方网页中完成，应用不读取或保存密码。\n\n解析后的课表只保存在本机，不上传到项目维护者服务器，也不进入系统云备份。\n\n应用只访问经过验证的教务域名，不会绕过验证码、证书错误或学校访问控制。\n\n你可以随时退出教务会话或清除本地课表。\n\n本项目与吉林建筑大学不存在官方合作或授权关系，源代码依据 GPL-3.0 公开。</string>
+    <string name="export_saved_no_app">已保存到「下载」：%1$s（当前设备没有可分享的应用）</string>
 </resources>

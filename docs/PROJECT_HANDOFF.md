@@ -136,7 +136,7 @@ test/fixtures/jlju/             只含脱敏结构证据
 
 - `TimeTableEntity`：一张课表/学期，含 `startDate`（`yyyy-MM-dd`，保存时按周一规范化）、`maxWeek`、`nodesPerDay`、`timeJson`、默认标记、智慧节次配置等。
 - `CourseEntity`：一条上课记录，含 `tableId`、课程组 `groupId`、名称/教师/教室/备注、星期 `day=1..7`、起始节 `startNode`（1-based）、连续节数 `step`、起止周和单双周 `type`，以及颜色、非常规节次/时间等。**同一门课可以有多条记录**（不同周、地点、星期、时间）。删除“这次课程”只删除该记录；课程组操作依 `groupId`。
-- Room 数据库名为 `sleepy.db`（历史标识，改名会导致既有安装数据丢失，需配迁移）；版本 5；使用明确迁移，不使用破坏性回退。增字段/改表时必须补 Migration 和旧库升级测试，不能通过卸载 App 掩盖迁移问题。
+- Room 数据库名为 `wedo.db`，版本 5；使用明确迁移，不使用破坏性回退。增字段/改表时必须补 Migration 和旧库升级测试，不能通过卸载 App 掩盖迁移问题。历史库名 `sleepy.db` 仍在 `AppDatabase.LEGACY_DB_NAME` 中保留一处，**仅供首次开库前的一次性文件搬迁**（见 `AppDatabase.adoptLegacyDatabaseFile`）：新库文件已存在则不动，`-wal`/`-shm`/`-journal` 伴生文件同批 rename，任一步失败即回滚并中止。这是纯文件改名，schema 与 version 均未变，**不要**为此写 Migration。
 - 当前周由 `ScheduleViewModel` 调用 `DateUtils.currentWeek(startDate)` 计算，周标题今日日期显式使用 `Asia/Shanghai`。`DateUtils` 默认日期参数则使用设备本地日期；若要全链路保证中国时区或学期外“假期/非教学周”，需单独核对并补测试，**不要把目标文档的描述当作现有完全实现**。
 - `CourseEntity.inWeek` 依据起止周及单双周决定是否显示。`type=3` 代码层仍按记录范围显示，离散周依解析阶段拆分为多条记录；后续若改周次模型，须保留此兼容语义并测试混合周、单双周和重复导入。
 - 设置持久化并非全在 DataStore：wedo 显示项放在 `SharedPreferences("wedo_display")`，主题、显示星期、冲突样式等放在继承的 `AppPrefs`，首次隐私同意又是单独的 `wedo_privacy`。修改设置前先查真理源，避免同名状态写两处。
@@ -149,7 +149,9 @@ test/fixtures/jlju/             只含脱敏结构证据
 
 `WedoDesign.kt` 的 `wedoColors` 对五套静态预设统一覆盖浅色/深色背景及 surface 层级，默认的**海蓝**强调色约为浅色 `#1764D9`、深色 `#80B5FF`（默认键由 `AppPrefs.getThemeKey` 指向 `ocean`）。`ThemePresets` 仍保留预设色和系统取色：`default`、`spring`、`ocean`、`peach`、`slate`、`system`；`AppearanceScreen` 可选主题色与浅/深/跟随系统。静态预设换强调色后仍以冷调蓝白/藏蓝为表面基底；Android 12/API 31+ 选择 `system` 时 `SleepyThemeProvider` 走 Material You 动态取色，不能把它当作完全相同的调色板。`WedoBackground` 的背景渐变另由组件固定绘制。别把 `Theme.kt` 中继承的紫色 `LightScheme` 常量误判为用户实际看到的 wedo 首页默认视觉；以 `SleepyThemeProvider` 的选择分支和 `WedoBackground` 的最终结果为准。
 
-`WedoBackground` 负责纵向冷色渐变和两处淡蓝径向环境光。`Modifier.wedoGlass` 用低透明渐变、细边缘亮线和柔和阴影叠加模拟玻璃。它可在 API 26 工作，但**不是实时背景模糊、折射或 AGSL Shader**。`quality` 为流畅/平衡/精致三档，默认平衡；低内存设备自动减轻装饰。精致档刻意降低白色不透明度，避免“透明拉满后露出一张白卡”的旧问题。评审视觉时需要同时看浅/深色、低内存、不同壁纸/背景及弱性能设备，不能只看静态生图。
+`WedoBackground` 负责纵向冷色渐变和两处淡蓝径向环境光。**玻璃材质已按「全面取消玻璃质感」的指令移除**：`WedoShell.kt` 里原 `Modifier.wedoGlass` 及其调用点均已改为实色卡片，`WedoGlassTokens.kt` 仅保留 `wedoGlassSpec` 纯逻辑内核（无渲染入口）。评审时不要再假设界面上存在玻璃卡片。
+
+> 设计规范的唯一权威来源已是 `docs/DESIGN_SPEC_V2.md`（苹果 HIG 对齐版，含色彩/字阶/间距/圆角/组件/动效/无障碍全量定义）。本节与 v2 冲突时**以 v2 为准**。
 
 ### 4.2 首页空间分配
 

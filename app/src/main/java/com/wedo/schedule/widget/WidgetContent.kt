@@ -3,8 +3,10 @@ package com.wedo.schedule.widget
 import android.content.Context
 import androidx.compose.ui.graphics.Color
 import com.wedo.schedule.data.entity.CourseEntity
-import com.wedo.schedule.ui.theme.ThemePresets
-import com.wedo.schedule.ui.theme.WakeUpColorScheme
+import com.wedo.schedule.ui.theme.AppleNeutralDark
+import com.wedo.schedule.ui.theme.AppleNeutralLight
+import com.wedo.schedule.ui.theme.WedoSystemColor
+import com.wedo.schedule.ui.theme.appleScheme
 import com.wedo.schedule.util.DateUtils
 import java.time.LocalDate
 
@@ -33,8 +35,8 @@ data class WidgetData(
     val hasTable: Boolean,
     /** 跟 app 主题保持一致：true=深色小组件 */
     val isDark: Boolean = false,
-    /** 跟 app 主题色（ThemePresets key） */
-    val themeKey: String = ThemePresets.KEY_DEFAULT,
+    /** 强调色名（[WedoSystemColor] 的 enum name，如 "Blue"）。历史上叫 themeKey。 */
+    val themeKey: String = WedoSystemColor.DEFAULT_NAME,
     /** 学期状态（v1.0.37）: 学期外时 Today 渲染状态文案不渲染课程 */
     val semesterStatus: DateUtils.SemesterStatus = DateUtils.SemesterStatus.IN_RANGE
 ) {
@@ -43,67 +45,60 @@ data class WidgetData(
 }
 
 /**
- * 4 元组：背景 / 主题强调色 / 正文色 / 次要色
- * 跟 app M3 scheme 派生方式相同：surface / primary / onSurface / onSurfaceVariant
+ * 小组件配色 —— **Apple 语义**，与 App 内 `WedoThemeProvider` 同一套取值。
  *
- * 死代码清理: 原 coursePrimary…coursePractice 9 个课程色字段赋值后从未被渲染使用
- * (课程底色实际走 CourseColorUtil 黄金角 HSL), 已随 CoursePalette 死属性一并删除。
+ * 字段名沿用了旧 M3 槽位（`bg` / `primary` / `onSurface` …）以免动 4 个渲染器的读取点，
+ * 但语义已按 [appleScheme] 重写：
+ *  - `bg`              分组列表底（浅 #F2F2F7 / 深 #000000）
+ *  - `surface`         卡片底（浅 #FFFFFF / 深 #1C1C1E）
+ *  - `primary`         用户强调色（默认系统蓝 #007AFF / #0A84FF）
+ *  - `onSurface`       主文字；`onSurfaceVariant` 次文字
+ *  - `surfaceContainer` 列/卡片底；`surfaceVariant` 填充色（chip 底）
+ *  - `separator`       0.5–1dp 分隔线（**深色模式必须用这个，不能拿黑色加透明度硬凑**）
  */
 data class WidgetScheme(
-    val bg: Color = Color(0xFFFDFCFF),
-    val surface: Color = Color(0xFFFFFBFE),
-    val primary: Color = Color(0xFF6750A4),
-    val primaryContainer: Color = Color(0xFFEADDFF),
-    val onPrimaryContainer: Color = Color(0xFF1C1B1F),
-    val onSurface: Color = Color(0xFF1C1B1F),
-    val onSurfaceVariant: Color = Color(0xFF79747E),
-    val surfaceContainer: Color = Color(0xFFF3EDF7),
-    val surfaceVariant: Color = Color(0xFFE7E0EC),
+    val bg: Color = AppleNeutralLight.groupedBackground,
+    val surface: Color = AppleNeutralLight.cardBackground,
+    val primary: Color = WedoSystemColor.Default.light,
+    val primaryContainer: Color = Color(0xFFD9EAFF),
+    val onPrimaryContainer: Color = WedoSystemColor.Default.light,
+    val onSurface: Color = AppleNeutralLight.label,
+    val onSurfaceVariant: Color = AppleNeutralLight.secondaryLabel,
+    val surfaceContainer: Color = AppleNeutralLight.cardBackground,
+    val surfaceVariant: Color = AppleNeutralLight.systemFill,
+    val separator: Color = AppleNeutralLight.separator,
     val isDark: Boolean = false
 )
 
 /**
- * 按 themeKey + isDark 派生小组件配色。
+ * 按强调色名 + 深浅模式派生小组件配色。
  *
- * themeKey == "system" 时走 Material You 动态取色(dynamicLightColorScheme / dynamicDarkColorScheme),
- *   与 [com.wedo.schedule.ui.theme.WedoThemeProvider] 的处理对齐 — 之前 widget 把 "system"
- *   当未知 key → ThemePresets.byKey 返回 Default(紫色) → 小组件永远紫色, 不跟随系统壁纸取色。
+ * **2026-09-28 修正**：此前这里走 `ThemePresets.byKey(themeKey)`，而 App 侧
+ * `AppPrefs.getThemeKey` 早已改为存 [WedoSystemColor] 的 enum name（"Blue" …）。
+ * 老 key（"default"/"ocean"…）在新表里查不到 → 回落预设默认色（M3 紫），
+ * 表现为「App 是蓝的、桌面小组件是紫的」。`themeKey == "system"` 时还会去取
+ * Material You 壁纸色 —— 而 App 已删除动态取色，于是变成「小组件跟壁纸、
+ * App 不跟」的第二层错位。
+ *
+ * 现在与 `WedoThemeProvider` 完全同路：强调色名 → [WedoSystemColor.byName] →
+ * [appleScheme]。未知/历史值一律回落系统蓝，不会崩也不会再变紫。
+ *
+ * @param context 保留入参以兼容现有 4 处调用点（取色已不再需要 Context）
  */
 internal fun resolveSchemePublic(context: Context, themeKey: String, isDark: Boolean): WidgetScheme {
-    // "跟随系统" 主题 → Material You 动态取色 (API 31+), 低版本降级 Default
-    val s = if (themeKey == ThemePresets.KEY_SYSTEM && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-        val dyn = if (isDark) androidx.compose.material3.dynamicDarkColorScheme(context)
-                  else androidx.compose.material3.dynamicLightColorScheme(context)
-        WakeUpColorScheme(
-            primary = dyn.primary, onPrimary = dyn.onPrimary,
-            primaryContainer = dyn.primaryContainer, onPrimaryContainer = dyn.onPrimaryContainer,
-            secondary = dyn.secondary, onSecondary = dyn.onSecondary,
-            secondaryContainer = dyn.secondaryContainer, onSecondaryContainer = dyn.onSecondaryContainer,
-            tertiary = dyn.tertiary, onTertiary = dyn.onTertiary,
-            tertiaryContainer = dyn.tertiaryContainer, onTertiaryContainer = dyn.onTertiaryContainer,
-            background = dyn.background, onBackground = dyn.onBackground,
-            surface = dyn.surface, onSurface = dyn.onSurface,
-            surfaceVariant = dyn.surfaceVariant, onSurfaceVariant = dyn.onSurfaceVariant,
-            surfaceContainerLowest = dyn.surfaceContainerLowest, surfaceContainerLow = dyn.surfaceContainerLow,
-            surfaceContainer = dyn.surfaceContainer, surfaceContainerHigh = dyn.surfaceContainerHigh,
-            surfaceContainerHighest = dyn.surfaceContainerHighest,
-            outline = dyn.outline, outlineVariant = dyn.outlineVariant, scrim = dyn.scrim,
-            error = dyn.error, onError = dyn.onError, errorContainer = dyn.errorContainer, onErrorContainer = dyn.onErrorContainer
-        )
-    } else {
-        val preset = ThemePresets.byKey(themeKey)
-        if (isDark) preset.dark else preset.light
-    }
+    val accent = WedoSystemColor.byName(themeKey).color(isDark)
+    val apple = appleScheme(accent, isDark)
     return WidgetScheme(
-        bg = s.surface,
-        surface = s.surface,
-        primary = s.primary,
-        primaryContainer = s.primaryContainer,
-        onPrimaryContainer = s.onPrimaryContainer,
-        onSurface = s.onSurface,
-        onSurfaceVariant = s.onSurfaceVariant,
-        surfaceContainer = s.surfaceContainer,
-        surfaceVariant = s.surfaceVariant,
+        bg = apple.background,
+        surface = apple.surface,
+        primary = apple.primary,
+        primaryContainer = apple.primaryContainer,
+        onPrimaryContainer = apple.onPrimaryContainer,
+        onSurface = apple.onSurface,
+        onSurfaceVariant = apple.onSurfaceVariant,
+        surfaceContainer = apple.surfaceContainer,
+        surfaceVariant = apple.surfaceVariant,
+        separator = if (isDark) AppleNeutralDark.separator else AppleNeutralLight.separator,
         isDark = isDark
     )
 }
@@ -130,20 +125,10 @@ data class WeekData(
     val days: List<DayData>,
     val hasTable: Boolean,
     val isDark: Boolean = false,
-    val themeKey: String = ThemePresets.KEY_DEFAULT,
+    val themeKey: String = WedoSystemColor.DEFAULT_NAME,
     // displayMode 死字段已删（renderer 各自直读 AppPrefs.getDisplayMode, 传入字段从未被消费）
     val showDate: Boolean = false,
     val visibleDays: Set<Int> = (1..7).toSet(),
     /** 学期状态（v1.0.37）: 学期外时列头加状态行 */
-    val semesterStatus: DateUtils.SemesterStatus = DateUtils.SemesterStatus.IN_RANGE
-)
-
-/** 两天视图数据 */
-data class TwoDayData(
-    val days: List<DayData>,
-    val hasTable: Boolean,
-    val isDark: Boolean = false,
-    val themeKey: String = ThemePresets.KEY_DEFAULT,
-    /** 学期状态（v1.0.37）: 学期外时渲染状态文案不渲染课程 */
     val semesterStatus: DateUtils.SemesterStatus = DateUtils.SemesterStatus.IN_RANGE
 )

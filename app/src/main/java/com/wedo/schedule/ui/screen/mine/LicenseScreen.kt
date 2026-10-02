@@ -47,10 +47,6 @@ private data class ThirdPartySource(
  */
 private val thirdPartySources: List<ThirdPartySource> = listOf(
     ThirdPartySource(
-        "shiguang_warehouse (XingHeYuZhuan)", "MIT",
-        "新版正方课表的网格视图与列表视图（#kbgrid_table_0 / #kblist_table）解析移植自 zhengfang_01.js"
-    ),
-    ThirdPartySource(
         "FlowCourse (jiaweiyaya)", "GPL-3.0",
         "kbList JSON 字段形态与 jc 多形态的交叉验证依据"
     ),

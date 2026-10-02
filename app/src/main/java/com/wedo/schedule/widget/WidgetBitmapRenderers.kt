@@ -10,20 +10,58 @@ import android.graphics.Typeface
 import com.wedo.schedule.R
 import com.wedo.schedule.WedoApp
 import com.wedo.schedule.data.entity.CourseEntity
+import com.wedo.schedule.ui.theme.WedoAppleDimensions
+import com.wedo.schedule.ui.theme.WedoAppleType
 import com.wedo.schedule.util.AppPrefs
 import com.wedo.schedule.util.CourseColorUtil
 import com.wedo.schedule.util.DateUtils
 import com.wedo.schedule.util.TimeTableUtils
 import java.time.LocalDate
-import kotlin.math.roundToInt
+
+/**
+ * 小组件字阶 —— 直接引用 [WedoAppleType]，避免桌面端与 App 内各写一套字号。
+ *
+ * Canvas 只认「数值 sp」，所以这里只取 TextStyle 的 fontSize，字重另由 Typeface 设。
+ * 小组件一列常常只有 40dp 宽，HIG 最小档 Caption 2（11pt）在这么窄的列里也会溢出，
+ * 因此另有 [columnTinySp] / [columnMicroSp] 两个**刻意低于 HIG 最小档**的档位 ——
+ * 它们是例外，不是漏改。
+ */
+internal object WidgetType {
+    /** 13 · Footnote —— 小组件标题行 */
+    val titleSp: Float = WedoAppleType.footnote().fontSize.value
+
+    /** 12 · Caption 1 —— 日期、列头 */
+    val caption1Sp: Float = WedoAppleType.caption1().fontSize.value
+
+    /** 11 · Caption 2 —— 次要信息、状态提示 */
+    val caption2Sp: Float = WedoAppleType.caption2().fontSize.value
+
+    /** 15 · Subheadline —— 空态/状态主文案 */
+    val bodySp: Float = WedoAppleType.subheadline().fontSize.value
+
+    /** 16 · Callout —— 今日页「无课」这类强调文案 */
+    val calloutSp: Float = WedoAppleType.callout().fontSize.value
+
+    /** 10 —— 窄列档，低于 HIG 最小档（见本对象说明） */
+    const val columnTinySp: Float = 10f
+
+    /** 9 —— 窄列 mini-list 档，低于 HIG 最小档（见本对象说明） */
+    const val columnMicroSp: Float = 9f
+}
 
 /**
  * Canvas bitmap 渲染器 — 各 Receiver.loadDataSync 拉数据后由本对象渲染，
  * 输出 PNG bitmap 推给 RemoteViews（生产桌面渲染 + WidgetRenderActivity 调试预览共用）。
  *
- * 4 个 widget 复用同一份 scheme，色彩与 app 主题一致。
+ * 2 种 widget（今日课程 / 本周课表·网格）复用同一份 scheme，色彩与 app 主题一致。
  */
 object WidgetBitmapRenderers {
+
+    // ── Apple 尺寸令牌（dp）──────────────────────────────────────────────
+    // Canvas 只认像素，取值处一律 × density。改观感请改 WedoAppleDimensions，不要改这里。
+    private val CONTAINER_CORNER_DP = WedoAppleDimensions.widgetCorner.value
+    private val CELL_CORNER_DP = WedoAppleDimensions.widgetCellCorner.value
+    private val COURSE_CORNER_DP = WedoAppleDimensions.courseCorner.value
 
     // ── Scheme 颜色（与 WidgetContent.resolveSchemePublic 一致） ──
     // 死代码清理: cPrimary…cPractice 9 个课程色字段与 surface 字段赋值后从未被渲染消费
@@ -37,13 +75,18 @@ object WidgetBitmapRenderers {
         val onSurfaceVariant: Int,
         val surfaceContainer: Int,
         val surfaceVariant: Int,
+        /**
+         * 分隔线色（Apple separator）。**不要再用「黑色 + alpha」硬凑**：
+         * 深色模式下黑色线压在纯黑底上等于没画，而 separator 是成对标定的。
+         */
+        val separator: Int,
         val isDark: Boolean
     )
 
     /**
      * 主题色 — 走 resolveSchemePublic (WidgetContent.kt, 全部 widget 渲染共用)
-     * 之前硬编码 Default 紫色 → 不跟随 app 主题/system 动态取色 → 移植到 RemoteViews 后仍是错的。
-     * 现在接收 themeKey, 完全对齐 WeekGridWidgetProvider.renderBitmap 的取色方式。
+     * 之前硬编码 Default 紫色 → 不跟随 app 主题 → 移植到 RemoteViews 后仍是错的。
+     * 现在完全对齐 App 内 WedoThemeProvider 的取色（强调色名 → appleScheme）。
      */
     private fun scheme(context: Context, themeKey: String, isDark: Boolean): Scheme {
         val s = resolveSchemePublic(context, themeKey, isDark)
@@ -59,14 +102,13 @@ object WidgetBitmapRenderers {
             onSurfaceVariant = s.onSurfaceVariant.toIntArgb(),
             surfaceContainer = s.surfaceContainer.toIntArgb(),
             surfaceVariant = s.surfaceVariant.toIntArgb(),
+            separator = s.separator.toIntArgb(),
             isDark = isDark
         )
     }
 
     // hslToColorInt / pickCourseColor 本地副本已收敛至 util/CourseColorUtil.kt (决策 D3 单一事实来源)。
     // 之前用 resolveCourseColorKey 关键词分类 → 与首页/WeekGrid 色系不一致, 已废弃。
-
-    private val dayLabels = arrayOf("", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
     private fun drawCourse(
         c: Canvas, p: Paint, course: CourseEntity, timeJson: String, x: Float, y: Float, w: Float, h: Float,
@@ -81,7 +123,8 @@ object WidgetBitmapRenderers {
         val textColor = CourseColorUtil.textColorOn(bgColor, scheme.isDark, scheme.onSurface)
         val pad = (3f * density).coerceAtLeast(1f)
         p.color = bgColor
-        c.drawRoundRect(RectF(x, y, x + w, y + h), 8f * density, 8f * density, p)
+        c.drawRoundRect(RectF(x, y, x + w, y + h),
+            COURSE_CORNER_DP * density, COURSE_CORNER_DP * density, p)
 
         // 时间 + 地点 — 先算 meta 文本 (需要知道是否有第二行才能居中)
         // displayMode (决策 D5-12, 对齐 CourseTableView.LessonRow):
@@ -213,21 +256,21 @@ object WidgetBitmapRenderers {
         // 背景圆角
         p.color = s.bg
         canvas.drawRoundRect(RectF(0f, 0f, w.toFloat(), h.toFloat()),
-            20f * density, 20f * density, p)
+            CONTAINER_CORNER_DP * density, CONTAINER_CORNER_DP * density, p)
 
         val pad = 10f * density
         val lines = todayCompactTexts(ctx, data)
 
         // 日期行(顶部小字)
         p.color = s.onSurfaceVariant
-        p.textSize = 11f * density
+        p.textSize = WidgetType.caption2Sp * density
         p.typeface = Typeface.DEFAULT
         val dateStr = "${data.date.monthValue}/${data.date.dayOfMonth}"
         canvas.drawText(dateStr, pad, pad + 11f * density, p)
 
         // 状态/首课程名 — 居中大字
         p.color = s.onSurface
-        p.textSize = 15f * density
+        p.textSize = WidgetType.bodySp * density
         p.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         var y = h / 2f
         for (line in lines.take(2)) {
@@ -267,7 +310,7 @@ object WidgetBitmapRenderers {
         // 背景圆角
         p.color = s.bg
         canvas.drawRoundRect(RectF(0f, 0f, w.toFloat(), h.toFloat()),
-            20f * density, 20f * density, p)
+            CONTAINER_CORNER_DP * density, CONTAINER_CORNER_DP * density, p)
 
         val pad = 14f * density
         var y = pad
@@ -275,14 +318,14 @@ object WidgetBitmapRenderers {
         // 标题行：今天 · 周X  +  日期 (showDate=false 时隐藏右侧日期, 对齐课表页设置)
         val ctx = WedoApp.get()
         p.color = s.primary
-        p.textSize = 13f * density
+        p.textSize = WidgetType.titleSp * density
         p.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         val titleStr = "${ctx.getString(R.string.today_today)} · ${DateUtils.localizedDay(data.date.dayOfWeek.value, ctx)}"
         canvas.drawText(titleStr, pad, y + 13f * density, p)
 
         if (showDate) {
             p.color = s.onSurfaceVariant
-            p.textSize = 12f * density
+            p.textSize = WidgetType.caption1Sp * density
             p.typeface = Typeface.DEFAULT
             val dateStr = "${data.date.monthValue}/${data.date.dayOfMonth}"
             val dateWidth = p.measureText(dateStr)
@@ -293,7 +336,7 @@ object WidgetBitmapRenderers {
 
         if (!data.hasTable) {
             p.color = s.onSurface
-            p.textSize = 15f * density
+            p.textSize = WidgetType.bodySp * density
             canvas.drawText(ctx.getString(R.string.widget_create_schedule), pad, y + 15f * density, p)
             return bmp.apply { eraseColor(Color.TRANSPARENT); Canvas(this).drawBitmap(c, 0f, 0f, null) }
         }
@@ -303,12 +346,12 @@ object WidgetBitmapRenderers {
             val statusRes = if (data.semesterStatus == DateUtils.SemesterStatus.BEFORE_START)
                 R.string.semester_not_started else R.string.semester_ended
             p.color = s.onSurface
-            p.textSize = 15f * density
+            p.textSize = WidgetType.bodySp * density
             p.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             canvas.drawText(ctx.getString(statusRes), pad, y + 15f * density, p)
             y += 22f * density
             p.color = s.onSurfaceVariant
-            p.textSize = 11f * density
+            p.textSize = WidgetType.caption2Sp * density
             p.typeface = Typeface.DEFAULT
             canvas.drawText(ctx.getString(R.string.today_semester_out_hint), pad, y + 11f * density, p)
             return bmp.apply { eraseColor(Color.TRANSPARENT); Canvas(this).drawBitmap(c, 0f, 0f, null) }
@@ -316,12 +359,12 @@ object WidgetBitmapRenderers {
 
         if (data.courses.isEmpty()) {
             p.color = s.onSurface
-            p.textSize = 16f * density
+            p.textSize = WidgetType.calloutSp * density
             p.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             canvas.drawText(ctx.getString(R.string.today_no_course), pad, y + 16f * density, p)
             y += 22f * density
             p.color = s.onSurfaceVariant
-            p.textSize = 12f * density
+            p.textSize = WidgetType.caption1Sp * density
             p.typeface = Typeface.DEFAULT
             canvas.drawText(ctx.getString(R.string.today_rest), pad, y + 12f * density, p)
             return bmp.apply { eraseColor(Color.TRANSPARENT); Canvas(this).drawBitmap(c, 0f, 0f, null) }
@@ -336,11 +379,13 @@ object WidgetBitmapRenderers {
         val rowW = w - pad * 2
 
         val laneRows = com.wedo.schedule.util.ConflictLayoutEngine.weekLaneRows(data.courses)
-        val sepColor = (s.onSurface and 0x00FFFFFF) or 0x4D000000  // 30% 黑(浅色主题下=浅灰细线)
+        // 分栏竖线 —— 用 Apple separator。原实现是「黑色 30%」，深色模式下
+        // 黑线压在纯黑底上等于没画，分栏边界整条消失。
+        val sepColor = s.separator
         laneRows.forEach { row ->
             if (row.laneCount == 1) {
                 drawCourse(canvas, p, row.courses[0], data.timeJson, pad, y, rowW, rowH, s, density,
-                    fontSizeSp = 12f, colorless = colorless, displayMode = displayMode,
+                    fontSizeSp = WidgetType.caption1Sp, colorless = colorless, displayMode = displayMode,
                     groupRows = data.courses.filter { it.groupId == row.courses[0].groupId })
                 y += rowH + rowGap
             } else {
@@ -366,7 +411,7 @@ object WidgetBitmapRenderers {
                     var ly = y
                     laneCourses.forEachIndexed { ci, laneCourse ->
                         drawCourse(canvas, p, laneCourse, data.timeJson, laneX, ly, laneW, rowH, s, density,
-                            fontSizeSp = 10f, colorless = colorless, displayMode = displayMode,
+                            fontSizeSp = WidgetType.columnTinySp, colorless = colorless, displayMode = displayMode,
                             groupRows = data.courses.filter { it.groupId == laneCourse.groupId })
                         ly += rowH
                         if (ci < laneCourses.size - 1) ly += stackGap
@@ -408,367 +453,6 @@ object WidgetBitmapRenderers {
     }
 
     /**
-     * TwoDay 小档纯文本行(渲染与单测共用单一事实来源)。
-     * 状态资源与 renderTwoDayRegular 各分支逐一对应:
-     *   无课表→widget_create_schedule · 学期外→semester_not_started/semester_ended
-     *   今日无课→no_course(regular 两栏空列同资源) · 有课→今日首课名单行
-     * resolver 抽象掉 Context 资源访问 → 核心选取逻辑可在纯 JVM 单测断言(仓库无 Robolectric)。
-     */
-    fun twoDayCompactTexts(context: Context, data: TwoDayData): List<String> =
-        twoDayCompactTexts({ resId -> context.getString(resId) }, data)
-
-    /** 同上 — resolver 注入版(纯 JVM 单测入口) */
-    fun twoDayCompactTexts(resolve: (Int) -> String, data: TwoDayData): List<String> {
-        if (!data.hasTable || data.days.isEmpty()) return listOf(resolve(R.string.widget_create_schedule))
-        if (data.semesterStatus != DateUtils.SemesterStatus.IN_RANGE) {
-            val statusRes = if (data.semesterStatus == DateUtils.SemesterStatus.BEFORE_START)
-                R.string.semester_not_started else R.string.semester_ended
-            return listOf(resolve(statusRes))
-        }
-        val today = data.days.first()
-        if (today.courses.isEmpty()) return listOf(resolve(R.string.no_course))
-        return data.days.flatMap { it.courses }.map { it.courseName }
-    }
-
-    /**
-     * TwoDay 紧凑档 — 日期小字(顶) + 状态/今日首课名(居中), 纯文本无两栏课程胶囊。
-     * 布局常量: compact 档不参与 twoDayContentHeightDp 滚动条带估算(固定 size 变体), 无需镜像。
-     */
-    private fun renderTwoDayCompact(context: Context, data: TwoDayData, wDp: Float, hDp: Float): Bitmap {
-        val density = context.resources.displayMetrics.density
-        val w = (wDp * density).toInt()
-        val h = (hDp * density).toInt()
-        val s = scheme(context, data.themeKey, data.isDark)
-        val ctx = WedoApp.get()
-
-        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        val c = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(c)
-        val p = Paint(Paint.ANTI_ALIAS_FLAG)
-
-        // 背景圆角
-        p.color = s.bg
-        canvas.drawRoundRect(RectF(0f, 0f, w.toFloat(), h.toFloat()),
-            20f * density, 20f * density, p)
-
-        val pad = 10f * density
-        val lines = twoDayCompactTexts(ctx, data)
-
-        // 日期行(顶部小字) — 今日日期
-        p.color = s.onSurfaceVariant
-        p.textSize = 11f * density
-        p.typeface = Typeface.DEFAULT
-        val dateStr = data.days.firstOrNull()?.let { "${it.date.monthValue}/${it.date.dayOfMonth}" } ?: ""
-        canvas.drawText(dateStr, pad, pad + 11f * density, p)
-
-        // 状态/今日首课名 — 居中大字
-        p.color = s.onSurface
-        p.textSize = 15f * density
-        p.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        var y = h / 2f
-        for (line in lines.take(2)) {
-            canvas.drawText(ellipsize(p, line, w - pad * 2), pad, y, p)
-            y += 20f * density
-        }
-
-        return bmp.apply { eraseColor(Color.TRANSPARENT); Canvas(this).drawBitmap(c, 0f, 0f, null) }
-    }
-
-    /**
-     * TwoDay 内容全展开高度(dp) — 可滚动条带渲染用。常量镜像 renderTwoDay。
-     * v7.10.11: 冲突分栏行高按最高栏堆叠数算(与 renderTwoDayRegular 分栏镜像)。
-     */
-    fun twoDayContentHeightDp(data: TwoDayData): Float {
-        var h = 12f + 22f                           // pad + 顶部标签行
-        if (!data.hasTable || data.days.isEmpty()) return h + 20f
-        if (data.semesterStatus != DateUtils.SemesterStatus.IN_RANGE) return h + 22f + 14f  // 状态 + 提示
-        // 最高一列决定整体高度; 每列: 列头(20) + 冲突分行课程 / "无课程"一行
-        val colH = data.days.maxOf { day ->
-            if (day.courses.isEmpty()) return@maxOf 20f + 16f
-            var cy = 20f
-            val rows = com.wedo.schedule.util.ConflictLayoutEngine.weekLaneRows(day.courses)
-            rows.forEach { row ->
-                if (row.laneCount == 1) {
-                    cy += 44f + 8f
-                } else {
-                    val maxStack = row.courses.groupBy { row.laneOf[it.id] }.values
-                        .maxOf { it.size }.coerceAtLeast(1)
-                    cy += maxStack * 44f + (maxStack - 1) * 3f + 8f
-                }
-            }
-            cy
-        }
-        h += colH + 12f                             // 底部 pad
-        return h
-    }
-
-    /**
-     * WeekList 内容全展开高度(dp) — 可滚动条带渲染用。常量镜像 renderWeekList。
-     */
-    fun weekListContentHeightDp(context: Context, data: WeekData): Float {
-        val outerPad = 6f
-        if (!data.hasTable) return outerPad * 2 + 20f
-        val visibleDays = AppPrefs.getVisibleDays(context)
-        val shownDays = if (visibleDays.isEmpty()) data.days
-            else data.days.filter { it.dayOfWeek in visibleDays }.sortedBy { it.dayOfWeek }
-        if (shownDays.isEmpty()) return outerPad * 2 + 20f
-        // 学期外状态行: 顶部全宽 +16dp (renderWeekList 学期外段)
-        val statusH = if (data.semesterStatus != DateUtils.SemesterStatus.IN_RANGE) 16f else 0f
-        // 最高一列: [状态行] + 标题(12+14) + chip 行(14+6) + 课程行 (16+3)*n
-        val colH = shownDays.maxOf { day ->
-            var cy = statusH + 12f + 14f
-            if (day.courses.isNotEmpty()) {
-                cy += 14f + 6f
-                cy += day.courses.size * 16f + (day.courses.size - 1) * 3f
-            }
-            cy
-        }
-        return outerPad * 2 + colH
-    }
-
-    /**
-     * WeekList 小档纯文本行(渲染与单测共用单一事实来源)。
-     * 状态资源与 renderWeekListRegular 各分支逐一对应:
-     *   无课表→widget_create_schedule · 学期外→semester_not_started/semester_ended
-     *   今明全无课→no_course(regular 空列同资源) · 有课→今天+明天各一条"周X 课名"
-     *     (每天只取首课 — loadDataSync 已按 startNode 排序; 无课天跳过; 最多 2 行)
-     * resolver 抽象掉 Context 资源访问 + today 锚点注入星期计算(禁 LocalDate.now() 进逻辑)
-     * → 核心选取逻辑可在纯 JVM 单测断言(仓库无 Robolectric)。
-     */
-    fun weekListCompactTexts(context: Context, today: LocalDate, data: WeekData): List<String> =
-        weekListCompactTexts(
-            { resId -> context.getString(resId) },
-            { dow -> DateUtils.localizedDay(dow, context) },
-            today, data
-        )
-
-    /** 同上 — resolver 注入版(纯 JVM 单测入口) */
-    fun weekListCompactTexts(
-        resolve: (Int) -> String,
-        dayName: (Int) -> String,
-        today: LocalDate,
-        data: WeekData
-    ): List<String> {
-        if (!data.hasTable || data.days.isEmpty()) return listOf(resolve(R.string.widget_create_schedule))
-        if (data.semesterStatus != DateUtils.SemesterStatus.IN_RANGE) {
-            val statusRes = if (data.semesterStatus == DateUtils.SemesterStatus.BEFORE_START)
-                R.string.semester_not_started else R.string.semester_ended
-            return listOf(resolve(statusRes))
-        }
-        val todayDow = today.dayOfWeek.value
-        val targetDows = listOf(todayDow, todayDow % 7 + 1)   // 今天 + 明天(周循环)
-        val lines = data.days.filter { it.dayOfWeek in targetDows && it.courses.isNotEmpty() }
-            // 按今天→明天的目标顺序排, 禁按 ISO 星期排: 周日锚点(tomorrow=周一)时
-            // ISO 排序会把"明天"排到"今天"前面
-            .sortedBy { targetDows.indexOf(it.dayOfWeek) }
-            .take(2)
-            .map { "${dayName(it.dayOfWeek)} ${it.courses.first().courseName}" }
-        return lines.ifEmpty { listOf(resolve(R.string.no_course)) }
-    }
-
-    /**
-     * WeekList 紧凑档 — 无标题, 今天+明天各一行"周X 课名"(取自 weekListCompactTexts),
-     * 纯文本无课程胶囊。布局常量: compact 档不参与 weekListContentHeightDp 滚动条带
-     * 估算(固定 size 变体), 无需镜像。
-     */
-    private fun renderWeekListCompact(context: Context, data: WeekData, wDp: Float, hDp: Float): Bitmap {
-        val density = context.resources.displayMetrics.density
-        val w = (wDp * density).toInt()
-        val h = (hDp * density).toInt()
-        val s = scheme(context, data.themeKey, data.isDark)
-        val ctx = WedoApp.get()
-
-        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        val c = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(c)
-        val p = Paint(Paint.ANTI_ALIAS_FLAG)
-
-        // 背景圆角
-        p.color = s.bg
-        canvas.drawRoundRect(RectF(0f, 0f, w.toFloat(), h.toFloat()),
-            20f * density, 20f * density, p)
-
-        val pad = 10f * density
-        val lines = weekListCompactTexts(ctx, LocalDate.now(), data)
-
-        // 今天+明天"周X 课名" — 居中大字
-        p.color = s.onSurface
-        p.textSize = 15f * density
-        p.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        var y = h / 2f
-        for (line in lines.take(2)) {
-            canvas.drawText(ellipsize(p, line, w - pad * 2), pad, y, p)
-            y += 20f * density
-        }
-
-        return bmp.apply { eraseColor(Color.TRANSPARENT); Canvas(this).drawBitmap(c, 0f, 0f, null) }
-    }
-
-    /**
-     * WeekList widget 渲染 — 7 列日列
-     * SMALL 变体 + 容器 <150dp → 走紧凑档(纯文本); REGULAR 或容器被拖大 ≥150dp → 全量排版
-     * (默认参数 REGULAR → 全部现有调用点零改动; 大档路径 renderWeekListRegular 函数体逐字节不变)
-     */
-    fun renderWeekList(
-        context: Context, data: WeekData, wDp: Float, hDp: Float,
-        variant: WidgetVariant = WidgetVariant.REGULAR
-    ): Bitmap {
-        if (variant == WidgetVariant.SMALL && wDp < 150f) {
-            return renderWeekListCompact(context, data, wDp, hDp)
-        }
-        // SMALL 但容器被拖大 ≥150dp → 内部升档回全量排版(设计第三节决策)
-        return renderWeekListRegular(context, data, wDp, hDp)
-    }
-
-    /**
-     * WeekList 全量排版 — 原 renderWeekList 函数体原样改名迁入(REGULAR 档逐字节不变保证)
-     */
-    private fun renderWeekListRegular(context: Context, data: WeekData, wDp: Float, hDp: Float): Bitmap {
-        val density = context.resources.displayMetrics.density
-        val w = (wDp * density).toInt()
-        val h = (hDp * density).toInt()
-        val s = scheme(context, data.themeKey, data.isDark)
-        val colorless = AppPrefs.isWidgetColorless(context)
-        // visibleDays (决策 D5-12, 对齐 WeekGridWidgetProvider.renderBitmap L162-163):
-        // 用户"显示星期"设置决定渲染列; 设置页 UI 保证至少留 1 天, 空集时回退全周防御
-        val visibleDays = AppPrefs.getVisibleDays(context)
-        val shownDays = if (visibleDays.isEmpty()) data.days
-            else data.days.filter { it.dayOfWeek in visibleDays }.sortedBy { it.dayOfWeek }
-
-        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        val c = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(c)
-        val p = Paint(Paint.ANTI_ALIAS_FLAG)
-
-        // 背景
-        p.color = s.bg
-        canvas.drawRoundRect(RectF(0f, 0f, w.toFloat(), h.toFloat()),
-            20f * density, 20f * density, p)
-
-        val outerPad = 6f * density
-        val innerW = w - outerPad * 2
-        val innerH = h - outerPad * 2
-
-        if (!data.hasTable || shownDays.isEmpty()) {
-            p.color = s.onSurface
-            p.textSize = 15f * density
-            canvas.drawText(WedoApp.get().getString(R.string.widget_create_schedule),
-                outerPad, outerPad + 15f * density, p)
-            return bmp.apply { eraseColor(Color.TRANSPARENT); Canvas(this).drawBitmap(c, 0f, 0f, null) }
-        }
-
-        val todayDow = LocalDate.now().dayOfWeek.value
-        val colGap = 4f * density
-        val dayCount = shownDays.size
-        val colW = (innerW - colGap * (dayCount - 1)) / dayCount
-
-        // 学期外: 顶部全宽状态行(只画一次; 学期前=第1周课照常预习 / 学期后=课程已清空)
-        var colTop = outerPad
-        if (data.semesterStatus != DateUtils.SemesterStatus.IN_RANGE) {
-            val statusRes = if (data.semesterStatus == DateUtils.SemesterStatus.BEFORE_START)
-                R.string.semester_not_started else R.string.semester_ended
-            p.color = s.onSurfaceVariant
-            p.textSize = 10f * density
-            p.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            val statusText = WedoApp.get().getString(statusRes)
-            val stw = p.measureText(statusText)
-            canvas.drawText(statusText, (w - stw) / 2f, outerPad + 10f * density, p)
-            colTop = outerPad + 16f * density
-        }
-
-        // 列数随 visibleDays 变化 (原硬编码 7 列)
-        for (i in shownDays.indices) {
-            val day = shownDays[i]
-            val x = outerPad + i * (colW + colGap)
-            val isToday = day.dayOfWeek == todayDow
-            val cardBg = if (isToday) s.primaryContainer else s.surfaceContainer
-
-            // 列背景
-            p.color = cardBg
-            canvas.drawRoundRect(RectF(x, colTop, x + colW, outerPad + innerH),
-                14f * density, 14f * density, p)
-
-            var cy = colTop + 12f * density
-
-            // 星期标题
-            p.color = if (isToday) s.onPrimaryContainer else s.onSurface
-            p.textSize = 12f * density
-            p.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            val title = dayLabels[day.dayOfWeek]
-            val tw = p.measureText(title)
-            canvas.drawText(title, x + (colW - tw) / 2, cy, p)
-            cy += 14f * density
-
-            // 课程数量 chip
-            if (day.courses.isNotEmpty()) {
-                val chipText = "${day.courses.size} 门"
-                p.color = s.surfaceVariant
-                val chipW = (chipText.length * 6f + 12f) * density
-                val chipH = 14f * density
-                canvas.drawRoundRect(RectF(x + (colW - chipW) / 2, cy, x + (colW - chipW) / 2 + chipW, cy + chipH),
-                    50f, 50f, p)
-                p.color = s.onSurfaceVariant
-                p.textSize = 9f * density
-                val ctw = p.measureText(chipText)
-                val chipFm = p.fontMetrics
-                val chipBaseline = cy + (chipH - (chipFm.descent - chipFm.ascent)) / 2f - chipFm.ascent
-                canvas.drawText(chipText, x + (colW - ctw) / 2, chipBaseline, p)
-                cy += chipH + 6f * density
-
-                // 课程列表 — 每门课带颜色胶囊背景
-                p.textSize = 9f * density
-                p.typeface = Typeface.DEFAULT
-                val coursePad = 3f * density
-                val courseRowH = 16f * density
-                val courseGap = 3f * density
-                day.courses.forEachIndexed { idx, course ->
-                    val name = course.courseName
-                    // 课程颜色背景 (对齐 WeekGrid 风格) — 统一入口 CourseColorUtil (决策 D3)
-                    // issue#22: 同名课程多地点 — 用 day.courses 同 groupId 全行,支持 AUTO/CUSTOM 模式取色
-                    val bgColor = CourseColorUtil.pickCourseColorIntWithGroupRows(
-                        course, day.courses.filter { it.groupId == course.groupId },
-                        s.isDark, s.surfaceVariant, colorless
-                    )
-                    p.color = bgColor
-                    canvas.drawRoundRect(
-                        RectF(x + coursePad, cy, x + colW - coursePad, cy + courseRowH),
-                        4f * density, 4f * density, p)
-                    // 课程名 — FontMetrics 垂直居中 + 亮度自适应文字色 (决策 D5-13, 对齐 drawCourse 同入口)
-                    p.color = CourseColorUtil.textColorOn(bgColor, s.isDark, s.onSurface)
-                    p.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                    val maxTextWidth = colW - coursePad * 2 - 4f * density
-                    val displayName = if (p.measureText(name) > maxTextWidth) {
-                        var n = name
-                        while (n.isNotEmpty() && p.measureText("$n…") > maxTextWidth) n = n.dropLast(1)
-                        "$n…"
-                    } else name
-                    val fm = p.fontMetrics
-                    val textBaseline = cy + (courseRowH - (fm.descent - fm.ascent)) / 2f - fm.ascent
-                    canvas.drawText(displayName, x + coursePad + 2f * density, textBaseline, p)
-                    p.typeface = Typeface.DEFAULT
-                    cy += courseRowH + courseGap
-                }
-            }
-        }
-
-        return bmp.apply { eraseColor(Color.TRANSPARENT); Canvas(this).drawBitmap(c, 0f, 0f, null) }
-    }
-
-    /**
-     * WeekView 小档列选取(渲染与单测共用单一事实来源):
-     * 有课的日子优先成池; 今天必保(无课也追加进池, 锚点语义);
-     * 按"与今天的距离"取最近 maxColumns 列, 最终按星期升序输出(从左到右绘制顺序)。
-     * 纯函数零 LocalDate.now() — todayDow 由调用方注入。
-     */
-    fun weekViewCompactColumns(data: WeekData, todayDow: Int, maxColumns: Int = 3): List<Int> {
-        val pool = data.days.filter { it.courses.isNotEmpty() }.map { it.dayOfWeek }
-            .ifEmpty { data.days.map { it.dayOfWeek } }
-            .toMutableList()
-        if (todayDow !in pool) pool.add(todayDow)
-        return pool.sortedBy { kotlin.math.abs(it - todayDow) }.take(maxColumns).sorted()
-    }
-
-    /**
      * WeekGrid 最小档数据映射 — WeekData → 今日 WidgetData。
      * 最小档(1×1 列)不再"折叠成单列的网格脸", 直接复用今日课程·小的渲染器:
      * 宿主只换数据, 渲染走 renderToday(SMALL) → 与今日课程·小像素同源同一张脸。
@@ -804,387 +488,4 @@ object WidgetBitmapRenderers {
         return if (measure(combined) <= maxWidth) listOf(combined) else listOf(timeStr, room)
     }
 
-    /**
-     * WeekView widget 渲染 — 7 列日列, 复刻 DaySummaryCell (CourseTableView.kt L559-L642)
-     * SMALL 变体 + 容器 <150dp → 走紧凑档(复用 Regular 渲染器, shownDays 换成 compact 列);
-     * REGULAR 或容器被拖大 ≥150dp → 全量排版
-     * (默认参数 REGULAR → 全部现有调用点零改动; 大档路径 renderWeekViewRegular 函数体逐字节不变)
-     */
-    fun renderWeekView(
-        context: Context, data: WeekData, wDp: Float, hDp: Float,
-        variant: WidgetVariant = WidgetVariant.REGULAR
-    ): Bitmap {
-        if (variant == WidgetVariant.SMALL && wDp < 150f) {
-            return renderWeekViewCompact(context, data, wDp, hDp)
-        }
-        // SMALL 但容器被拖大 ≥150dp → 内部升档回全量排版(设计第三节决策)
-        return renderWeekViewRegular(context, data, wDp, hDp)
-    }
-
-    /**
-     * WeekView 紧凑档 — 复用 Regular 渲染器的列绘制(字号不变, 列少了每列自然变宽)。
-     * Regular 函数体零改动, compact 走数据侧换列: 先按用户"显示星期"设置收窄可选池
-     * (避免 Regular 内 shownDays 交集为空落到"去创建课表"兜底文案), 再选 compact 列。
-     */
-    private fun renderWeekViewCompact(context: Context, data: WeekData, wDp: Float, hDp: Float): Bitmap {
-        val todayDow = LocalDate.now().dayOfWeek.value
-        // visibleDays 同 Regular 档读法(决策 D5-12): 用户设置决定可选列池, 空集回退全周防御
-        val visibleDays = AppPrefs.getVisibleDays(context)
-        val poolDays = if (visibleDays.isEmpty()) data.days
-            else data.days.filter { it.dayOfWeek in visibleDays }
-        val compactDows = weekViewCompactColumns(data.copy(days = poolDays), todayDow)
-        val compactData = data.copy(
-            days = data.days.filter { it.dayOfWeek in compactDows }.sortedBy { it.dayOfWeek }
-        )
-        return renderWeekViewRegular(context, compactData, wDp, hDp)
-    }
-
-    /**
-     * WeekView 全量排版 — 原 renderWeekView 函数体原样改名迁入(REGULAR 档逐字节不变保证)
-     */
-    private fun renderWeekViewRegular(context: Context, data: WeekData, wDp: Float, hDp: Float): Bitmap {
-        val density = context.resources.displayMetrics.density
-        val w = (wDp * density).toInt()
-        val h = (hDp * density).toInt()
-        val s = scheme(context, data.themeKey, data.isDark)
-        val showSeparator = AppPrefs.isWidgetSeparator(context)
-        // visibleDays (决策 D5-12, 对齐 WeekGridWidgetProvider.renderBitmap L162-163):
-        // 用户"显示星期"设置决定渲染列; 设置页 UI 保证至少留 1 天, 空集时回退全周防御
-        val visibleDays = AppPrefs.getVisibleDays(context)
-        val shownDays = if (visibleDays.isEmpty()) data.days
-            else data.days.filter { it.dayOfWeek in visibleDays }.sortedBy { it.dayOfWeek }
-
-        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        val c = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(c)
-        val p = Paint(Paint.ANTI_ALIAS_FLAG)
-
-        // 背景
-        p.color = s.bg
-        canvas.drawRoundRect(RectF(0f, 0f, w.toFloat(), h.toFloat()),
-            20f * density, 20f * density, p)
-
-        val outerPad = 6f * density
-        val innerW = w - outerPad * 2
-        val innerH = h - outerPad * 2
-
-        if (!data.hasTable || shownDays.isEmpty()) {
-            p.color = s.onSurface
-            p.textSize = 15f * density
-            canvas.drawText(WedoApp.get().getString(R.string.widget_create_schedule),
-                outerPad, outerPad + 15f * density, p)
-            return bmp.apply { eraseColor(Color.TRANSPARENT); Canvas(this).drawBitmap(c, 0f, 0f, null) }
-        }
-
-        val todayDow = LocalDate.now().dayOfWeek.value
-        val colGap = 4f * density
-        val dayCount = shownDays.size
-        val colW = (innerW - colGap * (dayCount - 1)) / dayCount
-
-        // 学期外: 顶部全宽状态行(只画一次, 同 renderWeekList)
-        var colTop = outerPad
-        if (data.semesterStatus != DateUtils.SemesterStatus.IN_RANGE) {
-            val statusRes = if (data.semesterStatus == DateUtils.SemesterStatus.BEFORE_START)
-                R.string.semester_not_started else R.string.semester_ended
-            p.color = s.onSurfaceVariant
-            p.textSize = 10f * density
-            p.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            val statusText = WedoApp.get().getString(statusRes)
-            val stw = p.measureText(statusText)
-            canvas.drawText(statusText, (w - stw) / 2f, outerPad + 10f * density, p)
-            colTop = outerPad + 16f * density
-        }
-
-        // 列数随 visibleDays 变化 (原硬编码 7 列)
-        for (i in shownDays.indices) {
-            val day = shownDays[i]
-            val x = outerPad + i * (colW + colGap)
-            val isToday = day.dayOfWeek == todayDow
-            val cardBg = if (isToday) s.primaryContainer else s.surfaceContainer
-
-            // 列背景
-            p.color = cardBg
-            canvas.drawRoundRect(RectF(x, colTop, x + colW, outerPad + innerH),
-                14f * density, 14f * density, p)
-
-            var cy = colTop + 12f * density
-
-            // 星期标题
-            p.color = if (isToday) s.onPrimaryContainer else s.onSurface
-            p.textSize = 12f * density
-            p.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            val title = dayLabels[day.dayOfWeek]
-            val tw = p.measureText(title)
-            canvas.drawText(title, x + (colW - tw) / 2, cy, p)
-            cy += 14f * density
-
-            // 课程数量 chip
-            if (day.courses.isNotEmpty()) {
-                val chipText = "${day.courses.size} 门"
-                p.color = s.surfaceVariant
-                val chipW = (chipText.length * 6f + 12f) * density
-                val chipH = 14f * density
-                canvas.drawRoundRect(RectF(x + (colW - chipW) / 2, cy, x + (colW - chipW) / 2 + chipW, cy + chipH),
-                    50f, 50f, p)
-                p.color = s.onSurfaceVariant
-                p.textSize = 9f * density
-                val ctw = p.measureText(chipText)
-                val chipFm = p.fontMetrics
-                val chipBaseline = cy + (chipH - (chipFm.descent - chipFm.ascent)) / 2f - chipFm.ascent
-                canvas.drawText(chipText, x + (colW - ctw) / 2, chipBaseline, p)
-                cy += chipH + 4f * density  // 4dp gap (DaySummaryCell L624)
-
-                // 课程 mini-list — 最多2行换行 + 课程间分隔线(可选)
-                p.textSize = 9f * density
-                p.typeface = Typeface.DEFAULT
-                p.style = Paint.Style.FILL
-                val textPad = 4f * density
-                val maxTextWidth = colW - textPad * 2
-                val courseGap = 3f * density  // 3dp (原2dp太紧, workflow验证阶段推荐3dp对齐胶囊版)
-                val fm = p.fontMetrics
-                val lineH = fm.descent - fm.ascent
-                val courses = day.courses.take(5)
-                courses.forEachIndexed { idx, course ->
-                    val name = course.courseName
-                    // today → onPrimaryContainer@0.82alpha, 其他 → onSurfaceVariant
-                    p.color = if (isToday)
-                        (0xD1 shl 24) or (s.onPrimaryContainer and 0x00FFFFFF)
-                    else
-                        s.onSurfaceVariant
-
-                    val lines = wrapMax2Lines(name, p, maxTextWidth)
-                    lines.forEach { line ->
-                        canvas.drawText(line, x + textPad, cy - fm.ascent, p)
-                        cy += lineH
-                    }
-
-                    // 课程间分隔: 开关ON→可见1dp@40%线; OFF→纯3dp留白
-                    if (idx < courses.size - 1) {
-                        if (showSeparator) {
-                            cy += courseGap / 2f
-                            p.color = (s.onSurfaceVariant and 0x00FFFFFF) or 0x66000000
-                            p.style = Paint.Style.STROKE
-                            p.strokeWidth = 1f * density
-                            canvas.drawLine(x + textPad, cy, x + colW - textPad, cy, p)
-                            p.style = Paint.Style.FILL
-                            p.strokeWidth = 0f
-                            cy += courseGap / 2f
-                        } else {
-                            cy += courseGap
-                        }
-                    } else {
-                        cy += courseGap
-                    }
-                }
-            }
-        }
-
-        return bmp.apply { eraseColor(Color.TRANSPARENT); Canvas(this).drawBitmap(c, 0f, 0f, null) }
-    }
-
-    /**
-     * TwoDay widget 渲染 — 今天 + 明天 (左右两栏竖排)
-     * 用户反馈: 不要把第二天堆在底下 → 改成左列今天 / 右列明天 并排
-     * SMALL 变体 + 容器 <150dp → 走紧凑档(纯文本); REGULAR 或容器被拖大 ≥150dp → 全量排版
-     * (默认参数 REGULAR → 全部现有调用点零改动; 大档路径 renderTwoDayRegular 函数体逐字节不变)
-     */
-    fun renderTwoDay(
-        context: Context, data: TwoDayData, wDp: Float, hDp: Float,
-        variant: WidgetVariant = WidgetVariant.REGULAR
-    ): Bitmap {
-        return renderTwoDayRegular(context, data, wDp, hDp)
-    }
-
-    /**
-     * TwoDay 全量排版 — 原 renderTwoDay 函数体原样改名迁入(REGULAR 档逐字节不变保证)
-     */
-    private fun renderTwoDayRegular(context: Context, data: TwoDayData, wDp: Float, hDp: Float): Bitmap {
-        val density = context.resources.displayMetrics.density
-        val w = (wDp * density).toInt()
-        val h = (hDp * density).toInt()
-        val s = scheme(context, data.themeKey, data.isDark)
-        val colorless = AppPrefs.isWidgetColorless(context)
-        // 用户显示设置 (决策 D5-12, 读法对齐 WeekGridWidgetProvider.loadWeekData L660-662)
-        val displayMode = AppPrefs.getDisplayMode(context)
-        val showDate = AppPrefs.isShowDate(context)
-
-        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        val c = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(c)
-        val p = Paint(Paint.ANTI_ALIAS_FLAG)
-
-        // 背景
-        p.color = s.bg
-        canvas.drawRoundRect(RectF(0f, 0f, w.toFloat(), h.toFloat()),
-            20f * density, 20f * density, p)
-
-        val ctx = WedoApp.get()
-        val pad = 12f * density
-        var y = pad
-
-        // 顶部标签
-        p.color = s.primary
-        p.textSize = 13f * density
-        p.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        canvas.drawText(ctx.getString(R.string.widget_twoday_label), pad, y + 13f * density, p)
-        y += 22f * density
-
-        if (!data.hasTable || data.days.isEmpty()) {
-            p.color = s.onSurface
-            p.textSize = 15f * density
-            canvas.drawText(ctx.getString(R.string.widget_create_schedule), pad, y + 15f * density, p)
-            return bmp.apply { eraseColor(Color.TRANSPARENT); Canvas(this).drawBitmap(c, 0f, 0f, null) }
-        }
-
-        // 学期外: 状态标题 + 提示行, 不画两栏课程 (loadDataSync 已清空, 此处给标题语义)
-        if (data.semesterStatus != DateUtils.SemesterStatus.IN_RANGE) {
-            val statusRes = if (data.semesterStatus == DateUtils.SemesterStatus.BEFORE_START)
-                R.string.semester_not_started else R.string.semester_ended
-            p.color = s.onSurface
-            p.textSize = 15f * density
-            p.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            canvas.drawText(ctx.getString(statusRes), pad, y + 15f * density, p)
-            y += 22f * density
-            p.color = s.onSurfaceVariant
-            p.textSize = 11f * density
-            p.typeface = Typeface.DEFAULT
-            canvas.drawText(ctx.getString(R.string.today_semester_out_hint), pad, y + 11f * density, p)
-            return bmp.apply { eraseColor(Color.TRANSPARENT); Canvas(this).drawBitmap(c, 0f, 0f, null) }
-        }
-
-        // 左右两栏: 每天一列, 中间竖直分隔
-        val colGap = 10f * density
-        val colW = (w - pad * 2 - colGap * (data.days.size - 1)) / data.days.size
-        val listTop = y
-        val listBottom = h - pad
-        val listH = (listBottom - listTop).coerceAtLeast(40f * density)
-
-        data.days.forEachIndexed { colIdx, day ->
-            val colX = pad + colIdx * (colW + colGap)
-
-            // 列标题
-            p.color = s.primary
-            p.textSize = 12f * density
-            p.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            val title = when {
-                day.isToday -> ctx.getString(R.string.today_today)
-                day.isTomorrow -> ctx.getString(R.string.tomorrow)
-                else -> day.dayName
-            }
-            canvas.drawText(title, colX, listTop + 12f * density, p)
-            val titleW = p.measureText(title)
-
-            // showDate=false 时隐藏列标题旁的日期 (对齐课表页设置)
-            if (showDate) {
-                p.color = s.onSurfaceVariant
-                p.textSize = 10f * density
-                p.typeface = Typeface.DEFAULT
-                canvas.drawText(day.dayLabel, colX + titleW + 6f * density, listTop + 12f * density, p)
-            }
-
-            var cy = listTop + 20f * density
-
-            if (day.courses.isEmpty()) {
-                p.color = s.onSurfaceVariant
-                p.textSize = 11f * density
-                canvas.drawText(ctx.getString(R.string.no_course), colX, cy + 11f * density, p)
-            } else {
-                // 胶囊固定最大高度 44dp, 不再撑满整个列
-                // v7.10.11: 冲突分栏 — 同引擎, 冲突课并排半栏(栏间浅细竖线), 同栏堆叠
-                val rowGap = 8f * density
-                val maxRowH = 44f * density
-                val stackGap = 3f * density
-                val laneGap = 5f * density
-                val sepColor = (s.onSurface and 0x00FFFFFF) or 0x4D000000
-                val laneRows = com.wedo.schedule.util.ConflictLayoutEngine.weekLaneRows(day.courses)
-                laneRows.forEach { row ->
-                    if (row.laneCount == 1) {
-                        drawCourse(canvas, p, row.courses[0], day.timeJson, colX, cy, colW, maxRowH, s, density,
-                            fontSizeSp = 10f, colorless = colorless, displayMode = displayMode,
-                            groupRows = day.courses.filter { it.groupId == row.courses[0].groupId })
-                        cy += maxRowH + rowGap
-                    } else {
-                        val laneW = (colW - laneGap * (row.laneCount - 1)) / row.laneCount
-                        val maxStack = row.courses.groupBy { row.laneOf[it.id] }.values
-                            .maxOf { it.size }.coerceAtLeast(1)
-                        val laneRowTotalH = maxStack * maxRowH + (maxStack - 1) * stackGap
-                        repeat(row.laneCount) { li ->
-                            val laneX = colX + li * (laneW + laneGap)
-                            if (li > 0) {
-                                val sepX = laneX - laneGap / 2f
-                                val keepColor = p.color
-                                p.color = sepColor
-                                canvas.drawRect(sepX - 0.5f * density, cy, sepX + 0.5f * density,
-                                    cy + laneRowTotalH, p)
-                                p.color = keepColor
-                            }
-                            val laneCourses = row.courses.filter { row.laneOf[it.id] == li }
-                            var ly = cy
-                            laneCourses.forEach { laneCourse ->
-                                drawCourse(canvas, p, laneCourse, day.timeJson, laneX, ly, laneW, maxRowH, s, density,
-                                    fontSizeSp = 9f, colorless = colorless, displayMode = displayMode,
-                                    groupRows = day.courses.filter { it.groupId == laneCourse.groupId })
-                                ly += maxRowH
-                                if (ly < cy + laneRowTotalH) ly += stackGap
-                            }
-                        }
-                        cy += laneRowTotalH + rowGap
-                    }
-                }
-            }
-
-            // 列间竖直分隔线
-            if (colIdx < data.days.size - 1) {
-                val sepX = colX + colW + colGap / 2f
-                p.color = (s.onSurfaceVariant and 0x00FFFFFF) or 0x20000000
-                canvas.drawRect(sepX - 0.5f * density, listTop, sepX + 0.5f * density, listBottom, p)
-            }
-        }
-
-        return bmp.apply { eraseColor(Color.TRANSPARENT); Canvas(this).drawBitmap(c, 0f, 0f, null) }
-    }
-
-    /**
-     * Canvas 手动换行: 最多2行, 超出截断 "…".
-     * CJK 按字符断行; Latin 在空格处断行.
-     */
-    private fun wrapMax2Lines(
-        text: String,
-        paint: Paint,
-        maxWidth: Float
-    ): List<String> {
-        val charsFit = paint.breakText(text, true, maxWidth, null)
-        if (charsFit <= 0) return listOf("…")  // 列极窄: 连一个字都放不下
-        if (charsFit >= text.length) return listOf(text)
-
-        // 找行1断点: 优先空格, 否则字符边界
-        val lastSpace = text.lastIndexOf(' ', charsFit)
-        val line1End: Int
-        val remainderStart: Int
-        if (lastSpace > 0 && lastSpace > charsFit * 4 / 5) {
-            line1End = lastSpace
-            remainderStart = lastSpace + 1
-        } else {
-            line1End = charsFit
-            remainderStart = charsFit
-        }
-
-        val line1 = text.substring(0, line1End)
-        val remainder = text.substring(remainderStart)
-        if (remainder.isEmpty()) return listOf(line1)
-
-        val charsFit2 = paint.breakText(remainder, true, maxWidth, null)
-        if (charsFit2 >= remainder.length) return listOf(line1, remainder)
-
-        // 行2超宽 → 截断 "…"
-        var lo = 0
-        var hi = remainder.length
-        while (lo < hi) {
-            val mid = (lo + hi + 1) / 2
-            if (paint.measureText(remainder.substring(0, mid) + "…") <= maxWidth) lo = mid
-            else hi = mid - 1
-        }
-        val line2 = if (lo == 0) "…" else remainder.substring(0, lo) + "…"
-        return listOf(line1, line2)
-    }
 }

@@ -25,6 +25,7 @@ import java.time.LocalDate
  *
  * v1.0.36: 内容装得下走静态 renderAndPush(与主分支一致); 装不下走 pushScrollable
  * (壳图+条带 ListView, 条带与静态渲染同源 → 顶部像素一致, 可滚动)。
+ * V3 重设计（REQ-P5-02）：可滚动条带路径已删除，统一按容器尺寸静态渲染。
  *
  * Glance 版 TodayWidget 类已删除(决策 D5-11); loadDataSync 自 Glance companion 迁入本类。
  */
@@ -78,26 +79,15 @@ open class TodayWidgetReceiver : AppWidgetProvider() {
             context: Context, awm: AppWidgetManager, id: Int,
             variant: WidgetVariant, data: WidgetData
         ) {
-            val opts = awm.getAppWidgetOptions(id)
-            val (wDp, hDp) = RemoteViewsWidgetHelper.computeSizeDp(opts)
-            val contentH = WidgetBitmapRenderers.todayContentHeightDp(data)
-            if (contentH <= hDp) {
-                RemoteViewsWidgetHelper.renderAndPush(
-                    context, awm, id, TAG,
-                    loadData = { data },
-                    renderBitmap = { d, w, h ->
-                        WidgetBitmapRenderers.renderToday(context, d, w, h, variant)
-                    }
-                )
-            } else {
-                val shell = WidgetBitmapRenderers.renderToday(context, data, wDp.toFloat(), hDp.toFloat(), variant)
-                RemoteViewsWidgetHelper.pushScrollable(
-                    context, awm, id, TAG,
-                    layoutRes = com.wedo.schedule.R.layout.widget_scroll_today,
-                    shellBitmap = shell,
-                    scopeExtra = ScrollStripService.StripFactory.SCOPE_TODAY
-                )
-            }
+            // V3 重设计（REQ-P5-02）删除了可滚动条带路径（ScrollStripService 已移除）：
+            // 一律按容器尺寸静态渲染推送，内容超出时底部裁切。
+            RemoteViewsWidgetHelper.renderAndPush(
+                context, awm, id, TAG,
+                loadData = { data },
+                renderBitmap = { d, w, h ->
+                    WidgetBitmapRenderers.renderToday(context, d, w, h, variant)
+                }
+            )
         }
 
         /**

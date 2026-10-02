@@ -2,7 +2,6 @@ package com.wedo.schedule.widget.notification
 
 import android.Manifest
 import android.app.AlarmManager
-import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -32,25 +31,27 @@ import java.time.LocalTime
 import java.time.ZoneId
 
 /**
- * 课程通知调度器 — 支持每日提醒 + 每节课前提醒。
+ * 课程通知调度器 — V3 重设计（REQ-P5-03/04）：只保留**每节课前提醒**。
  *
- * 每日提醒：在用户指定时间发送今日课程摘要。
- * 课前提醒：每天凌晨调度当天每节课前 N 分钟的通知。
+ * 每日摘要提醒（旧 [DailyNotifyReceiver]）与流体云/超级岛（旧 `FluidCloudService`）
+ * 已随 REQ-P5 删除；课前提醒：每天凌晨调度当天每节课前 N 分钟的通知。
  */
 class CourseNotificationScheduler(private val context: Context) {
 
     companion object {
-        const val CHANNEL_DAILY = "wedo_daily"
         const val CHANNEL_BEFORE_CLASS = "wedo_before_class"
-        const val CHANNEL_FLUID = "wedo_fluid_v2"
+
+        /**
+         * 「横幅提醒」关闭时使用的低干扰渠道：同内容但不触发悬浮横幅（heads-up）。
+         * Android 8+（本 app minSdk=26）横幅由渠道重要度决定，故用双渠道表达开关语义。
+         */
+        const val CHANNEL_BEFORE_CLASS_SILENT = "wedo_before_class_silent"
 
         // Request codes for PendingIntent discrimination
-        private const val RC_DAILY = 1
         private const val RC_BEFORE_CLASS_SCHEDULER = 2
         private const val RC_BEFORE_CLASS_BASE = 100 // + courseId offset
 
         // Notification IDs
-        const val NOTIFY_DAILY = 1001
         const val NOTIFY_BEFORE_CLASS_BASE = 2000 // + courseId offset
     }
 
@@ -65,22 +66,14 @@ class CourseNotificationScheduler(private val context: Context) {
             val prefs = context.applicationContext
             if (!AppPrefs.isReminderEnabled(prefs)) return@launch
 
-            if (AppPrefs.isDailyReminderEnabled(prefs)) {
-                scheduleDaily()
-            }
             if (AppPrefs.isBeforeClassEnabled(prefs)) {
                 scheduleBeforeClassDaily()
-                // 状态兜底：排 alarm 的同时立即检测是否已在某节课窗口内（补起流体云）
-                ensureActiveFluidCloud()
             }
         }
     }
 
     suspend fun cancelAll() {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-
-        // Cancel daily
-        alarmManager.cancel(buildPendingIntent(RC_DAILY, DailyNotifyReceiver::class.java))
 
         // Cancel before-class scheduler
         alarmManager.cancel(buildPendingIntent(RC_BEFORE_CLASS_SCHEDULER, BeforeClassScheduleReceiver::class.java))
@@ -115,26 +108,6 @@ class CourseNotificationScheduler(private val context: Context) {
                 alarmManager.cancel(buildPendingIntent(RC_BEFORE_CLASS_BASE + cid, BeforeClassNotifyReceiver::class.java))
             } catch (_: Exception) {}
         }
-    }
-
-    // ==================== Daily ====================
-
-    private fun scheduleDaily() {
-        val timeStr = AppPrefs.getDailyReminderTime(context)
-        val parts = timeStr.split(":")
-        // 钳制到合法范围，避免破损 pref（"07:60"、负数、空值）触发 DateTimeException 崩溃
-        val hour = (parts.getOrNull(0)?.toIntOrNull() ?: 7).coerceIn(0, 23)
-        val minute = (parts.getOrNull(1)?.toIntOrNull() ?: 0).coerceIn(0, 59)
-
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val pending = buildPendingIntent(RC_DAILY, DailyNotifyReceiver::class.java)
-
-        val target = LocalTime.of(hour, minute)
-        var next = LocalDate.now().atTime(target)
-        if (LocalTime.now().isAfter(target)) next = next.plusDays(1)
-        val epoch = next.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-
-        setRepeatingAlarm(alarmManager, epoch, AlarmManager.INTERVAL_DAY, pending)
     }
 
     // ==================== Before-class scheduler ====================
@@ -222,6 +195,8 @@ class CourseNotificationScheduler(private val context: Context) {
                 putExtra("startTime", String.format("%02d:%02d", h, m))
                 putExtra("notifyEpoch", epoch)
                 putExtra("classEpoch", classStart.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
+                // 通知 id 按课程稳定唯一，重复投递会覆盖同一通知而非堆叠
+                putExtra("notifyId", NOTIFY_BEFORE_CLASS_BASE + course.id.toInt())
             }
             val pending = PendingIntent.getBroadcast(
                 context, RC_BEFORE_CLASS_BASE + course.id.toInt(),
@@ -238,82 +213,21 @@ class CourseNotificationScheduler(private val context: Context) {
         }
     }
 
-    /**
-     * 状态驱动的流体云兜底：只要"现在"落在任一节课的 [classStart-minutes, classStart] 窗口内，
-     * 就确保 FluidCloudService 在跑、流体云在显示。不依赖"正好提前N分钟那一秒"的 alarm。
-     *
-     * 调用时机：app 回前台、app 启动、课程数据变更、WorkManager 周期兜底。
-     * 解决"alarm 错过那一秒 / 用户在窗口内才打开 app → 流体云永远不起"的问题。
-     */
-    suspend fun ensureActiveFluidCloud() {
-        val app = context.applicationContext
-        if (!AppPrefs.isReminderEnabled(app) || !AppPrefs.isBeforeClassEnabled(app)) return
-        if (!AppPrefs.isBeforeClassFluidEnabled(app)) return
-        val minutes = AppPrefs.getBeforeClassMinutes(app)
-        val today = LocalDate.now()
-        val dow = DateUtils.todayDayOfWeek(today)
-        val table = resolveCurrentTable() ?: return
-        val week = DateUtils.currentWeek(table.startDate, today)
-        // 防呆: 学期范围外不触发流体云(钳制周数会误匹配第 1 周的课)
-        if (DateUtils.semesterStatus(table.startDate, table.maxWeek, today) != DateUtils.SemesterStatus.IN_RANGE) return
-        val nodes = TimeTableUtils.parseNodes(table.timeJson)
-        val now = System.currentTimeMillis()
-
-        // 找出现在处于课前窗口内的第一节课
-        val hit = WedoApp.get().repository.getCoursesByDayOnce(table.id, dow)
-            .filter { it.inWeek(week) }
-            .firstOrNull { c ->
-                val st = if (c.ownTime && c.startTime.isNotBlank()) c.startTime
-                    else nodes.find { it.node == c.startNode }?.let { String.format("%02d:%02d", it.start.hour, it.start.minute) }
-                val p = st?.split(":")
-                val h = p?.getOrNull(0)?.toIntOrNull(); val m = p?.getOrNull(1)?.toIntOrNull()
-                if (h == null || m == null || h !in 0..23 || m !in 0..59) return@firstOrNull false
-                val classStart = today.atTime(h, m).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                val notifyEpoch = classStart - minutes * 60_000L
-                now in notifyEpoch..classStart  // 现在在窗口内
-            } ?: return
-
-        // 计算这节课的精确窗口，启动 FluidCloudService
-        val st = if (hit.ownTime && hit.startTime.isNotBlank()) hit.startTime
-            else nodes.find { it.node == hit.startNode }!!.let { String.format("%02d:%02d", it.start.hour, it.start.minute) }
-        val p = st.split(":")
-        val classStart = today.atTime(p[0].toInt(), p[1].toInt()).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        val notifyEpoch = classStart - minutes * 60_000L
-        val svc = Intent(app, FluidCloudService::class.java).apply {
-            putExtra("courseName", hit.courseName)
-            putExtra("room", hit.room.ifBlank { app.getString(R.string.default_room) })
-            putExtra("teacher", hit.teacher)
-            putExtra("startTime", st)
-            putExtra("notifyEpoch", notifyEpoch)
-            putExtra("classEpoch", classStart)
-        }
-        try {
-            androidx.core.content.ContextCompat.startForegroundService(app, svc)
-            android.util.Log.d("CourseScheduler", "ensureActiveFluidCloud: started for ${hit.courseName} notify=$notifyEpoch class=$classStart now=$now")
-        } catch (t: Throwable) {
-            android.util.Log.w("CourseScheduler", "ensureActiveFluidCloud start failed", t)
-        }
-    }
     // ==================== Helpers ====================
 
     private fun createChannels() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val nm = context.getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel(
-            CHANNEL_DAILY,
-            context.getString(R.string.notif_channel_daily),
-            NotificationManager.IMPORTANCE_DEFAULT
-        ).apply { description = context.getString(R.string.notif_channel_daily_desc) })
-        nm.createNotificationChannel(NotificationChannel(
             CHANNEL_BEFORE_CLASS,
             context.getString(R.string.notif_channel_before_class),
             NotificationManager.IMPORTANCE_HIGH
         ).apply { description = context.getString(R.string.notif_channel_before_class_desc) })
         nm.createNotificationChannel(NotificationChannel(
-            CHANNEL_FLUID,
-            context.getString(R.string.notif_channel_fluid),
-            NotificationManager.IMPORTANCE_HIGH
-        ).apply { description = context.getString(R.string.notif_channel_fluid_desc) })
+            CHANNEL_BEFORE_CLASS_SILENT,
+            context.getString(R.string.notif_channel_before_class_silent),
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply { description = context.getString(R.string.notif_channel_before_class_silent_desc) })
     }
 
     // buildPendingIntInfo 死函数已删（实际全部走下方 buildPendingIntent）
@@ -341,72 +255,6 @@ class CourseNotificationScheduler(private val context: Context) {
 // ==================== Receivers ====================
 
 /**
- * Daily summary notification — fires at user-chosen time.
- * Content: "今日{X}号 您有{N}节课 第一节课{courseName}于{HH}时{MM}分在{room}上课"
- */
-class DailyNotifyReceiver : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) {
-        if (!hasNotifPermission(context)) return
-        if (!AppPrefs.isReminderEnabled(context) || !AppPrefs.isDailyReminderEnabled(context)) return
-
-        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-            sendDailyNotification(context)
-        }
-    }
-
-    private suspend fun sendDailyNotification(context: Context) {
-        val today = LocalDate.now()
-        val dow = DateUtils.todayDayOfWeek(today)
-
-        val table = com.wedo.schedule.widget.WidgetTableResolver.resolveCurrentTable()
-        val dayOfMonth = today.dayOfMonth
-
-        val title: String
-        val text: String
-
-        if (table == null) {
-            title = context.getString(R.string.notif_daily_title_no_course, dayOfMonth)
-            text = context.getString(R.string.notif_daily_text_no_course)
-        } else {
-            val week = DateUtils.currentWeek(table.startDate, today)
-            // 防呆: 学期范围外不发"今日有课"摘要(钳制周数会误匹配第 1 周的课)
-            val inSemester = DateUtils.semesterStatus(table.startDate, table.maxWeek, today) == DateUtils.SemesterStatus.IN_RANGE
-            val courses = if (!inSemester) emptyList() else WedoApp.get().repository
-                .getCoursesByDayOnce(table.id, dow)
-                .filter { it.inWeek(week) }
-                .sortedBy { it.startNode }
-
-            if (courses.isEmpty()) {
-                title = context.getString(R.string.notif_daily_title_no_course, dayOfMonth)
-                text = context.getString(R.string.notif_daily_text_no_course)
-            } else {
-                title = context.getString(R.string.notif_daily_title, dayOfMonth, courses.size)
-
-                // Build first course info
-                val first = courses.first()
-                val firstTime = getCourseStartTime(first, table)
-                val firstRoom = first.room.ifBlank { context.getString(R.string.notif_room_unknown) }
-                text = context.getString(R.string.notif_daily_text_first,
-                    first.courseName, firstTime, firstRoom)
-            }
-        }
-
-        val notif = NotificationCompat.Builder(context, CourseNotificationScheduler.CHANNEL_DAILY)
-            .setSmallIcon(R.drawable.ic_notification_time)
-            .setContentTitle(title)
-            .setContentText(text)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setContentIntent(openAppIntent(context))
-            .setAutoCancel(true)
-            .build()
-
-        // wedo v1 deliberately has no notification permission or reminder feature.
-        // Keep upstream formatting code compilable, but never post the notification.
-    }
-}
-
-/**
  * Midnight scheduler — sets up individual before-class alarms for the day.
  */
 class BeforeClassScheduleReceiver : BroadcastReceiver() {
@@ -420,17 +268,19 @@ class BeforeClassScheduleReceiver : BroadcastReceiver() {
 
 /**
  * Individual before-class notification — fires N minutes before a class.
- * Content: "下节课{courseName}于{HH}:{MM}在{room}上课"
+ * Content: "下节课{courseName}于{HH}:{MM}在{room}上课"。
+ *
+ * V3 重设计（REQ-P5-03）：流体云/超级岛路径已删除，仅保留标准高优先级通知。
+ * 通知 id 由调度器通过 "notifyId" extra 传入（= NOTIFY_BEFORE_CLASS_BASE + courseId），
+ * 同一门课重复投递会覆盖同一条通知而非堆叠。
  */
 class BeforeClassNotifyReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        android.util.Log.d("BeforeClassNotify", "entered extras=${intent.extras?.keySet()}")
         if (!hasNotifPermission(context)) {
             android.util.Log.w("BeforeClassNotify", "POST_NOTIFICATIONS denied")
             return
         }
         if (!AppPrefs.isReminderEnabled(context) || !AppPrefs.isBeforeClassEnabled(context)) {
-            android.util.Log.w("BeforeClassNotify", "reminder toggles disabled")
             return
         }
 
@@ -439,18 +289,6 @@ class BeforeClassNotifyReceiver : BroadcastReceiver() {
         val startTime = intent.getStringExtra("startTime") ?: ""
         val roomStr = room.ifBlank { context.getString(R.string.notif_room_unknown) }
         val teacher = intent.getStringExtra("teacher") ?: ""
-        val fluid = intent.getBooleanExtra("debug_force_fluid", false) || AppPrefs.isBeforeClassFluidEnabled(context)
-        val banner = AppPrefs.isBeforeClassBannerEnabled(context)
-        if (!banner && !fluid) return
-        val fields = AppPrefs.getBeforeClassFluidFields(context)
-        val fluidText = buildList {
-            if ("name" in fields) add(courseName)
-            if ("time" in fields) add(startTime)
-            if ("room" in fields && room.isNotBlank()) add(roomStr)
-            if ("teacher" in fields && teacher.isNotBlank()) add(teacher)
-        }.ifEmpty { listOf(courseName) }.joinToString("  ·  ")
-        // primaryText / roomTeacherText / timeTeacherText 三个死变量已删
-        // (计算后从未被使用——SDK>=26 路径直接交给 FluidCloudService, fallback 用上面的 fluidText/text)
 
         val text = if (teacher.isBlank()) {
             context.getString(R.string.notif_before_class_text, courseName, startTime, roomStr)
@@ -458,43 +296,32 @@ class BeforeClassNotifyReceiver : BroadcastReceiver() {
             context.getString(R.string.notif_before_class_text_with_teacher, courseName, startTime, roomStr, teacher)
         }
 
-        // == 流体云 / Live Update ==
-        // 所有 SDK>=26 统一走 FluidCloudService：service 的 Handler 每 15s 循环
-        //   re-post ProgressStyle 通知推进 progress，进度条才会持续动。
-        //   旧代码在 SDK>=36 单独静态 post 一次就 return，导致进度条停在 0 不更新。
-
-        // FluidCloudService 接管流体云：前台服务每 15s 循环 re-post ProgressStyle 通知推进进度条。
-        // SDK>=26（含 Android 16）统一走此路径。
-        if (fluid && Build.VERSION.SDK_INT >= 26) {
-            val serviceIntent = Intent(context, FluidCloudService::class.java).apply {
-                putExtra("courseName", courseName)
-                putExtra("room", roomStr)
-                putExtra("teacher", teacher)
-                putExtra("startTime", startTime)
-                putExtra("notifyEpoch", intent.getLongExtra("notifyEpoch", System.currentTimeMillis()))
-                putExtra("classEpoch", intent.getLongExtra("classEpoch", System.currentTimeMillis()))
-            }
-            ContextCompat.startForegroundService(context, serviceIntent)
-            return
+        // 横幅样式：开启 → 高优先级渠道（可触发 heads-up 横幅）；关闭 → 普通渠道（仅通知栏）。
+        val banner = AppPrefs.isBeforeClassBannerEnabled(context)
+        val channel = if (banner) {
+            CourseNotificationScheduler.CHANNEL_BEFORE_CLASS
+        } else {
+            CourseNotificationScheduler.CHANNEL_BEFORE_CLASS_SILENT
         }
 
-        // == Fallback: standard notification ==
-        val notif = NotificationCompat.Builder(context, if (fluid) CourseNotificationScheduler.CHANNEL_FLUID else CourseNotificationScheduler.CHANNEL_BEFORE_CLASS)
+        val notif = NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_notification_time)
-            .setContentTitle(if (fluid) courseName else context.getString(R.string.notif_before_class_title))
-            .setContentText(if (fluid) fluidText else text)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(if (fluid) fluidText else text))
-            .setTicker(if (fluid) fluidText else text)
-            .setSubText(if (fluid) fluidText else null)
-            .setOngoing(fluid)
-            .setOnlyAlertOnce(false)
-            .setPriority(if (fluid) NotificationCompat.PRIORITY_LOW else NotificationCompat.PRIORITY_HIGH)
+            .setContentTitle(context.getString(R.string.notif_before_class_title))
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setPriority(if (banner) NotificationCompat.PRIORITY_HIGH else NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(openAppIntent(context))
             .setAutoCancel(true)
             .build()
 
-        // wedo v1 deliberately has no notification permission or reminder feature.
-        // Keep upstream formatting code compilable, but never post the notification.
+        val notifyId = intent.getIntExtra(
+            "notifyId", CourseNotificationScheduler.NOTIFY_BEFORE_CLASS_BASE
+        )
+        try {
+            NotificationManagerCompat.from(context).notify(notifyId, notif)
+        } catch (_: SecurityException) {
+            // 权限在运行时被撤销：静默忽略，不崩溃
+        }
     }
 }
 
@@ -523,10 +350,3 @@ private fun openAppIntent(context: Context): PendingIntent =
         context, 0, Intent(context, MainActivity::class.java),
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
     )
-
-private fun getCourseStartTime(course: CourseEntity, table: TimeTableEntity): String {
-    if (course.ownTime && course.startTime.isNotBlank()) return course.startTime
-    val nodes = TimeTableUtils.parseNodes(table.timeJson)
-    val node = nodes.find { it.node == course.startNode } ?: return ""
-    return String.format("%02d:%02d", node.start.hour, node.start.minute)
-}

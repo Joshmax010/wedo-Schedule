@@ -16,8 +16,8 @@ class WidgetUpdateWorker(
 
     override suspend fun doWork(): Result {
         WidgetUpdater.notifyDataChanged(applicationContext)
-        // 周期兜底：app 可能长时间不在前台，这里每 15min 检测是否在某节课窗口内，补起流体云
-        try { com.wedo.schedule.WedoApp.get().notificationScheduler.ensureActiveFluidCloud() } catch (_: Throwable) {}
+        // 流体云兜底（ensureActiveFluidCloud）已随 REQ-P4-04 删除；课前提醒由
+        // BeforeClassScheduleReceiver（每日凌晨 00:05）+ BootReceiver（开机/更新）负责调度。
         return Result.success()
     }
 }

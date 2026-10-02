@@ -180,14 +180,14 @@ class JwNewZfParserTest {
     }
 
     @Test
-    fun `html kbgrid_table_0 grid view shiguang structure`() {
+    fun `html kbgrid_table_0 grid view reads cells by id day prefix`() {
         val src = readFixture("grid_dual_view.html")
         val courses = JwNewZfParser(src).generateCourseList()
         assertCourses("grid_dual_view", courses)
     }
 
     @Test
-    fun `html kblist_table list view shiguang structure`() {
+    fun `html kblist_table list view reads rows by tbody day index`() {
         val src = readFixture("list_dual_view.html")
         val courses = JwNewZfParser(src).generateCourseList()
         assertCourses("list_dual_view", courses)

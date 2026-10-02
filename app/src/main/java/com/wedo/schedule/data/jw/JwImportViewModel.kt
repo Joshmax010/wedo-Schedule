@@ -109,6 +109,15 @@ class JwImportViewModel(application: Application) : AndroidViewModel(application
                 status = JwSchoolInfo.STATUS_SUPPORTED,
                 aliases = listOf("吉建大", "JLJU"),
                 enableFetch = true,
+                // 白名单下沉数据层（ADR-4 / §4.3）：三域名逐字不变，取自原 UI 层取证常量。
+                // 严禁通配 —— 只允许这三个精确主机名。
+                authHosts = setOf(
+                    "lxr.jlju.edu.cn",
+                    "cas.jlju.edu.cn",
+                ),
+                jsBridgeHosts = setOf(
+                    "jwxt.jlju.edu.cn",
+                ),
             )
         )
 

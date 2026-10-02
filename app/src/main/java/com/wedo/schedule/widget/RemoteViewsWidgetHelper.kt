@@ -15,11 +15,13 @@ import com.wedo.schedule.R
 /**
  * 同步 RemoteViews 小组件的共享渲染+推送逻辑。
  *
- * 3 个移植自 Glance 的小组件(Today/WeekList/TwoDay) + WeekGrid 全走这条路:
+ * 2 种小组件（今日课程 / 本周课表·网格）全走这条路:
  * goAsync 续命 → 后台加载+画 Canvas bitmap → awm.updateAppWidget 同步推送。
  * 全程在 OPPO OplusHansManager 冻结窗口(~5s)前完成 → 不卡 loading 布局。
  *
- * 各 Receiver 只需提供 [loadData] (同步数据加载) 和 [renderBitmap] (Canvas 画图)。
+ * 各 Receiver 只需提供 [renderAndPush] 的 loadData / renderBitmap 两个 lambda。
+ * （V3 重设计删除的可滚动条带路径 pushScrollable + ScrollStripService 已移除，
+ *   内容超出容器时按容器尺寸渲染、底部裁切。）
  */
 object RemoteViewsWidgetHelper {
 
@@ -95,50 +97,5 @@ object RemoteViewsWidgetHelper {
         // RemoteViews.apply() 失败 → AppWidgetHostView 回落到 "无法加载微件" 错误视图。
         // 改成 next onUpdate 推送新 RemoteViews 时旧 bitmap 自然随 mBitmapCache 一起被 GC。
         Log.d(tag, "renderAndPush id=$widgetId ${wDp}x${hDp}dp → ${wPx}x${hPx}px")
-    }
-
-    /**
-     * 可滚动推送 (v1.0.36 第二次实现) — 内容超出容器时启用。
-     *
-     * 结构: 壳图(原渲染器按容器尺寸画 = 圆角背景+首屏内容, 与主分支静态渲染同一次调用)
-     * + ListView(ScrollStripService 条带, 原渲染器按全展开高度画长图后横切)。
-     * 条带与壳同源 → 滚动位置 0 与主分支静态 widget 像素一致。
-     *
-     * @param shellBitmap 壳图 (调用方用原渲染器按 wDp×hDp 渲染)
-     * @param layoutRes 可滚动容器布局 (含 widget_shell + widget_strip_list)
-     */
-    fun pushScrollable(
-        context: Context,
-        awm: AppWidgetManager,
-        widgetId: Int,
-        tag: String,
-        layoutRes: Int,
-        shellBitmap: Bitmap,
-        scopeExtra: String
-    ) {
-        val views = RemoteViews(context.packageName, layoutRes)
-        views.setImageViewBitmap(R.id.widget_shell, shellBitmap)
-
-        val svcIntent = Intent(context, ScrollStripService::class.java).apply {
-            putExtra(ScrollStripService.StripFactory.EXTRA_WIDGET_ID, widgetId)
-            putExtra(ScrollStripService.StripFactory.EXTRA_SCOPE, scopeExtra)
-            data = android.net.Uri.parse(toUri(Intent.URI_INTENT_SCHEME))
-        }
-        views.setRemoteAdapter(R.id.widget_strip_list, svcIntent)
-
-        val template = PendingIntent.getActivity(
-            context, widgetId,
-            Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            },
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        views.setPendingIntentTemplate(R.id.widget_strip_list, template)
-
-        awm.updateAppWidget(widgetId, views)
-        awm.notifyAppWidgetViewDataChanged(widgetId, R.id.widget_strip_list)
-        // 同样不能 recycle: 壳图经 setImageViewBitmap 持有, 由 RemoteViews.mBitmapCache 引用,
-        // 启动器渲染期间 native pixel 必须有效 (见 renderAndPush 同注释)。
-        Log.d(tag, "pushScrollable id=$widgetId scope=$scopeExtra")
     }
 }

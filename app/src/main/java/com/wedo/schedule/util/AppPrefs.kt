@@ -20,7 +20,14 @@ import kotlinx.coroutines.flow.distinctUntilChanged
  * 进程内 mutableStateOf 同步给 UI，磁盘做持久化。
  */
 object AppPrefs {
-    private const val FILE = "sleepy_prefs"
+    /** 现行偏好文件名 */
+    private const val FILE = "wedo_prefs"
+
+    /** 历史偏好文件名 —— 只用于首次搬迁，不再读写 */
+    private const val LEGACY_FILE = "sleepy_prefs"
+
+    /** 搬迁完成标记：置位后不再去读旧文件 */
+    private const val KEY_LEGACY_MIGRATED = "__legacy_prefs_migrated"
 
     /**
      * 全局 prefs key 变化广播 — UI 用它主动 recompose 而非依赖 SharedPreferences 监听器
@@ -34,14 +41,9 @@ object AppPrefs {
     val changeBus: Flow<String> = _changeBus.asSharedFlow()
     const val KEY_DARK = "dark_mode"
     const val KEY_REMINDER = "reminder_master"      // master toggle (default false)
-    const val KEY_DAILY_ENABLED = "daily_reminder"   // daily sub-toggle (default true)
-    const val KEY_DAILY_TIME = "daily_reminder_time" // "HH:mm" default "07:00"
     const val KEY_BEFORE_CLASS_ENABLED = "before_class_enabled"       // bool default false
     const val KEY_BEFORE_CLASS_MINUTES = "before_class_minutes"       // int default 10
     const val KEY_BEFORE_CLASS_BANNER = "before_class_banner"         // bool default true
-    const val KEY_BEFORE_CLASS_FLUID = "before_class_fluid"            // bool default false
-    const val KEY_BEFORE_CLASS_FLUID_FIELDS = "before_class_fluid_fields" // legacy multi-select
-    const val KEY_BEFORE_CLASS_FLUID_PRIMARY = "before_class_fluid_primary" // name/time/room
     const val KEY_THEME = "theme_key"
     const val KEY_LANG = "language"
     const val KEY_DISPLAY_MODE = "display_mode" // "node" or "time"
@@ -83,8 +85,60 @@ object AppPrefs {
     const val KEY_HOLIDAY_OVERRIDES = "holiday_overrides"           // JSON — 用户范围化覆盖(编辑/新增/删除节日段)
     const val KEY_CONFLICT_DEFAULT_TOP = "conflict_default_top"      // JSON {"day:startNode:step": layerRepId} — 冲突簇默认置顶图层; 默认空 = 全由 primaryComparator 决
 
-    private fun sp(ctx: Context): SharedPreferences =
-        ctx.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+    /**
+     * App 偏好文件入口（HolidayManager 等也读这一份，共用同一个文件实例）。
+     *
+     * 首次访问时顺带完成历史 `sleepy_prefs` → `wedo_prefs` 的搬迁。
+     */
+    internal fun sharedPrefs(ctx: Context): SharedPreferences {
+        val prefs = ctx.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        migrateLegacyPrefs(ctx.applicationContext, prefs)
+        return prefs
+    }
+
+    /**
+     * 把历史 `sleepy_prefs` 里的键搬迁到 `wedo_prefs`。
+     *
+     * **为什么必须搬**：改文件名常量本身不丢数据，但也就**读不到了**。用户升级后会
+     * 看着设置全部复位 —— 深浅模式、强调色、提醒时间、显示设置统统回默认值，
+     * 课表数据还在，观感却像「App 被重置了」。
+     *
+     * 三条刻意的约束：
+     *  1. **新文件优先**：只补旧文件里有、新文件里没有的键。若用户在新版本里已经
+     *     改过某个设置，不会被旧值覆盖。
+     *  2. **旧文件不删**：用户回滚到旧版本时，设置还能读回来。
+     *  3. **只搬一次**：成功后在新文件里打标记，之后不再触碰旧文件
+     *     （否则每次读偏好都要多开一个 SharedPreferences 实例）。
+     */
+    private fun migrateLegacyPrefs(ctx: Context, target: SharedPreferences) {
+        if (target.getBoolean(KEY_LEGACY_MIGRATED, false)) return
+
+        val snapshot = ctx.getSharedPreferences(LEGACY_FILE, Context.MODE_PRIVATE).all
+        val editor = target.edit()
+        for ((key, value) in snapshot) {
+            if (target.contains(key)) continue
+            when (value) {
+                is String -> editor.putString(key, value)
+                is Int -> editor.putInt(key, value)
+                is Boolean -> editor.putBoolean(key, value)
+                is Long -> editor.putLong(key, value)
+                is Float -> editor.putFloat(key, value)
+                // SharedPreferences 只支持 String / Int / Boolean / Long / Float / Set<String> 六类；
+                // 旧文件里的字符串集合需显式转成 Set<String> 才能回写。
+                is Set<*> -> editor.putStringSet(key, value.filterIsInstance<String>().toSet())
+                else -> Unit  // 其他类型 SharedPreferences 本就不支持
+            }
+        }
+        editor.putBoolean(KEY_LEGACY_MIGRATED, true).apply()
+    }
+
+    private fun sp(ctx: Context): SharedPreferences = sharedPrefs(ctx)
+
+    /**
+     * 仅供单测断言文件名常量，不参与运行时逻辑。
+     * 常量本身是 `private`，从 JVM 单测无法直接读。
+     */
+    internal fun resolvePrefsFileNameForTest(): String = FILE
 
     /** 实际是否深色：dark→true, light→false, system→isSystemDark。isSystemDark 由调用方传入。 */
     fun isDarkMode(ctx: Context, isSystemDark: Boolean = false): Boolean {
@@ -151,22 +205,6 @@ object AppPrefs {
         sp(ctx).edit().putBoolean(KEY_REMINDER, v).apply()
     }
 
-    /** Daily reminder sub-toggle — default true (only active when master on) */
-    fun isDailyReminderEnabled(ctx: Context): Boolean =
-        sp(ctx).getBoolean(KEY_DAILY_ENABLED, true)
-
-    fun setDailyReminderEnabled(ctx: Context, v: Boolean) {
-        sp(ctx).edit().putBoolean(KEY_DAILY_ENABLED, v).apply()
-    }
-
-    /** Daily reminder time "HH:mm" — default "07:00" */
-    fun getDailyReminderTime(ctx: Context): String =
-        sp(ctx).getString(KEY_DAILY_TIME, "07:00") ?: "07:00"
-
-    fun setDailyReminderTime(ctx: Context, time: String) {
-        sp(ctx).edit().putString(KEY_DAILY_TIME, time).apply()
-    }
-
     /** Before-class reminder sub-toggle — default false */
     fun isBeforeClassEnabled(ctx: Context): Boolean =
         sp(ctx).getBoolean(KEY_BEFORE_CLASS_ENABLED, false)
@@ -183,33 +221,12 @@ object AppPrefs {
         sp(ctx).edit().putInt(KEY_BEFORE_CLASS_MINUTES, minutes).apply()
     }
 
+    /** 横幅提醒样式 — default true（开启时课前通知以悬浮横幅 heads-up 呈现） */
     fun isBeforeClassBannerEnabled(ctx: Context): Boolean =
         sp(ctx).getBoolean(KEY_BEFORE_CLASS_BANNER, true)
 
     fun setBeforeClassBannerEnabled(ctx: Context, v: Boolean) {
         sp(ctx).edit().putBoolean(KEY_BEFORE_CLASS_BANNER, v).apply()
-    }
-
-    fun isBeforeClassFluidEnabled(ctx: Context): Boolean =
-        sp(ctx).getBoolean(KEY_BEFORE_CLASS_FLUID, false)
-
-    fun setBeforeClassFluidEnabled(ctx: Context, v: Boolean) {
-        sp(ctx).edit().putBoolean(KEY_BEFORE_CLASS_FLUID, v).apply()
-    }
-
-    fun getBeforeClassFluidFields(ctx: Context): Set<String> =
-        (sp(ctx).getString(KEY_BEFORE_CLASS_FLUID_FIELDS, "name,time,room,teacher")
-            ?: "name,time,room,teacher").split(",").filter { it.isNotBlank() }.toSet()
-
-    // setBeforeClassFluidFields 死写路径已删（legacy 多选写入口, 全库零调用; 读取仅 BeforeClassNotifyReceiver 用旧数据）
-
-    fun getBeforeClassFluidPrimary(ctx: Context): String =
-        sp(ctx).getString(KEY_BEFORE_CLASS_FLUID_PRIMARY, "room") ?: "room"
-
-    fun setBeforeClassFluidPrimary(ctx: Context, value: String) {
-        require(value == "name" || value == "time" || value == "room")
-        // 只写 PRIMARY；不再覆盖 FIELDS（多选字段集），否则用户配置的多字段组合被冲掉。
-        sp(ctx).edit().putString(KEY_BEFORE_CLASS_FLUID_PRIMARY, value).apply()
     }
 
 
@@ -548,4 +565,5 @@ object AppPrefs {
     fun setUpdateCheckEnabled(ctx: Context, v: Boolean) {
         sp(ctx).edit().putBoolean(KEY_UPDATE_CHECK_ENABLED, v).apply()
     }
+
 }

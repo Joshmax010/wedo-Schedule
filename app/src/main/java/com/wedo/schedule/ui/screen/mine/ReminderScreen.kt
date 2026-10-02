@@ -12,34 +12,23 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.AccessTime
-import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.School
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.TextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TimePicker
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -56,12 +45,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import com.wedo.schedule.ui.theme.WedoAppleType
 import com.wedo.schedule.R
 import com.wedo.schedule.WedoApp
 import com.wedo.schedule.ui.component.WedoToggle
+import com.wedo.schedule.ui.theme.WedoAppleType
 import com.wedo.schedule.ui.theme.WedoTheme
-import com.wedo.schedule.ui.theme.noRippleClickable
 import com.wedo.schedule.util.AppPrefs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -69,6 +57,13 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+/**
+ * 提醒设置页 — V3 重设计（REQ-P5-03 / REQ-P5-04）。
+ *
+ * 仅保留**每节课前提醒**：主开关 + 课前提醒开关 + 提前分钟数 + 横幅样式。
+ * 「每日提醒」（旧 [DailyNotifyReceiver]）与「流体云 / 超级岛」（旧 `FluidCloudService`）
+ * 已随 REQ-P5-04 / REQ-P4-04 删除，对应 UI 段一并移除，避免开关空转误导用户。
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReminderScreen(onBack: () -> Unit) {
@@ -76,16 +71,10 @@ fun ReminderScreen(onBack: () -> Unit) {
     val context = LocalContext.current
 
     var masterEnabled by remember { mutableStateOf(AppPrefs.isReminderEnabled(context)) }
-    var dailyEnabled by remember { mutableStateOf(AppPrefs.isDailyReminderEnabled(context)) }
-    var dailyTime by remember { mutableStateOf(AppPrefs.getDailyReminderTime(context)) }
     var beforeClassEnabled by remember { mutableStateOf(AppPrefs.isBeforeClassEnabled(context)) }
     var beforeClassMinutes by remember { mutableStateOf(AppPrefs.getBeforeClassMinutes(context)) }
-    var showTimePicker by remember { mutableStateOf(false) }
     var minutesInput by remember { mutableStateOf(beforeClassMinutes.toString()) }
-    var fluidEnabled by remember { mutableStateOf(AppPrefs.isBeforeClassFluidEnabled(context)) }
     var bannerEnabled by remember { mutableStateOf(AppPrefs.isBeforeClassBannerEnabled(context)) }
-    var fluidPrimary by remember { mutableStateOf(AppPrefs.getBeforeClassFluidPrimary(context)) }
-    var fieldsMenuExpanded by remember { mutableStateOf(false) }
 
     // debounce：分钟输入停止 500ms 后才持久化并重排提醒，
     //   避免每敲一键就触发一次全量 cancelAll + scheduleAll（查库 + 重排全部闹钟）。
@@ -141,7 +130,7 @@ fun ReminderScreen(onBack: () -> Unit) {
             }
         } else {
             // 关闭 master 只设 reminder_master=false + cancelAll(); scheduleAll 与各 Receiver 均双重检查
-            //   isReminderEnabled, 无需覆写子开关(否则重开 master 后 daily/beforeClass 配置全丢)。
+            //   isReminderEnabled, 无需覆写子开关(否则重开 master 后 beforeClass 配置全丢)。
             masterEnabled = false
             AppPrefs.setReminderEnabled(context, false)
             // cancelAll 现为 suspend，由 IO 协程调用，避免主线程查库阻塞
@@ -212,73 +201,6 @@ fun ReminderScreen(onBack: () -> Unit) {
 
             // Sub-settings — only visible when master is on
             if (masterEnabled) {
-                // Daily reminder
-                item {
-                    ReminderCard {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                IconBox(icon = Icons.Outlined.AccessTime, color = colors.primary)
-                                Spacer(modifier = Modifier.size(12.dp))
-                                Column {
-                                    Text(
-                                        text = stringResource(R.string.reminder_daily_title),
-                                        style = WedoAppleType.body().copy(fontWeight = FontWeight.SemiBold),
-                                        color = colors.onSurface
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.reminder_daily_sub),
-                                        style = WedoAppleType.footnote(),
-                                        color = colors.onSurfaceVariant
-                                    )
-                                }
-                            }
-                            WedoToggle(
-                                checked = dailyEnabled,
-                                onCheckedChange = { on ->
-                                    dailyEnabled = on
-                                    AppPrefs.setDailyReminderEnabled(context, on)
-                                    WedoApp.get().notificationScheduler.scheduleAll()
-                                }
-                            )
-                        }
-
-                        if (dailyEnabled) {
-                            SubDivider()
-                            // Time picker row
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .noRippleClickable { showTimePicker = true }
-                                    .padding(vertical = 12.dp, horizontal = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.reminder_daily_time_label),
-                                    style = WedoAppleType.subheadline(),
-                                    color = colors.onSurface
-                                )
-                                Text(
-                                    text = dailyTime,
-                                    style = WedoAppleType.body().copy(fontWeight = FontWeight.Medium),
-                                    color = colors.primary
-                                )
-                            }
-                            SubDivider()
-                            Text(
-                                text = stringResource(R.string.reminder_daily_preview),
-                                style = WedoAppleType.footnote(),
-                                color = colors.onSurfaceVariant,
-                                modifier = Modifier.padding(start = 52.dp, top = 8.dp, bottom = 8.dp, end = 4.dp)
-                            )
-                        }
-                    }
-                }
-
                 // Before-class reminder
                 item {
                     ReminderCard {
@@ -361,6 +283,8 @@ fun ReminderScreen(onBack: () -> Unit) {
                                 modifier = Modifier.padding(start = 52.dp, top = 8.dp, bottom = 8.dp, end = 4.dp)
                             )
                             SubDivider()
+                            // 横幅样式：开关「横幅提醒」决定课前通知是否以悬浮横幅（heads-up）呈现。
+                            // 后端按此设置选择高优先级 / 普通优先级通知渠道。
                             ReminderToggleRow(
                                 title = stringResource(R.string.reminder_banner_title),
                                 subtitle = stringResource(R.string.reminder_banner_sub),
@@ -371,124 +295,11 @@ fun ReminderScreen(onBack: () -> Unit) {
                                     WedoApp.get().notificationScheduler.scheduleAll()
                                 }
                             )
-                            SubDivider()
-                            ReminderToggleRow(
-                                title = stringResource(R.string.reminder_fluid_title),
-                                subtitle = stringResource(R.string.reminder_fluid_sub),
-                                checked = fluidEnabled,
-                                onCheckedChange = {
-                                    fluidEnabled = it
-                                    AppPrefs.setBeforeClassFluidEnabled(context, it)
-                                    WedoApp.get().notificationScheduler.scheduleAll()
-                                }
-                            )
-                            if (fluidEnabled) {
-                                SubDivider()
-                                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp)) {
-                                    Text(
-                                        text = stringResource(R.string.reminder_fluid_fields),
-                                        style = WedoAppleType.subheadline(),
-                                        color = colors.onSurface
-                                    )
-                                    Spacer(modifier = Modifier.height(6.dp))
-                                    androidx.compose.foundation.layout.Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clip(WedoTheme.fieldShape)
-                                            .noRippleClickable { fieldsMenuExpanded = true }
-                                    ) {
-                                        TextField(
-                                            value = fluidPrimaryLabel(context, fluidPrimary),
-                                            onValueChange = {},
-                                            readOnly = true,
-                                            enabled = false,
-                                            modifier = Modifier.fillMaxWidth(),
-                                            label = { Text(stringResource(R.string.reminder_fluid_fields_hint)) },
-                                            trailingIcon = {
-                                                Icon(Icons.Outlined.ExpandMore, contentDescription = null, tint = colors.onSurfaceVariant)
-                                            },
-                                            shape = WedoTheme.fieldShape,
-                                            colors = WedoTheme.fieldColors()
-                                        )
-                                        DropdownMenu(
-                                            expanded = fieldsMenuExpanded,
-                                            onDismissRequest = { fieldsMenuExpanded = false },
-                                            // 菜单浮在 surfaceContainer 卡片上, 用 Highest 拉开对比(默认 High 与卡片几乎同色=隐形)
-                                            containerColor = colors.surfaceContainerHighest
-                                        ) {
-                                            listOf(
-                                                "name" to R.string.reminder_fluid_field_name,
-                                                "time" to R.string.reminder_fluid_field_time,
-                                                "room" to R.string.reminder_fluid_field_room
-                                            ).forEach { (key, labelRes) ->
-                                                DropdownMenuItem(
-                                                    text = { Text(stringResource(labelRes)) },
-                                                    onClick = {
-                                                        fluidPrimary = key
-                                                        AppPrefs.setBeforeClassFluidPrimary(context, key)
-                                                        WedoApp.get().notificationScheduler.scheduleAll()
-                                                        fieldsMenuExpanded = false
-                                                    },
-                                                    leadingIcon = {
-                                                        RadioButton(
-                                                            selected = key == fluidPrimary,
-                                                            onClick = null
-                                                        )
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
-                                    Text(
-                                        text = stringResource(R.string.reminder_fluid_note),
-                                        style = WedoAppleType.footnote(),
-                                        color = colors.onSurfaceVariant,
-                                        modifier = Modifier.padding(top = 6.dp)
-                                    )
-                                }
-                            }
                         }
                     }
                 }
             }
         }
-    }
-
-    // Time picker dialog
-    if (showTimePicker) {
-        val parts = dailyTime.split(":")
-        val timeState = rememberTimePickerState(
-            initialHour = parts.getOrNull(0)?.toIntOrNull() ?: 7,
-            initialMinute = parts.getOrNull(1)?.toIntOrNull() ?: 0,
-            is24Hour = true
-        )
-        AlertDialog(
-            onDismissRequest = { showTimePicker = false },
-            title = { Text(stringResource(R.string.reminder_pick_time)) },
-            text = {
-                // 默认 TimePicker 配色 — 与 TimePickerField 弹窗一致, 不再单独覆写表盘色
-                TimePicker(state = timeState)
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    val h = String.format("%02d", timeState.hour)
-                    val m = String.format("%02d", timeState.minute)
-                    dailyTime = "$h:$m"
-                    AppPrefs.setDailyReminderTime(context, dailyTime)
-                    WedoApp.get().notificationScheduler.scheduleAll()
-                    showTimePicker = false
-                }) {
-                    Text(stringResource(R.string.action_confirm))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showTimePicker = false }) {
-                    Text(stringResource(R.string.action_cancel))
-                }
-            },
-            titleContentColor = colors.onSurface,
-            textContentColor = colors.onSurfaceVariant
-        )
     }
 }
 
@@ -508,15 +319,6 @@ private fun ReminderToggleRow(title: String, subtitle: String, checked: Boolean,
         WedoToggle(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
-
-private fun fluidPrimaryLabel(context: android.content.Context, primary: String): String =
-    context.getString(
-        when (primary) {
-            "name" -> R.string.reminder_fluid_field_name
-            "time" -> R.string.reminder_fluid_field_time
-            else -> R.string.reminder_fluid_field_room
-        }
-    )
 
 @Composable
 private fun ReminderCard(content: @Composable () -> Unit) {

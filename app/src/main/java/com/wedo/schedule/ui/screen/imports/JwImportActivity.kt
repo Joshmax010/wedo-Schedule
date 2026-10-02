@@ -5,19 +5,25 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -25,6 +31,7 @@ import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,9 +44,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.wedo.schedule.ui.theme.WedoAppleType
+import com.wedo.schedule.MainActivity
 import com.wedo.schedule.WedoApp
 import com.wedo.schedule.data.entity.CourseEntity
+import com.wedo.schedule.ui.component.WedoIconButton
+import com.wedo.schedule.ui.component.WedoPrimaryButton
 import com.wedo.schedule.data.jw.JwCourse
 import com.wedo.schedule.data.jw.JwImportViewModel
 import com.wedo.schedule.data.jw.JwParseDiagnostics
@@ -49,6 +58,8 @@ import com.wedo.schedule.data.parser.ScheduleParser
 import com.wedo.schedule.ui.component.DatePickerField
 import com.wedo.schedule.ui.component.TimeSlotEditor
 import com.wedo.schedule.ui.screen.schedule.ScheduleViewModel
+import com.wedo.schedule.ui.theme.WedoAppleDimensions
+import com.wedo.schedule.ui.theme.WedoAppleType
 import com.wedo.schedule.ui.theme.WedoTheme
 import com.wedo.schedule.ui.theme.WedoThemeProvider
 import com.wedo.schedule.util.AppPrefs
@@ -83,7 +94,7 @@ class JwImportActivity : ComponentActivity() {
                 val scope = rememberCoroutineScope()
 
                 var selectedSchool by remember { mutableStateOf<JwSchoolInfo?>(null) }
-                var stage by remember { mutableStateOf<Stage>(Stage.SelectSchool) }
+                var stage by remember { mutableStateOf(JwImportStage.SELECT_SCHOOL) }
                 var errorMsg by remember { mutableStateOf<String?>(null) }
                 var statusMsg by remember { mutableStateOf<String?>(null) }
                 var importFinished by remember { mutableStateOf(false) }
@@ -105,127 +116,144 @@ class JwImportActivity : ComponentActivity() {
                         LaunchedEffect(Unit) { finish() }
                     }
 
-                    stage is Stage.ConfigureConfirm && parsedCourses.isNotEmpty() -> {
+                    stage == JwImportStage.CONFIGURE_CONFIRM && parsedCourses.isNotEmpty() -> {
                         val school = parsedSchool
                         if (school == null) {
-                            stage = Stage.WebViewLogin
+                            stage = JwImportStage.WEBVIEW_LOGIN
                             parsedCourses = emptyList()
                         } else {
                         val colors = WedoTheme.colors
                         var confirmError by remember { mutableStateOf<String?>(null) }
-                        AlertDialog(
-                            onDismissRequest = {
-                                stage = Stage.WebViewLogin
-                                parsedCourses = emptyList()
-                            },
-                            title = {
+                        // 2026-10-01 真机反馈：确认页从 Material AlertDialog 改为**全屏页**——
+                        // 日期选择 + 表名 + 12 节课作息编辑在弹窗里挤成一团，且完全没走令牌体系。
+                        Column(Modifier.fillMaxSize()) {
+                            // 顶栏：返回 + 标题 + 课程数
+                            Row(
+                                Modifier.fillMaxWidth()
+                                    .padding(horizontal = WedoAppleDimensions.pageMargin, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                WedoIconButton(
+                                    Icons.AutoMirrored.Outlined.ArrowBack,
+                                    description = getString(R.string.back),
+                                    onClick = {
+                                        stage = JwImportStage.WEBVIEW_LOGIN
+                                        parsedCourses = emptyList()
+                                    }
+                                )
+                                Spacer(Modifier.width(8.dp))
                                 Column {
-                                    Text(getString(R.string.jw_config_title), color = colors.onSurface)
-                                    Spacer(Modifier.height(4.dp))
+                                    Text(getString(R.string.jw_config_title), style = WedoAppleType.title3(), color = colors.onSurface)
                                     Text(
                                         text = "${parsedCourses.size} ${getString(R.string.import_courses)}",
                                         style = WedoAppleType.footnote(),
                                         color = colors.onSurfaceVariant
                                     )
                                 }
-                            },
-                            text = {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .heightIn(max = 360.dp)
-                                        .verticalScroll(rememberScrollState()),
-                                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    DatePickerField(
-                                        value = configStartDate,
-                                        onValueChange = { configStartDate = it },
-                                        label = getString(R.string.import_week_start),
-                                        modifier = Modifier.fillMaxWidth(),
-                                        isError = confirmError != null
-                                    )
-                                    // 用户可改的导入课表名 — 教务直连此前无任何命名入口,
-                                    // 硬编码成 "教务导入 - {学校名}" 后用户改名要进课表管理.
-                                    // 此次把命名入口放到导入前, 落库前最后一次修改机会.
-                                    TextField(
-                                        value = configTableName,
-                                        onValueChange = { configTableName = it },
-                                        label = { Text(getString(R.string.jw_table_name_label)) },
-                                        singleLine = true,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                    if (confirmError != null) {
-                                        Text(text = confirmError!!, color = colors.error, style = WedoAppleType.footnote())
-                                    }
-                                    TimeSlotEditor(
-                                        rows = configRows,
-                                        onRowsChange = { newRows ->
-                                            configRows = newRows
-                                            configTimeJson = TimeTableUtils.buildTimeJsonFromRows(newRows)
-                                        }
-                                    )
+                            }
+                            // 内容（可滚动）
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f)
+                                    .verticalScroll(rememberScrollState())
+                                    .padding(horizontal = WedoAppleDimensions.pageMargin),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                DatePickerField(
+                                    value = configStartDate,
+                                    onValueChange = { configStartDate = it },
+                                    label = getString(R.string.import_week_start),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    isError = confirmError != null
+                                )
+                                // 用户可改的导入课表名 — 教务直连此前无任何命名入口,
+                                // 硬编码成 "教务导入 - {学校名}" 后用户改名要进课表管理.
+                                // 此次把命名入口放到导入前, 落库前最后一次修改机会.
+                                TextField(
+                                    value = configTableName,
+                                    onValueChange = { configTableName = it },
+                                    label = { Text(getString(R.string.jw_table_name_label)) },
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                if (confirmError != null) {
+                                    Text(text = confirmError!!, color = colors.error, style = WedoAppleType.footnote())
                                 }
-                            },
-                            confirmButton = {
+                                TimeSlotEditor(
+                                    rows = configRows,
+                                    onRowsChange = { newRows ->
+                                        configRows = newRows
+                                        configTimeJson = TimeTableUtils.buildTimeJsonFromRows(newRows)
+                                    }
+                                )
+                            }
+                            // 底部动作：返回（次级）+ 确认导入（主 CTA）
+                            Row(
+                                Modifier.fillMaxWidth()
+                                    .padding(horizontal = WedoAppleDimensions.pageMargin, vertical = 12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 TextButton(onClick = {
-                                    if (configStartDate.isBlank() || !Regex("""^\d{4}-\d{2}-\d{2}$""").matches(configStartDate)) {
-                                        confirmError = getString(R.string.start_date_format)
-                                        return@TextButton
-                                    }
-                                    val emptyRows = configRows.filter { it.start.isBlank() || it.end.isBlank() }
-                                    if (emptyRows.isNotEmpty()) {
-                                        confirmError = getString(R.string.slot_time_required, emptyRows.first().node)
-                                        return@TextButton
-                                    }
-                                    val invalidRows = configRows.filter {
-                                        !Regex("""^\d{2}:\d{2}$""").matches(it.start) || !Regex("""^\d{2}:\d{2}$""").matches(it.end) || it.start >= it.end
-                                    }
-                                    if (invalidRows.isNotEmpty()) {
-                                        confirmError = getString(R.string.slot_time_invalid, invalidRows.first().node)
-                                        return@TextButton
-                                    }
-                                    confirmError = null
-                                    configTimeJson = TimeTableUtils.buildTimeJsonFromRows(configRows)
-                                    // 落库
-                                    statusMsg = getString(R.string.import_parsing)
-                                    scope.launch {
-                                        try {
-                                            val maxNode = configRows.maxOfOrNull { it.node } ?: 0
-                                            val tableId = jwViewModel.importAsNewTable(
-                                                courses = parsedCourses,
-                                                tableName = configTableName.ifBlank {
-                                                    getString(R.string.jw_import_title, school.name)
-                                                },
-                                                startDate = configStartDate,
-                                                timeJson = configTimeJson,
-                                                nodesPerDay = maxNode
-                                            )
-                                            Log.d("JwImport", "importAsNewTable tableId=$tableId courses=${parsedCourses.size}")
-                                            statusMsg = getString(R.string.jw_import_success, parsedCourses.size)
-                                            importFinished = true
-                                        } catch (_: Exception) {
-                                            Log.e("JwImport", "import failed code=E_LOCAL_STORAGE")
-                                            errorMsg = getString(R.string.jw_parse_failed, "E_LOCAL_STORAGE")
-                                            statusMsg = null
-                                        }
-                                    }
-                                }) {
-                                    Text(getString(R.string.jw_config_confirm))
-                                }
-                            },
-                            dismissButton = {
-                                TextButton(onClick = {
-                                    stage = Stage.WebViewLogin
+                                    stage = JwImportStage.WEBVIEW_LOGIN
                                     parsedCourses = emptyList()
                                 }) {
-                                    Text(getString(R.string.back))
+                                    Text(getString(R.string.back), color = colors.onSurfaceVariant)
                                 }
+                                WedoPrimaryButton(
+                                    text = getString(R.string.jw_config_confirm),
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        if (configStartDate.isBlank() || !Regex("""^\d{4}-\d{2}-\d{2}$""").matches(configStartDate)) {
+                                            confirmError = getString(R.string.start_date_format)
+                                            return@WedoPrimaryButton
+                                        }
+                                        val emptyRows = configRows.filter { it.start.isBlank() || it.end.isBlank() }
+                                        if (emptyRows.isNotEmpty()) {
+                                            confirmError = getString(R.string.slot_time_required, emptyRows.first().node)
+                                            return@WedoPrimaryButton
+                                        }
+                                        val invalidRows = configRows.filter {
+                                            !Regex("""^\d{2}:\d{2}$""").matches(it.start) || !Regex("""^\d{2}:\d{2}$""").matches(it.end) || it.start >= it.end
+                                        }
+                                        if (invalidRows.isNotEmpty()) {
+                                            confirmError = getString(R.string.slot_time_invalid, invalidRows.first().node)
+                                            return@WedoPrimaryButton
+                                        }
+                                        confirmError = null
+                                        configTimeJson = TimeTableUtils.buildTimeJsonFromRows(configRows)
+                                        // 落库
+                                        statusMsg = getString(R.string.import_parsing)
+                                        scope.launch {
+                                            try {
+                                                val maxNode = configRows.maxOfOrNull { it.node } ?: 0
+                                                val tableId = jwViewModel.importAsNewTable(
+                                                    courses = parsedCourses,
+                                                    tableName = configTableName.ifBlank {
+                                                        getString(R.string.jw_import_title, school.name)
+                                                    },
+                                                    startDate = configStartDate,
+                                                    timeJson = configTimeJson,
+                                                    nodesPerDay = maxNode
+                                                )
+                                                Log.d("JwImport", "importAsNewTable tableId=$tableId courses=${parsedCourses.size}")
+                                                statusMsg = getString(R.string.jw_import_success, parsedCourses.size)
+                                                importFinished = true
+                                            } catch (_: Exception) {
+                                                Log.e("JwImport", "import failed code=E_LOCAL_STORAGE")
+                                                errorMsg = getString(R.string.jw_parse_failed, "E_LOCAL_STORAGE")
+                                                statusMsg = null
+                                            }
+                                        }
+                                    }
+                                )
                             }
-                        )
+                        }
                         } // end else (school != null)
                     }
 
-                    stage is Stage.SelectSchool -> {
+                    stage == JwImportStage.SELECT_SCHOOL -> {
                         SchoolSelectScreen(
                             onSchoolSelected = { school ->
                                 if (school.url.isBlank()) {
@@ -233,16 +261,17 @@ class JwImportActivity : ComponentActivity() {
                                     return@SchoolSelectScreen
                                 }
                                 selectedSchool = school
-                                stage = Stage.WebViewLogin
+                                stage = JwImportStageMachine.onSchoolSelected()
                             },
                             onBack = { finish() }
                         )
                     }
 
-                    stage is Stage.WebViewLogin -> {
+                    stage == JwImportStage.WEBVIEW_LOGIN -> {
                         val school = selectedSchool
                         if (school == null) {
-                            stage = Stage.SelectSchool
+                            // 选校丢失（不应发生）：退回上一有效阶段（选校）。
+                            stage = JwImportStageMachine.onBack(stage)
                         } else {
                             JwWebViewLoginScreen(
                                 school = school,
@@ -255,6 +284,8 @@ class JwImportActivity : ComponentActivity() {
                                         try {
                                             val courses = jwViewModel.parseHtml(payload, effectiveType ?: "")
                                             Log.d("JwImport", "parseHtml returned ${courses.size} courses")
+                                            // REQ-P2-06：解析为空/失败一律停在登录页（保留会话上下文），绝不退回选校。
+                                            stage = JwImportStageMachine.onPayloadParsed(courses.size)
                                             if (courses.isEmpty()) {
                                                 errorMsg = getString(R.string.jw_err_empty_semester)
                                                 statusMsg = null
@@ -274,12 +305,11 @@ class JwImportActivity : ComponentActivity() {
                                             }
                                             configStartDate = ""
                                             configTimeJson = ""
-                                            stage = Stage.ConfigureConfirm
                                             statusMsg = null
                                         } catch (_: Exception) {
-                                            // Parser exceptions can contain response fragments. Keep logs and UI
-                                            // diagnostic-only instead of reflecting exception messages.
+                                            // Parser 异常可能含响应片段：只回显错误 code，绝不回显异常内容/响应片段。
                                             Log.e("JwImport", "parse failed code=E_PARSE_FORMAT")
+                                            stage = JwImportStageMachine.onCaptureFailed(stage)
                                             errorMsg = getString(R.string.jw_parse_failed, "E_PARSE_FORMAT") + getString(R.string.jw_parse_failed_hint)
                                             statusMsg = null
                                         }
@@ -287,17 +317,40 @@ class JwImportActivity : ComponentActivity() {
                                 },
                                 onCaptureError = { hint ->
                                     Log.w("JwImport", "capture failed hint=$hint")
+                                    // REQ-P2-06：抓取失败停在登录页以上下文重试。
+                                    stage = JwImportStageMachine.onCaptureFailed(stage)
                                     errorMsg = getString(R.string.jw_parse_empty)
                                     statusMsg = null
                                 },
-                                onBack = { stage = Stage.SelectSchool }
+                                onBack = { stage = JwImportStageMachine.onBack(stage) }
                             )
                         }
                     }
                 }
 
-                // 错误与状态提示：直接显示在中央 errorMsg + 底部 statusMsg
-                errorMsg?.let { msg ->
+                // 失败提示（REQ-P2-03）：抓取/解析失败 → **可操作失败页**（原因 + 下一步动作）；
+                // 非抓取失败（选校无 URL / 落库失败）→ 沿用最小提示卡。
+                val msg = errorMsg
+                if (msg != null && stage == JwImportStage.WEBVIEW_LOGIN) {
+                    JwFailureCard(
+                        reason = msg,
+                        onRetry = {
+                            // REQ-P2-07：关闭失败页回到 WebView（仍停在原页面），提示用户停在个人课表页。
+                            errorMsg = null
+                            stage = JwImportStageMachine.onCaptureFailed(stage)
+                        },
+                        onUseFileImport = {
+                            // REQ-P2-03：跨 Activity 进 TASK-02 的 ImportWizard（复用 MainActivity extra 通道）。
+                            startActivity(MainActivity.intentForImportWizard(this@JwImportActivity))
+                            finish()
+                        },
+                        onManualAdd = {
+                            // REQ-P2-03：跨 Activity 进 AddCourse（复用 MainActivity extra 通道）。
+                            startActivity(MainActivity.intentForManualAdd(this@JwImportActivity))
+                            finish()
+                        },
+                    )
+                } else if (msg != null) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -334,11 +387,91 @@ class JwImportActivity : ComponentActivity() {
             }
         }
     }
+}
 
-    private sealed class Stage {
-        object SelectSchool : Stage()
-        object WebViewLogin : Stage()
-        object ConfigureConfirm : Stage()
+/**
+ * 可操作失败页（REQ-P2-03 / REQ-P2-07）。
+ *
+ * 结构固定为「**原因**（来自 DiagMapper 的诊断文案）+ **下一步动作**」：
+ *   - 重试抓取（回到 WebView，提示停在「个人课表」页）
+ *   - 改用文件导入（进 `ImportWizard`）
+ *   - 手动添加课程（进 `AddCourse`）
+ *
+ * 红线：这里只显示 [reason]（调用方已保证只含错误 code 与诊断特征），
+ * **绝不**回显响应内容 / 学号 / 姓名 / Cookie / token / HTML。
+ * 三个按钮均为带文字标签的 Material3 [Button]（TalkBack 可读），触控目标 ≥ [WedoAppleDimensions.minTouchTarget]。
+ */
+@Composable
+private fun JwFailureCard(
+    reason: String,
+    onRetry: () -> Unit,
+    onUseFileImport: () -> Unit,
+    onManualAdd: () -> Unit,
+) {
+    val colors = WedoTheme.colors
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(colors.background)
+            .padding(WedoAppleDimensions.pageMargin),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.jw_failure_title),
+                style = WedoAppleType.title3(),
+                color = colors.onSurface
+            )
+            Text(
+                text = reason,
+                style = WedoAppleType.subheadline(),
+                color = colors.onSurfaceVariant
+            )
+            Text(
+                text = stringResource(R.string.jw_failure_retry_hint),
+                style = WedoAppleType.footnote(),
+                color = colors.onSurfaceVariant
+            )
+            FailureActionButton(
+                text = stringResource(R.string.jw_failure_retry),
+                primary = true,
+                onClick = onRetry
+            )
+            FailureActionButton(
+                text = stringResource(R.string.jw_failure_use_file),
+                primary = false,
+                onClick = onUseFileImport
+            )
+            FailureActionButton(
+                text = stringResource(R.string.jw_failure_manual_add),
+                primary = false,
+                onClick = onManualAdd
+            )
+        }
+    }
+}
+
+/** 失败页动作按钮 —— 引用主题令牌，触控目标 ≥ `WedoAppleDimensions.minTouchTarget`。 */
+@Composable
+private fun FailureActionButton(text: String, primary: Boolean, onClick: () -> Unit) {
+    val colors = WedoTheme.colors
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = WedoAppleDimensions.minTouchTarget),
+        shape = WedoTheme.shapes.extraLarge,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (primary) colors.primary else colors.surfaceContainerHigh,
+            contentColor = if (primary) colors.onPrimary else colors.onSurface
+        )
+    ) {
+        Text(text = text, style = WedoAppleType.headline())
     }
 }
 
