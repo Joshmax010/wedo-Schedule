@@ -403,33 +403,14 @@ private fun AddBreakChip(
     onAdd: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    FilterChip(
+    // 2026-10-06 真机反馈：原为 Material FilterChip（M3 长相）→ 全 app 统一用 WedoChip。
+    // 这是「+ 添加」动作按钮，**不是可选项**，故 selected 恒为 false（不谎报状态）。
+    WedoChip(
+        label = stringResource(R.string.add_label, label),
         selected = false,
         onClick = onAdd,
-        label = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Outlined.Add,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = color
-                )
-                Spacer(Modifier.width(4.dp))
-                Text(stringResource(R.string.add_label, label))
-            }
-        },
-        colors = FilterChipDefaults.filterChipColors(
-            containerColor = color.copy(alpha = WedoTheme.Alpha.tinted),
-            labelColor = color
-        ),
-        border = FilterChipDefaults.filterChipBorder(
-            enabled = true,
-            selected = false,
-            borderColor = Color.Transparent,
-            selectedBorderColor = Color.Transparent,
-            disabledBorderColor = Color.Transparent,
-            disabledSelectedBorderColor = Color.Transparent
-        ),
+        leadingIcon = Icons.Outlined.Add,
+        leadingIconTint = color,
         modifier = modifier
     )
 }

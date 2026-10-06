@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -81,6 +83,8 @@ import java.util.Locale
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun ExportScreen(
+    /** 2026-10-06：滚动状态由 AppRoot 持有，返回本页时保持原位 */
+    listState: LazyListState = rememberLazyListState(),
     onBack: () -> Unit,
     viewModel: ScheduleViewModel = viewModel()
 ) {
@@ -124,7 +128,8 @@ fun ExportScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = stringResource(R.string.back)
+                            contentDescription = stringResource(R.string.back),
+                            tint = com.wedo.schedule.ui.theme.WedoApple.accentIcon
                         )
                     }
                 },
@@ -144,6 +149,7 @@ fun ExportScreen(
         }
 
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)

@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -47,6 +49,8 @@ import com.wedo.schedule.ui.theme.noRippleClickable
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun AllTablesScreen(
+    /** 2026-10-06：滚动状态由 AppRoot 持有，返回本页时保持原位 */
+    listState: LazyListState = rememberLazyListState(),
     onBack: () -> Unit,
     onCreateNewTable: () -> Unit,
     onOpenEditTable: (Long) -> Unit,
@@ -62,7 +66,7 @@ fun AllTablesScreen(
                 title = { Text(stringResource(R.string.all_tables)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back))
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back), tint = com.wedo.schedule.ui.theme.WedoApple.accentIcon)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -75,6 +79,7 @@ fun AllTablesScreen(
         containerColor = colors.background
     ) { padding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {

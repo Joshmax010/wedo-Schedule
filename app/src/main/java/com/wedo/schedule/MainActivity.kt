@@ -278,6 +278,17 @@ private fun AppRoot(
     // 默认首屏 = 课表（2026-10-01 真机反馈定调：打开就是为了看课表）。
     // 返回键「非课表 → 回课表」「课表 → 双击退出」的既有逻辑因此天然成立。
     var currentTab by remember { mutableStateOf(Tab.Schedule) }
+    // 2026-10-06 真机反馈：上滑隐藏底栏、下滑回来（X 式）。三页共用同一个状态。
+    val tabBarState = remember { com.wedo.schedule.ui.component.TabBarVisibilityState() }
+
+    // 2026-10-06 真机反馈：二级页返回后要保持原滚动位置。
+    // 根因：本函数里 `if (topOverlay() == X) { ...; return }` —— 推入覆盖页时
+    // **设置页根本不再组合**，它内部的 LazyColumn 状态随组合一起销毁，返回即置顶。
+    // 把 LazyListState 提升到 AppRoot（此函数在覆盖页切换期间**始终处于组合状态**），
+    // 按页面 key 缓存，即可跨 push/pop 复用同一状态对象。
+    val overlayListStates = remember { androidx.compose.runtime.mutableStateMapOf<String, androidx.compose.foundation.lazy.LazyListState>() }
+    fun listStateFor(key: String): androidx.compose.foundation.lazy.LazyListState =
+        overlayListStates.getOrPut(key) { androidx.compose.foundation.lazy.LazyListState() }
     var editingCourse by remember { mutableStateOf<CourseEntity?>(null) }
     // v7.10.8 返回键分层修复: overlayScreen 从单变量改成导航栈 —
     // 旧实现一个 BackHandler 把整摞 overlay 一次清空(通用设置→假期设置 按一次返回
@@ -367,7 +378,7 @@ private fun AppRoot(
         return
     }
     if (topOverlay() == OverlayScreen.AllTables) {
-        AllTablesScreen(onBack = { popOverlay() }, onCreateNewTable = {
+        AllTablesScreen(listState = listStateFor("all_tables"), onBack = { popOverlay() }, onCreateNewTable = {
             mainScope.launch {
                 val previousId = mainVm.state.value.currentTable?.id
                 val newId = mainVm.createEmptyTable(commitSelection = false)
@@ -377,7 +388,7 @@ private fun AppRoot(
         return
     }
     if (topOverlay() == OverlayScreen.EditTable) {
-        EditTableScreen(tableId = editTableId, pendingNewTableId = pendingNewTableId, onBack = { popOverlay(); editTableId = null; pendingNewTableId = null; previousDefaultTableId = null }, onDiscardPending = {
+        EditTableScreen(listState = listStateFor("edit_table"), tableId = editTableId, pendingNewTableId = pendingNewTableId, onBack = { popOverlay(); editTableId = null; pendingNewTableId = null; previousDefaultTableId = null }, onDiscardPending = {
             val discardId = pendingNewTableId; val fallback = previousDefaultTableId; pendingNewTableId = null; previousDefaultTableId = null
             if (discardId != null) mainVm.discardNewTable(discardId, fallback)
             popOverlay(); editTableId = null
@@ -385,31 +396,32 @@ private fun AppRoot(
         return
     }
     if (topOverlay() == OverlayScreen.Theme) {
-        AppearanceScreen(onBack = { popOverlay() }, themeMode = themeMode, onThemeModeChange = onThemeModeChange)
+        AppearanceScreen(listState = listStateFor("appearance"), onBack = { popOverlay() }, themeMode = themeMode, onThemeModeChange = onThemeModeChange)
         return
     }
     if (topOverlay() == OverlayScreen.General) {
         GeneralSettingsScreen(
+            listState = listStateFor("general"),
             onBack = { popOverlay() }
         )
         return
     }
     if (topOverlay() == OverlayScreen.Export) {
-        ExportScreen(onBack = { popOverlay() })
+        ExportScreen(listState = listStateFor("export"), onBack = { popOverlay() })
         return
     }
     if (topOverlay() == OverlayScreen.License) {
-        LicenseScreen(onBack = { popOverlay() })
+        LicenseScreen(listState = listStateFor("license"), onBack = { popOverlay() })
         return
     }
     // REQ-P4-01：设置页「显示」组 → 节假日与补班日二级页（原页面复活的接入点）。
     if (topOverlay() == OverlayScreen.Holiday) {
-        HolidaySettingsScreen(onBack = { popOverlay() })
+        HolidaySettingsScreen(listState = listStateFor("holiday"), onBack = { popOverlay() })
         return
     }
     // REQ-P4-01 / REQ-P5-03：设置页「通知」组 → 提醒二级页（课前提醒 + 通知权限）。
     if (topOverlay() == OverlayScreen.Reminder) {
-        ReminderScreen(onBack = { popOverlay() })
+        ReminderScreen(listState = listStateFor("reminder"), onBack = { popOverlay() })
         return
     }
     // REQ-P2-01: 全屏分步导入向导（取代旧底部 ImportSheet）。
@@ -441,21 +453,24 @@ private fun AppRoot(
             LocalNavExtraBottomPadding provides (WedoTabBarDefaults.contentHeight + navBarBottom),
             // P0 决策(ADR-2): 移除「下滑收起」后 collapsed 恒为 false;
             // WedoWeekHeader 暂消费该值(零改动编译), P3 由顶栏大标题滚动收起接手。
-            LocalWedoCollapsed provides false
+            LocalWedoCollapsed provides false,
+            com.wedo.schedule.ui.component.LocalTabBarVisibilityState provides tabBarState
         ) {
             Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars)) {
                 MainTabs(
                     currentTab = currentTab,
                     pushOverlay = ::pushOverlay,
                     editingCourse = { editingCourse = it },
-                    onAdd = { pushOverlay(OverlayScreen.Import) }
+                    onAdd = { pushOverlay(OverlayScreen.Import) },
+                    listStateFor = ::listStateFor
                 )
             }
         }
         // 常驻底部 tab bar（不隐藏、不收起）—— 取代原浮动 Dock + 下滑收起联动。
         WedoTabBar(
             current = currentTab,
-            onSelect = { currentTab = it },
+            onSelect = { currentTab = it; tabBarState.reset() },
+            visible = tabBarState.visible,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
@@ -466,7 +481,9 @@ private fun MainTabs(
     currentTab: Tab,
     pushOverlay: (OverlayScreen) -> Unit,
     editingCourse: (CourseEntity?) -> Unit,
-    onAdd: () -> Unit
+    onAdd: () -> Unit,
+    /** 2026-10-06：设置页滚动状态由 AppRoot 持有（覆盖页切换期间 AppRoot 始终组合） */
+    listStateFor: (String) -> androidx.compose.foundation.lazy.LazyListState
 ) {
     when (currentTab) {
         Tab.Today -> TodayScreen(onOpenImport = onAdd, onEditCourse = { editingCourse(it) })
@@ -477,6 +494,7 @@ private fun MainTabs(
         // REQ-P4-01：设置页合并为四组（课表 / 显示 / 通知 / 关于）；全部「进入下一页」
         // 动作经覆盖页栈（pushOverlay），返回键逐层只退一级。
         Tab.Settings -> WedoSettingsScreen(
+            listState = listStateFor("settings"),
             onOpenAllTables = { pushOverlay(OverlayScreen.AllTables) },
             onOpenAppearance = { pushOverlay(OverlayScreen.Theme) },
             onOpenGeneral = { pushOverlay(OverlayScreen.General) },

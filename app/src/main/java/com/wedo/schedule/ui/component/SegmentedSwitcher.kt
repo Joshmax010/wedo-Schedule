@@ -49,7 +49,7 @@ import kotlin.math.roundToInt
  *  └──────────────────────────────────────────┘
  *
  * 容器: surface-container (M3), 圆角 14dp
- * 选中: secondary-container 色块（无描边，色块填充风格）
+ * 选中: **accent 实底 + 白字**（2026-10-06 真机反馈统一，此前是 M3 secondaryContainer 灰）
  *
  * 动画 (v2, iOS 原生级): 单个 thumb 色块由物理弹簧(Animatable+spring)在轨道上从旧段滑到新段;
  * 每帧读 thumb 实时像素位置, 每个字符按「自身矩形 ∩ thumb 矩形」的横向覆盖率 lerp 上色 —
@@ -122,7 +122,10 @@ fun <T> SegmentedSwitcher(
                             translationX = exact - exact.toInt()
                         }
                         .clip(RoundedCornerShape(12.dp))
-                        .background(colors.secondaryContainer)
+                        // 2026-10-06 真机反馈：原为 M3 secondaryContainer（中性灰），
+                        // 与强调色体系无关 → 整套 app 出现「第二套主题逻辑」。
+                        // 统一为 accent 实底 + 白字，与 WedoChoiceChip / WedoToggle 同源。
+                        .background(com.wedo.schedule.ui.theme.WedoApple.accent)
                 )
                 // 层1..n: 点击段 — 透明, 只负责点击与无障碍
                 options.forEachIndexed { index, _ ->
@@ -154,7 +157,7 @@ fun <T> SegmentedSwitcher(
                             thumbEndPx = thumbEnd,
                             segmentWidthPx = segW,
                             selected = index == selectedIndex,
-                            selectedColor = colors.onSecondaryContainer,
+                            selectedColor = Color.White,
                             unselectedColor = colors.onSurfaceVariant
                         )
                     )

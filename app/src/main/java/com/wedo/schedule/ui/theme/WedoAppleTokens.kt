@@ -159,8 +159,16 @@ data class WedoCourseBlockColors(
     val subtitle: Color
 )
 
-/** 淡底色不透明度 —— 与 WedoTheme.Alpha.tinted 同源，避免两处魔法数 */
-private const val TINT_ALPHA = 0.12f
+/**
+ * 课程块底色的不透明度。
+ *
+ * 2026-10-06 真机反馈：原为 0.12（淡底），实测在课表网格里**彩色被稀释到几乎看不见**，
+ * 整屏发白、课程之间难以区分。改为 0.55 —— 仍是浅色底 + 同色系深字（文字对比度
+ * 仍由 [solveForContrast] 保证 6.5:1），但颜色一眼可辨。
+ *
+ * 刻意**不取 1.0**：满屏二十几个纯色块过于抢眼，且浅色课程配白字会掉到 1.7:1。
+ */
+private const val TINT_ALPHA = 0.55f
 
 /**
  * 课程文字的目标对比度。
@@ -581,9 +589,6 @@ object WedoAppleDimensions {
 
     /** 课程块圆角 */
     val courseCorner = 8.dp
-
-    /** 课程块左侧色条宽度 */
-    val courseBarWidth = 4.dp
 
     /** 图标按钮惯用边长 */
     val iconButton = 28.dp

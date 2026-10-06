@@ -70,6 +70,7 @@ import com.wedo.schedule.data.entity.CourseEntity
 import com.wedo.schedule.data.entity.TimeTableEntity
 import com.wedo.schedule.ui.screen.schedule.ScheduleViewModel
 import com.wedo.schedule.ui.component.SegmentedSwitcher
+import com.wedo.schedule.ui.component.WedoToggle
 import com.wedo.schedule.ui.component.TimePickerField
 import com.wedo.schedule.ui.theme.WedoTheme
 import com.wedo.schedule.ui.theme.noRippleClickable
@@ -453,7 +454,7 @@ fun AddCourseScreen(
                 title = { Text(stringResource(if (editingCourse != null) R.string.edit_course else R.string.create_course)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back))
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back), tint = com.wedo.schedule.ui.theme.WedoApple.accentIcon)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -539,9 +540,10 @@ fun AddCourseScreen(
                         },
                         modifier = Modifier.fillMaxWidth().height(WedoTheme.Buttons.regularHeight),
                         shape = WedoTheme.Buttons.shape,
-                        colors = ButtonDefaults.buttonColors(containerColor = colors.secondaryContainer)
+                        // 2026-10-06：灰色 secondaryContainer → accent 实底 + 白字（全 app 一套主题）
+                        colors = ButtonDefaults.buttonColors(containerColor = com.wedo.schedule.ui.theme.WedoApple.accent)
                     ) {
-                        Text(stringResource(R.string.apply_to_all_slots), color = colors.onSecondaryContainer)
+                        Text(stringResource(R.string.apply_to_all_slots), color = androidx.compose.ui.graphics.Color.White)
                     }
                 }
             }
@@ -614,11 +616,11 @@ fun AddCourseScreen(
                     },
                     modifier = Modifier.fillMaxWidth().height(WedoTheme.Buttons.regularHeight),
                     shape = WedoTheme.Buttons.shape,
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.secondaryContainer)
+                    colors = ButtonDefaults.buttonColors(containerColor = com.wedo.schedule.ui.theme.WedoApple.accent)
                 ) {
-                    Icon(Icons.Outlined.Add, contentDescription = null, tint = colors.onSecondaryContainer)
+                    Icon(Icons.Outlined.Add, contentDescription = null, tint = androidx.compose.ui.graphics.Color.White)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.add_slot), color = colors.onSecondaryContainer)
+                    Text(stringResource(R.string.add_slot), color = androidx.compose.ui.graphics.Color.White)
                 }
             }
 
@@ -955,7 +957,8 @@ private fun SwitchRow(
                 color = colors.onSurfaceVariant
             )
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        // 2026-10-06 真机反馈：Material Switch 是「上一套主题」的漏网之鱼 → 统一为 iOS 胶囊
+        WedoToggle(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
@@ -1298,8 +1301,8 @@ private fun EdgeCandidatePickerDialog(
                             .fillMaxWidth()
                             .clip(WedoTheme.shapes.medium)
                             .background(
-                                if (c.exists) WedoTheme.colors.secondaryContainer
-                                else WedoTheme.colors.surfaceContainerHighest
+                                if (c.exists) com.wedo.schedule.ui.theme.WedoApple.accent
+                                else WedoTheme.colors.surfaceContainerLow
                             )
                             .noRippleClickable {
                                 if (c.exists) onPickExisting(c.node) else onPickNew(c)
@@ -1319,7 +1322,7 @@ private fun EdgeCandidatePickerDialog(
                                 stringResource(R.string.irregular_node_new, c.node)
                             },
                             style = WedoAppleType.subheadline(),
-                            color = if (c.exists) colors.onSecondaryContainer else colors.onSurface
+                            color = if (c.exists) androidx.compose.ui.graphics.Color.White else colors.onSurface
                         )
                     }
                 }
@@ -1441,7 +1444,8 @@ private fun ColorSection(block: MeetingBlockDraft) {
                     color = colors.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Switch(
+                // 2026-10-06 真机反馈：Material Switch → 统一为 iOS 胶囊 WedoToggle
+                WedoToggle(
                     checked = useDifferent,
                     onCheckedChange = { on ->
                         block.colorModeState = if (on) {

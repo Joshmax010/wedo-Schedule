@@ -15,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -55,6 +56,8 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun WedoSettingsScreen(
+    /** 2026-10-06：滚动状态由 AppRoot 持有，进二级页再返回时保持原位 */
+    listState: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState(),
     onOpenAllTables: () -> Unit = {},
     onOpenAppearance: () -> Unit = {},
     onOpenGeneral: () -> Unit = {},
@@ -142,7 +145,10 @@ fun WedoSettingsScreen(
     }
 
     LazyColumn(
-        Modifier.fillMaxSize(),
+        // 2026-10-06：上滑隐藏底栏 + 滚动状态由 AppRoot 持有（返回时保持原位）
+        state = listState,
+        modifier = Modifier.fillMaxSize()
+            .nestedScroll(com.wedo.schedule.ui.component.LocalTabBarVisibilityState.current.scrollConnection),
         contentPadding = PaddingValues(
             start = WedoAppleDimensions.pageMargin,
             end = WedoAppleDimensions.pageMargin,
@@ -189,13 +195,24 @@ fun WedoSettingsScreen(
                 SettingsItem(Icons.Outlined.Palette, stringResource(R.string.mine_appearance), onOpenAppearance)
                 SettingsItem(Icons.Outlined.Tune, stringResource(R.string.mine_general), onOpenGeneral)
                 SettingsItem(Icons.Outlined.EventBusy, stringResource(R.string.holiday_page_title), onOpenHoliday)
-                Text(
-                    stringResource(R.string.settings_conflict_style),
-                    color = colors.onSurface,
-                    // 2026-10-02 真机反馈：此处原来只有 padding(top=8dp)，**缺水平边距**，
-                    // 导致标题贴到 x=0，与上方 16dp 的设置行左对齐不上。
+                // 2026-10-06 真机反馈：加图标，与上方三行 SettingsItem 的图标对齐
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 2.dp)
-                )
+                ) {
+                    Icon(
+                        Icons.Outlined.CallSplit,
+                        contentDescription = null,
+                        tint = WedoApple.accentIcon,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_conflict_style),
+                        style = WedoAppleType.body(),
+                        color = colors.onSurface,
+                        modifier = Modifier.padding(start = 14.dp)
+                    )
+                }
                 Choices(
                     listOf(
                         "stack" to stringResource(R.string.settings_conflict_stack),
@@ -213,11 +230,9 @@ fun WedoSettingsScreen(
         // ── 组③ 通知 ──
         item {
             WedoSettingsGroup(stringResource(R.string.settings_group_notify)) {
-                WedoLabeledToggle(
-                    stringResource(R.string.reminder_before_class_title),
-                    beforeClassEnabled,
-                    ::setBeforeClass
-                )
+                // 2026-10-06 真机反馈：原来「每节课前提醒[开关]」+「提醒[入口]」两行
+                // 说的是同一件事（同页内重复）→ 合并为一行，细节全进二级页。
+                // 二级页 ReminderScreen 内已有：总开关 / 课前开关 / 提前分钟数。
                 SettingsItem(Icons.Outlined.Notifications, stringResource(R.string.reminder_title), onOpenReminder)
             }
         }
@@ -283,49 +298,11 @@ private fun Choices(options: List<Pair<String, String>>, selected: String, onSel
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         options.forEach { (key, label) ->
-            WedoChoiceChip(label = label, selected = selected == key, onClick = { onSelect(key) })
+            WedoChip(label = label, selected = selected == key, onClick = { onSelect(key) })
         }
     }
 }
 
-/**
- * 选中态 chip —— 2026-10-01 真机反馈定调的**全 App 强调色硬规则**载体：
- *
- * **accent 只属于「可交互且处于选中/激活态」的元素**。
- * 选中 = accent 描边 + 15% 浅底 + accent 文字；未选中 = 中性描边 + 实色底 + 普通文字。
- *
- * 2026-10-02 真机反馈「样式没排列好」：原实现用 `heightIn(min=36dp)` + 纵向 padding，
- * 选中/未选中的**实际高度会因描边与背景层叠而不一致**，一排 chip 看着参差。
- * 现改为**固定高度 + 固定内边距**，两个状态几何完全一致，只换颜色。
- */
-@Composable
-private fun WedoChoiceChip(label: String, selected: Boolean, onClick: () -> Unit) {
-    val colors = WedoTheme.colors
-    Box(
-        modifier = Modifier
-            .height(WedoChoiceChipHeight)
-            .clip(WedoAppleShapes.capsule)
-            .background(if (selected) WedoApple.accent.copy(alpha = WedoTheme.Alpha.tinted) else colors.surfaceContainerLow)
-            .border(
-                width = 1.dp,
-                color = if (selected) WedoApple.accent else colors.outlineVariant,
-                shape = WedoAppleShapes.capsule
-            )
-            .noRippleClickable(onClick = onClick)
-            .padding(horizontal = 16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            label,
-            style = WedoAppleType.caption1(),
-            color = if (selected) WedoApple.accentText else colors.onSurfaceVariant,
-            maxLines = 1
-        )
-    }
-}
-
-/** 冲突样式 chip 的固定高度——两个状态共用，保证一排 chip 等高。 */
-private val WedoChoiceChipHeight = 34.dp
 
 /**
  * 带标签的设置开关行。

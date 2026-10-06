@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -67,7 +69,11 @@ private val thirdPartySources: List<ThirdPartySource> = listOf(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LicenseScreen(onBack: () -> Unit) {
+fun LicenseScreen(
+    onBack: () -> Unit,
+    /** 2026-10-06：滚动状态由 AppRoot 持有，返回本页时保持原位 */
+    listState: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState(),
+) {
     val colors = WedoTheme.colors
 
     Scaffold(
@@ -78,7 +84,8 @@ fun LicenseScreen(onBack: () -> Unit) {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = stringResource(R.string.back)
+                            contentDescription = stringResource(R.string.back),
+                            tint = com.wedo.schedule.ui.theme.WedoApple.accentIcon
                         )
                     }
                 },
@@ -92,6 +99,7 @@ fun LicenseScreen(onBack: () -> Unit) {
         containerColor = colors.background
     ) { padding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)

@@ -165,7 +165,7 @@ fun SchoolSelectScreen(
                 title = { Text(stringResource(R.string.select_school)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back))
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back), tint = com.wedo.schedule.ui.theme.WedoApple.accentIcon)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

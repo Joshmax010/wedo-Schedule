@@ -117,22 +117,42 @@ class ScheduleHeaderLayoutContractTest {
         // 故取资源名之后的**定长窗口**来断言。
         val start = src.indexOf("R.string.settings_conflict_style")
         assertTrue("未找到冲突样式标题", start >= 0)
-        val window = src.substring(start, minOf(start + 400, src.length))
+        // 2026-10-06：标题已改为「图标 + 文字」的 Row，padding 挂在 Row 上，
+        // 故向前多取一段窗口（标题行在资源名之前）。
+        // 窗口要足够大：modifier 里的 padding 与资源名之间还夹着 Icon(...) 整块（>400 字符）
+        val from = maxOf(0, start - 900)
+        val window = src.substring(from, minOf(start + 400, src.length))
 
         assertTrue(
-            "标题必须带水平左边距（原来只有 padding(top=8dp)，贴到 x=0 与上方设置行不对齐）：\n$window",
+            "标题行必须带水平左边距 16dp（原来只有 padding(top=8dp)，贴到 x=0 与上方设置行不对齐）：\n$window",
             window.contains("start = 16.dp")
         )
         assertTrue("标题须保留右边距：\n$window", window.contains("end = 16.dp"))
+        assertTrue(
+            "冲突样式标题须带图标（与上方三行 SettingsItem 对齐）：\n$window",
+            window.contains("Icons.Outlined.CallSplit")
+        )
     }
 
     @Test
-    fun conflictStyleChips_shareFixedHeight() {
-        val src = executableLines(settingsSrc)
-        val body = src.substringAfter("private fun WedoChoiceChip(")
+    fun conflictStyleChips_useSharedWedoChipWithFixedHeight() {
+        // 2026-10-06：chip 已抽成全 app 共享组件 ui/component/WedoChip.kt
+        // （原先设置页私有 + SmartPeriodEditor 用 Material FilterChip，两套长相）。
+        val settings = executableLines(settingsSrc)
+        assertTrue(
+            "设置页须使用共享 WedoChip",
+            settings.contains("WedoChip(label = label")
+        )
+        val chip = executableLines(
+            TestProjectFiles.read("app/src/main/java/com/wedo/schedule/ui/component/WedoChip.kt")
+        )
         assertTrue(
             "chip 必须用固定高度（heightIn 会让选中/未选中因描边层叠而参差）",
-            body.contains(".height(WedoChoiceChipHeight)")
+            chip.contains(".height(WedoChipHeight)")
+        )
+        assertTrue(
+            "选中态必须是 accent 实底 + 白字（2026-10-06 主题统一硬规则）",
+            chip.contains("if (selected) WedoApple.accent else") && chip.contains("if (selected) Color.White else")
         )
     }
 }

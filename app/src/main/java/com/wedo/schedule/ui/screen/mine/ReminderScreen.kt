@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -66,7 +68,11 @@ import kotlinx.coroutines.launch
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReminderScreen(onBack: () -> Unit) {
+fun ReminderScreen(
+    onBack: () -> Unit,
+    /** 2026-10-06：滚动状态由 AppRoot 持有，返回本页时保持原位 */
+    listState: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState(),
+) {
     val colors = WedoTheme.colors
     val context = LocalContext.current
 
@@ -148,7 +154,7 @@ fun ReminderScreen(onBack: () -> Unit) {
                 title = { Text(stringResource(R.string.reminder_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back))
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back), tint = com.wedo.schedule.ui.theme.WedoApple.accentIcon)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -160,6 +166,7 @@ fun ReminderScreen(onBack: () -> Unit) {
         }
     ) { padding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize().padding(padding),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)

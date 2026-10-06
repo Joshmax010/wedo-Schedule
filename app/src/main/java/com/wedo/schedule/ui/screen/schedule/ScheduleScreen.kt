@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
@@ -151,7 +152,8 @@ fun ScheduleScreen(
 
         val shownWeek = pager.currentPage + 1
 
-        Column(Modifier.fillMaxSize()) {
+        // 2026-10-06：上滑隐藏底栏。挂在根 Column 上可捕获 Pager 内嵌网格的滚动
+        Column(Modifier.fillMaxSize().nestedScroll(com.wedo.schedule.ui.component.LocalTabBarVisibilityState.current.scrollConnection)) {
             // 2026-10-02 真机反馈：顶栏压成**单行**——左「第 N 周 + 日期」（点开全屏周次选择器），
             // 右「＋ / ⋯」。原大标题块、左右翻周箭头、以及「周/学期/课程」三视图分段控件全部移除
             // （用户要的就是课表一种视图；换周靠左右滑动，与 WakeUp 一致）。

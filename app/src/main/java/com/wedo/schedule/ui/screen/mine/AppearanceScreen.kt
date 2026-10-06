@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -69,6 +71,8 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppearanceScreen(
+    /** 2026-10-06：滚动状态由 AppRoot 持有，返回本页时保持原位 */
+    listState: LazyListState = rememberLazyListState(),
     onBack: () -> Unit,
     themeMode: String = AppPrefs.THEME_MODE_SYSTEM,
     onThemeModeChange: (String) -> Unit = {}
@@ -94,7 +98,7 @@ fun AppearanceScreen(
                 title = { Text(stringResource(R.string.mine_appearance), style = WedoAppleType.headline()) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.back))
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.back), tint = com.wedo.schedule.ui.theme.WedoApple.accentIcon)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -106,6 +110,7 @@ fun AppearanceScreen(
         }
     ) { padding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(WedoAppleDimensions.pageMargin),
             verticalArrangement = Arrangement.spacedBy(WedoAppleDimensions.sectionGap)

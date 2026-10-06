@@ -66,7 +66,8 @@ fun WidgetEditScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = stringResource(R.string.back)
+                            contentDescription = stringResource(R.string.back),
+                            tint = com.wedo.schedule.ui.theme.WedoApple.accentIcon
                         )
                     }
                 },

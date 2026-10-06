@@ -1103,7 +1103,6 @@ private fun LessonRow(
             surface = colors.surfaceContainerLow
         )
     }
-    val effectiveBar = if (isGrey) block.bar.copy(alpha = WedoTheme.Alpha.inactive) else block.bar
     val effectiveFg = if (isGrey) block.title.copy(alpha = WedoTheme.Alpha.inactive) else block.title
     val effectiveSub = if (isGrey) block.subtitle.copy(alpha = WedoTheme.Alpha.inactive) else block.subtitle
     val holidayStyle = AppPrefs.getHolidayStyle(context)
@@ -1124,14 +1123,8 @@ private fun LessonRow(
             .padding(sd(9f)),
         horizontalArrangement = Arrangement.spacedBy(sd(8f))
     ) {
-        // 左侧 4px 实色条 —— 与课程块保持同一辨识载体
-        Box(
-            Modifier
-                .width(WedoAppleDimensions.courseBarWidth)
-                .height(sd(28f))
-                .clip(RoundedCornerShape(2.dp))
-                .background(effectiveBar)
-        )
+        // 2026-10-06 真机反馈：左侧 4px 实色条已移除 —— 底色改为 55% 实底后，
+        // 再留一条纯色条属于冗余装饰。课程的辨识载体由块底色本身承担。
         val sideStyle = WedoTextStyle.smallMeta().copy(
             fontSize = (12 * effScale).sp,
             lineHeight = (16 * effScale).sp,

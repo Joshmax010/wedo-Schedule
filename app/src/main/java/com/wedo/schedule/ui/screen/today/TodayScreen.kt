@@ -34,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -129,7 +130,9 @@ fun TodayScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(WedoTheme.colors.background),
+            .background(WedoTheme.colors.background)
+            // 2026-10-06：上滑隐藏底栏
+            .nestedScroll(com.wedo.schedule.ui.component.LocalTabBarVisibilityState.current.scrollConnection),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(
             start = 16.dp, end = 16.dp, top = 16.dp, bottom = 16.dp + navExtra
         ),
@@ -515,13 +518,7 @@ private fun TimelineCourseBlock(
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Box(
-            Modifier
-                .width(WedoAppleDimensions.courseBarWidth)
-                .fillMaxHeight()
-                .clip(RoundedCornerShape(2.dp))
-                .background(block.bar)
-        )
+        // 2026-10-06 真机反馈：左侧色条已移除（底色改为 55% 实底后不再需要）。
         Column(Modifier.weight(1f)) {
             Text(
                 text = course.courseName,

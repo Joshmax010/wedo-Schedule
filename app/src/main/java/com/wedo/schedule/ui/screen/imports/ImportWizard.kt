@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Edit
@@ -302,7 +303,9 @@ private fun WizardTopBar(title: String, onClose: () -> Unit) {
         Modifier.fillMaxWidth().padding(horizontal = WedoAppleDimensions.pageMargin, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        WedoIconButton(Icons.Outlined.Close, description = stringResource(R.string.import_wiz_close), onClick = onClose)
+        // 2026-10-06 真机反馈：全 app 返回图标统一为**蓝色 ← 箭头**（原为 × 关闭）。
+        // WedoIconButton 的默认 tint 即 WedoApple.accentIcon，故只需换图标形状。
+        WedoIconButton(Icons.AutoMirrored.Outlined.ArrowBack, description = stringResource(R.string.back), onClick = onClose)
         Spacer(Modifier.size(8.dp))
         Text(title, style = WedoAppleType.title2(), color = WedoTheme.colors.onSurface)
     }

@@ -126,17 +126,12 @@ fun WedoCourseCard(
             }
             .wedoPress(onLongClick = onLongClick, onClick = onClick)
     ) {
-        // 左侧 4px 实色条 —— 课程辨识的载体
-        Box(
-            Modifier.align(Alignment.CenterStart)
-                .width(WedoAppleDimensions.courseBarWidth)
-                .fillMaxHeight()
-                .background(block.bar)
-        )
+        // 2026-10-06 真机反馈：左侧 4px 实色条已移除（底色已是 55% 实底，色条冗余）。
+        // 下方 Column 的 start 内边距同步从「色条宽 + 5dp」改为普通内边距。
 
         Column(
             Modifier.fillMaxSize().padding(
-                start = WedoAppleDimensions.courseBarWidth + 5.dp,
+                start = 2.dp,
                 top = 4.dp,
                 end = 4.dp,
                 bottom = 4.dp

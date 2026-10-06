@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.ChevronLeft
@@ -84,7 +86,11 @@ private const val MAX_YEAR = 2049
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HolidaySettingsScreen(onBack: () -> Unit) {
+fun HolidaySettingsScreen(
+    onBack: () -> Unit,
+    /** 2026-10-06：滚动状态由 AppRoot 持有，返回本页时保持原位 */
+    listState: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState(),
+) {
     val colors = WedoTheme.colors
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -161,7 +167,7 @@ fun HolidaySettingsScreen(onBack: () -> Unit) {
                 title = { Text(stringResource(R.string.holiday_page_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back))
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.back), tint = com.wedo.schedule.ui.theme.WedoApple.accentIcon)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -173,6 +179,7 @@ fun HolidaySettingsScreen(onBack: () -> Unit) {
         }
     ) { padding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -516,7 +523,8 @@ private fun HolidayRemovedCard(
                     modifier = Modifier.height(WedoTheme.Buttons.regularHeight),
                     shape = WedoTheme.Buttons.shape,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = colors.secondaryContainer,
+                        // 2026-10-06：灰色 → accent 实底 + 白字
+                        containerColor = com.wedo.schedule.ui.theme.WedoApple.accent,
                         contentColor = colors.onSecondaryContainer
                     )
                 ) { Text(stringResource(R.string.holiday_restore)) }
