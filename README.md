@@ -22,9 +22,10 @@
 界面按「苹果 HIG 对齐 + 液态玻璃」重做，权威文档：
 
 - [液态玻璃方案主索引](docs/glass/00_MASTER.md)：全量设计推导与编号（M-/V-/O-/Q-）。
-- [液态玻璃实现规范](docs/DESIGN_SPEC_V4_GLASS.md)：条款正文。
+- [液态玻璃规范 v4](docs/glass/DESIGN_SPEC_V4_GLASS.md)：条款正文（G-001…G-072）。
 - [界面设计规范 v2](docs/DESIGN_SPEC_V2.md)：色彩 / 字阶 / 间距 / 圆角 / 无障碍（材质章节已由 v4 取代）。
 - [验收报告](docs/glass/ACCEPTANCE_REPORT.md) 与 [技术债清单](docs/glass/TECH_DEBT.md)。
+- 当前实现的参数定稿在 [视觉系统卷](docs/glass/02_visual_system.md) 附录 A。
 
 材质分三级，**只有浮层允许采样**：
 

@@ -152,7 +152,7 @@ test/fixtures/jlju/             只含脱敏结构证据
 `WedoBackground` 负责纵向冷色渐变和两处淡蓝径向环境光。**玻璃材质已按「全面取消玻璃质感」的指令移除**：`WedoShell.kt` 里原 `Modifier.wedoGlass` 及其调用点均已改为实色卡片，`WedoGlassTokens.kt` 仅保留 `wedoGlassSpec` 纯逻辑内核（无渲染入口）。评审时不要再假设界面上存在玻璃卡片。
 
 > 设计规范的唯一权威来源是 `docs/glass/00_MASTER.md`（液态玻璃主索引，含全部 M/V/O/Q 编号与推导过程）。
-> 面向实现的条款正文见 `docs/DESIGN_SPEC_V4_GLASS.md`（材质与运动，已取代 v2 的材质章节）；
+> 面向实现的条款正文见 `docs/glass/DESIGN_SPEC_V4_GLASS.md`（材质与运动，已取代 v2 的材质章节）；
 > `docs/DESIGN_SPEC_V2.md` 的色彩 / 字阶 / 间距 / 圆角 / 组件 / 无障碍章节仍然有效。
 > 本节与上述文件冲突时**以它们为准**。
 
