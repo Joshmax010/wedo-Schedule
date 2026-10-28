@@ -1,5 +1,5 @@
 {
-  "_note": "上游 NewZFParser.kt (dIT8Zv) 真实期望结构: getElementById('table1') + tr.festival 文本转节次数字 + td.id[0] 取星期(取首字符) + p[title='教师']/p[title='上课地点']/p[title='节/周'] 三属性取字段; 周次串解析算法: 先用 nodeRegex 剥 '(N-M节)' 前缀, 剩余按 ',' 拆段; 段含 '-' 按 '-' 拆 startWeek/endWeek; 段含 '单' type=1, '双' type=2。注: 上游 NewZFParser 对每个 div 内多 <p> 的 teacher/room 是 last-wins 赋值策略, 本 fixture 每 div 仅一个 p 故安全。",
+  "_note": "#table1 + td.festival 视图。节次取 tr 的 .festival 文本；星期取 td.id 的首字符；教师、上课地点、节次周次分别取 p[title='教师'] / p[title='上课地点'] / p[title='节/周']。周次串先剥去「(N-M节)」前缀，再按 ',' 拆段；段内含 '-' 则拆 startWeek/endWeek；含「单」→ type=1，含「双」→ type=2。",
   "courses": [
     {
       "name": "高等数学",

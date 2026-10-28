@@ -1,5 +1,5 @@
 {
-  "_note": "新正方 grid 视图(#kbgrid_table_0 + td.td_wrap + .timetable_con), 对照 shiguang parserTbale(): day=td.id.split('-')[0], name=.title font, infoStr=p[0] font[1] 须含 '(N-M节)'+周次串, position=p[1] font, teacher=p[2] font。注意 .title 必须非 <p> 否则会占掉 p[0] 导致 infoStr 取空。周次语义按上游 NewZFParser/Common: '2-8周(单)' → startWeek=2, endWeek=8, type=1(单周)。",
+  "_note": "grid 视图（#kbgrid_table_0 + td.td_wrap + .timetable_con）。day 取自 td.id 的前缀，课名在 .title 的 font 里，节次与周次串在 p[0] 的 font[1]（形如「(N-M节) 周次」），教室在 p[1]、教师在 p[2]。注意 .title 必须是 <div>；若写成 <p> 会占掉 p[0] 导致节次串取空。「2-8周(单)」→ startWeek=2, endWeek=8, type=1。",
   "courses": [
     {
       "name": "高等数学",

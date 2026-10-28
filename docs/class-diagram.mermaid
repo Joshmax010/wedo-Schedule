@@ -1,0 +1,230 @@
+classDiagram
+    %% ===== 导航骨架（MainActivity.kt，P0）=====
+    class MainActivity {
+        +onCreate()
+        +handleDeepLinkIntent(intent)
+        +pendingImportText : String?
+    }
+    class AppRoot {
+        -currentTab : Tab
+        -overlayStack : List~OverlayScreen~
+        -editTableId : Long?
+        -pendingNewTableId : Long?
+        -previousDefaultTableId : Long?
+        +topOverlay() OverlayScreen?
+        +pushOverlay(s : OverlayScreen)
+        +popOverlay()
+    }
+    class Tab {
+        <<enumeration>>
+        Today
+        Schedule
+        Settings
+    }
+    class OverlayScreen {
+        <<enumeration>>
+        AddCourse
+        AllTables
+        EditTable
+        Theme
+        General
+        Export
+        About
+        License
+        Reminder
+        Import
+    }
+    class WedoTabBar {
+        <<Composable>>
+        +WedoTabBar(current, onSelect)
+    }
+    MainActivity --> AppRoot : setContent
+    AppRoot --> Tab
+    AppRoot --> OverlayScreen
+    AppRoot --> WedoTabBar
+
+    %% ===== 今天页 / 倒计时（P1）=====
+    class TodayScreen {
+        <<Composable>>
+        +TodayScreen(onOpenImport, onEditCourse, viewModel)
+        -TodayHeader()
+        -TodayCourseCard()
+        -EmptyToday()
+        -NextClassCard()
+    }
+    class NextClassDecider {
+        <<object>>
+        +decide(courses, now, timeJson) NextClass?
+    }
+    class NextClass {
+        +course : CourseEntity
+        +startTime : LocalTime
+        +endTime : LocalTime
+        +minutesUntilStart : Long
+        +inProgress : Boolean
+    }
+    class ScheduleViewModel {
+        +state : StateFlow~ScheduleState~
+        +refreshCurrentWeek()
+        +changeWeek(week)
+        +createEmptyTable(commitSelection) Long
+        +discardNewTable(newId, fallbackId)
+    }
+    class ScheduleState {
+        +courses : List~CourseEntity~
+        +currentWeek : Int
+        +selectedWeek : Int
+        +currentTable : TimeTableEntity?
+    }
+    TodayScreen --> ScheduleViewModel
+    TodayScreen --> NextClassDecider
+    NextClassDecider --> NextClass
+    ScheduleViewModel --> ScheduleState
+
+    %% ===== 导入向导（P2-01/02）=====
+    class ImportWizard {
+        <<Composable>>
+        +ImportWizard(onDismiss, onFinish, onManualAdd, viewModel)
+        -Step1Source()
+        -Step2Detail()
+        -Step3Preview()
+        -Step4Done()
+    }
+    class ImportStep {
+        <<enumeration>>
+        SOURCE
+        SOURCE_DETAIL
+        PREVIEW
+        DONE
+    }
+    class ImportSource {
+        <<enumeration>>
+        JW
+        FILE
+        TEXT
+        MANUAL
+    }
+    class ImportFlow {
+        <<object>>
+        +buildImportPreview(text, state, context, onError) ImportPreview?
+        +applyImportPreview(...)
+    }
+    class ImportApplyMode {
+        <<enumeration>>
+        ReplaceCurrent
+        ImportAsNew
+        AppendNonConflict
+        AppendAsNew
+        AppendAll
+    }
+    ImportWizard --> ImportStep
+    ImportWizard --> ImportSource
+    ImportWizard --> ImportFlow
+    ImportFlow --> ImportApplyMode
+
+    %% ===== 教务导入（P2-03..08）=====
+    class JwImportActivity {
+        +onCreate()
+        -Stage : SelectSchool|WebViewLogin|ConfigureConfirm
+    }
+    class JwWebViewLoginScreen {
+        <<Composable>>
+        +JwWebViewLoginScreen(school, onPayloadCaptured, onCaptureError, onBack)
+        -VERIFIED_AUTH_HOSTS : Set~String~
+        -VERIFIED_JS_BRIDGE_HOSTS : Set~String~
+    }
+    class JwSchoolInfo {
+        +sortKey : String
+        +name : String
+        +url : String
+        +type : String?
+        +status : String
+        +enableFetch : Boolean
+        +authHosts : List~String~
+        +jsBridgeHosts : List~String~
+        +isSupported : Boolean
+        +hasUrl : Boolean
+    }
+    class JwImportViewModel {
+        +schools : StateFlow~List~JwSchoolInfo~~
+        +parseHtml(html, protocolType) List~JwCourse~
+        +importAsNewTable(courses, tableName, startDate, timeJson, nodesPerDay) Long
+        +defaultWedoSchools() List~JwSchoolInfo~
+    }
+    class DiagMapper {
+        <<object>>
+        +mapImpl(diag, school, context) String
+        +mapForTest(diag, school) String
+    }
+    JwImportActivity --> JwWebViewLoginScreen
+    JwImportActivity --> JwImportViewModel
+    JwImportActivity --> DiagMapper
+    JwWebViewLoginScreen --> JwSchoolInfo
+    JwImportViewModel --> JwSchoolInfo
+
+    %% ===== 课表页三视图（P3）=====
+    class ScheduleScreen {
+        <<Composable>>
+        +ScheduleScreen(onGoImport, onManualAdd, onEditCourse, viewModel)
+        -viewMode : ScheduleViewMode
+    }
+    class ScheduleViewMode {
+        <<enumeration>>
+        WEEK
+        SEMESTER
+        COURSE
+    }
+    class WeekPicker {
+        <<Composable>>
+        +WeekPicker(week, maxWeek, onSelect, onBack)
+    }
+    class SemesterOverview {
+        <<Composable>>
+        +SemesterOverview(weeks, currentWeek)
+    }
+    class CourseListView {
+        <<Composable>>
+        +CourseListView(courses, onOpen)
+    }
+    class CourseSummary {
+        +courseName : String
+        +groupId : String
+        +teacher : String
+        +rooms : List~String~
+        +sessions : List~CourseEntity~
+    }
+    class PinyinMatcher {
+        <<object>>
+        +match(name, sortKey, query, aliases) Boolean
+        +namePinyinShort(name, sortKey) String
+    }
+    ScheduleScreen --> ScheduleViewMode
+    ScheduleScreen --> WeekPicker
+    ScheduleScreen --> SemesterOverview
+    ScheduleScreen --> CourseListView
+    CourseListView --> CourseSummary
+    CourseListView --> PinyinMatcher
+
+    %% ===== 小组件存活集合（P5）=====
+    class WidgetVariantInfo {
+        +receiverClass : Class
+        +displayNameRes : Int
+    }
+    class WidgetUpdater {
+        <<object>>
+        +remoteViewsReceiverClasses : List~Class~
+        +notifyDataChanged(context)
+    }
+    class WidgetBindingStore {
+        <<object>>
+        +get(context, widgetId) Long?
+        +put(context, widgetId, tableId)
+        +remove(context, widgetId)
+    }
+    class WidgetTableResolver {
+        <<object>>
+        +resolveBoundTable(widgetId) TimeTableEntity?
+        +resolveCurrentTable() TimeTableEntity?
+    }
+    WidgetUpdater --> WidgetVariantInfo
+    WidgetVariantInfo --> WidgetBindingStore

@@ -1,4 +1,4 @@
-param(
+﻿param(
     [Parameter(Mandatory = $true)]
     [string]$HarPath,
     [string]$OutputDirectory = "test/fixtures/jlju",

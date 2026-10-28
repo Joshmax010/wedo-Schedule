@@ -1,10 +1,9 @@
 {
-  "_note": "新正方 kbList 主流 JSON 形态: jc 多形态(1-2 / 3-4,6-7 / 0102 / 0304),zcd 多形态(1-16周 / 2-16周(单) / 第1-16周),xqj 数字 1-5,cdmc 教室,xm 教师。覆盖 jc:1-2→startNode=1 endNode=2;jc:3-4,6-7→展开为 2 条课(3-4 / 6-7);jc:0102 / 0304 按两位补零解(每 2 位为 1 节,0102→1-2 / 0304→3-4);zcd:第1-16周 剥离'第'字;zcd:2-16周(单)→ type=1 start=2 end=16(只奇数周)。",
+  "_note": "kbList 的主流 JSON 形态。jc 覆盖 1-2 / 3-4,6-7 / 0102 / 0304 四种写法；zcd 覆盖 1-16周 / 2-16周(单) / 第1-16周。jc:1-2 → startNode=1 endNode=2；jc:3-4,6-7 → 展开为 2 条独立课程；补零写法 0102 → 1-2；zcd 的「第」字被剥离；2-16周(单) → start=2 end=16 type=1。",
   "_uncertain": [
-    "jc:'3-4,6-7' 多段应展开为两条课还是合并为一条 step=4,jw_research.json 倾向展开(FlowCourse parseGeneric_shouldExpandMultiSectionSlots 测试样本),采用展开语义。",
-    "jc:'0102' / '0304' 两位补零格式仅 SHUFEZJ.js 注释提到'老版本正方',第一手报文未拿到;按'每 2 位一节'解,0102→[01,02] 即 startNode=1 endNode=2(1-indexed),0304→[03,04] 即 startNode=3 endNode=4。",
-    "zcd:'第1-16周' 的 '第' 字前缀剥离,sleepy 当前 parseWeekStr 不处理'strip 第'会引发 parts[0] filter {isDigit}='1'(通过但脆),按 SHUFEZJ 注释处理。",
-    "qm_code 校际差异(3/12/16/1/2)在本 fixture 不出现,留给 fetch JS 层处理。"
+    "多段节次按「展开为多条课」处理，而非合并为单条长课。",
+    "两位补零写法（0102/0304）来自老版本正方，按「每 2 位一节」解析。",
+    "学期代码在不同部署间不一致，此 fixture 不涉及，留给 fetch JS 层处理。"
   ],
   "courses": [
     {

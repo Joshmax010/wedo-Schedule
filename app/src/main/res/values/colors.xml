@@ -1,5 +1,4 @@
 <resources>
-    <color name="splash_background">#FFFAF8F2</color>
-    <color name="brand_primary">#FF6750A4</color>
-    <color name="brand_on_primary">#FFFFFFFF</color>
+    <!-- 启动图底色与应用页面一致；品牌色由单一 iOS 蓝承载，不再保留 M3 紫 -->
+    <color name="splash_background">#FFF2F2F7</color>
 </resources>

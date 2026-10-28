@@ -20,13 +20,13 @@
     <tr>
       <td>第一节</td>
       <td id="1-1" class="td_wrap">
-        <!-- title 在但无 p[0..2] font: 上游 shiguang parserTbale 直接拿不到 infoStr.match(/\\((\\d+-\\d+节)\\)/), 短路 false 不 push -->
+        <!-- title 在但无元信息段落: 找不到含 "(N-M节)" 的段 → 整块丢弃 -->
         <div class="timetable_con text-left">
           <p class="title"><font>体育课</font></p>
         </div>
       </td>
       <td id="2-1" class="td_wrap">
-        <!-- p 全在但只有 p[0]=周次, p[1]/p[2] 缺失(教师和地点都空) -->
+        <!-- 节次段在, 但后面不足两段(地点/教师缺) → 整块丢弃 -->
         <div class="timetable_con text-left">
           <p class="title"><font>高等数学</font></p>
           <p><font>(1-2节)</font><font>1-16周</font></p>

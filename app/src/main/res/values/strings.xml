@@ -2,20 +2,28 @@
     <string name="app_name">wedo课程表</string>
     <string name="widget_today_label">今日课程</string>
     <string name="widget_today_small_label">今日课程 · 小</string>
-    <string name="widget_week_list_label">本周课表（列表）</string>
-    <string name="widget_week_list_small_label">本周课表（列表）· 小</string>
     <string name="widget_week_grid_label">本周课表（网格）</string>
     <string name="widget_week_grid_small_label">本周课表（网格）· 小</string>
-    <string name="widget_twoday_label">最近两天</string>
-    <string name="widget_twoday_small_label">最近两天 · 小</string>
-    <string name="widget_week_view_label">本周课表（周视图）</string>
-    <string name="widget_week_view_small_label">本周课表（周视图）· 小</string>
 
     <!-- Tabs -->
     <string name="tab_schedule">课表</string>
-    <string name="tab_today">今日</string>
+    <string name="tab_today">今天</string>
+    <string name="tab_settings">设置</string>
     <string name="tab_mine">我的</string>
     <string name="tab_manage">课表管理</string>
+
+    <!-- Today screen (P1): 下一节课倒计时卡 + 无课表引导 -->
+    <string name="today_next_class">下一节课</string>
+    <string name="today_in_progress">进行中</string>
+    <string name="today_countdown">还有 %1$d 分钟</string>
+    <string name="today_countdown_soon">即将开始</string>
+    <string name="today_running_remaining">正在上课 · 还剩 %1$d 分钟</string>
+    <string name="today_running_soon_end">正在上课 · 即将下课</string>
+    <string name="today_no_more_class">今天的课都上完啦</string>
+    <string name="today_no_table_title">还没有课表</string>
+    <string name="today_no_table_hint">支持教务直连、文件导入与手动添加</string>
+    <string name="today_import_cta">导入课表</string>
+    <string name="today_week_has_days">本周还有 %1$d 天有课</string>
 
     <!-- Schedule screen -->
     <string name="schedule_empty">还没有课表</string>
@@ -23,7 +31,6 @@
     <string name="schedule_go_manage">前往课表管理</string>
     <string name="schedule_manual_first">手动创建第一门课</string>
     <string name="schedule_add_course">添加课程</string>
-    <string name="schedule_share_table">分享课表</string>
     <string name="exit_press_back_again">再按一次返回退出</string>
     <string name="schedule_current_week">第 %1$d 周</string>
     <string name="schedule_no_course_today">今天没有课哦</string>
@@ -66,7 +73,6 @@
     <string name="import_paste">粘贴课表文本</string>
     <string name="import_paste_hint">粘贴课表文本…</string>
     <string name="import_file">从文件导入</string>
-    <string name="import_qr">扫码导入</string>
     <string name="import_jw">教务直连</string>
     <string name="import_manual">手动添加</string>
     <string name="import_success">导入成功</string>
@@ -114,7 +120,7 @@
     <string name="format_html">HTML 表格</string>
     <string name="format_html_desc">&lt;table&gt; 形式，识别表头后逐行解析</string>
     <string name="format_plain">纯文本</string>
-    <string name="format_plain_desc">Sleepy 原生格式，一行一课，竖线分列</string>
+    <string name="format_plain_desc">wedo 原生格式，一行一课，竖线分列</string>
 
     <!-- 格式详情弹窗: 文案必须与 ScheduleParser 实际识别行为一致 -->
     <string name="format_help_spec">识别要求</string>
@@ -123,9 +129,9 @@
     <string name="format_detail_content_desc">查看格式说明</string>
     <string name="copy_prompt">复制 Prompt</string>
     <string name="copied">已复制</string>
-    <string name="ai_prompt_title">让 AI 帮你转换截图（Sleepy 原生格式）</string>
-    <string name="ai_prompt_hint">把下面的 Prompt 复制给豆包、ChatGPT 等 AI，连同课表截图一起发送，AI 会输出 #sleepy-v1 格式文本，整段复制粘贴回上方输入框即可导入。</string>
-    <string name="ai_prompt_text">任务：把接下来发给你的课表截图（或文件内容），转换成 sleepy-v1 纯文本格式输出。除了转换结果，不要输出任何解释、问候、Markdown 代码围栏或多余文字。输出第一行必须是 #sleepy-v1。\n\n========== 一、格式规则 ==========\n\n第一行固定写：#sleepy-v1\n\n其余每行一条记录，用竖线 | 分隔列。三种行：\n\n1. T 行（表信息，可选，最多一行）：\nT表名|学期开始日期|总周数|每天节数\n· 学期开始日期格式 YYYY-MM-DD，必须是第 1 周的周一\n· 课表上明确写出才填，没写的信息留空；可以只写到有值的列，例如 T|2026-03-02\n· 课表完全没提这些就整个 T 行不要输出，禁止猜测\n\n2. N 行（每节课的上下课时间，可选，每节课一行）：\nN节号|开始时间|结束时间\n· 例如 N3|10:00|10:45\n· 只有课表明确给出每节课的时间表才输出；时间用 24 小时制 HH:mm，8:00 要写成 08:00\n· 课表没给时间表就不要输出任何 N 行\n\n3. C 行（课程，主体，每门课每出现一次写一行）：\nC课名|星期|节次|周次|教师|教室|颜色|备注|上课时间|组\n固定 10 列、9 个竖线。没有内容的列留空，但竖线不能少。各列填法：\n  第1列 课名：照抄课表原文，一字不改，任何语言都原样保留\n  第2列 星期：周一至周日分别写 1 2 3 4 5 6 7\n  第3列 节次：第3-4节写 3-4；单节第6节写 6\n  第4列 周次：见「二、周次规则」\n  第5列 教师：课表有就照抄，没有留空\n  第6列 教室：同上\n  第7列 颜色：恒留空\n  第8列 备注：课表上有备注或说明才写，否则留空\n  第9列 上课时间：仅当课表对该课明确标出具体钟点（如晚课）才写 HH:mm-HH:mm，否则留空\n  第10列 组：恒留空\n\n========== 二、周次规则 ==========\n\n先从课表提取这门课的上课周集合，再按顺序判断：\n1. 连续区间且不限奇偶 → 写 S-E，如 1-16\n2. 区间内全部是单周（课表写「单周」「奇数周」）→ 写 S-E单，如 1-15单\n3. 区间内全部是双周（「双周」「偶数周」）→ 写 S-E双，如 2-16双\n4. 零散周（如「1-8周，10周，12-16周」）→ 按连续段拆开，每段写一个独立的 C 行，课名、星期、节次等其余列原样照抄：\n   · 全周连续段写 S-E（如 1-8、12-16）\n   · 孤立单周写 S定（如 10定）\n   · 纯奇数连续段写 S-E单，纯偶数连续段写 S-E双\n   · 段内不连续又非纯奇偶的写 S-E定（如 6,7 两周写 6-7定）\n5. 课表完全没提周次 → 写 1-16\n\n========== 三、提取规则 ==========\n\n· 同一门课一周出现多次（不同天或不同节）→ 写多个 C 行，一个上课时刻一行，不要合并成一行\n· 节次必须从课表的「第 X 节」读出；若整张课表没有节次只有时间，把全天不重叠的时间段按先后编为第 1、2、3…节，并用这些时间输出对应的 N 行\n· 课名、教师、教室照抄原文；文本里若含 | \ \\" &amp;amp;lt; { ( 这几个字符，在每个字符前加一个 \；文本内需要换行时写成 \n 两个字符，制表符写成 \t\n· 课表上没有的信息一律留空，禁止编造教师、教室、时间或周次\n\n========== 四、输出自检（在心里核对，不要输出清单） ==========\n\n· 第一行是 #sleepy-v1，除此之外没有任何多余文字，输出到最后一行记录为止\n· 每个 C 行恰好 9 个竖线、10 列\n· 星期是 1-7 的数字；时间小时两位（08:00 不是 8:00）\n· 周次列只出现 S-E、S-E单、S-E双、S-E定、S定 五种形态\n· 课名与课表原文一致；没有编造任何内容\n\n========== 五、示例输出 ==========\n\n#sleepy-v1\nT|2026-03-02\nN1|08:00|08:45\nN2|08:55|09:40\nN3|10:00|10:45\nN4|10:55|11:40\nN5|14:00|14:45\nN6|14:55|15:40\nN7|16:00|16:45\nN8|16:55|17:40\nN9|19:00|19:45\nN10|19:55|20:40\nC高等数学A|1|1-2|1-16|张三|A101||||\nC高等数学A|3|3-4|1-16|张三|A101||||\nC大学英语|2|3-4|1-15单|李四|C301||||\nC数据结构|4|3-4|2-16双|王五|C302||||\nC体育|4|5-6|3-4定||||||\nCJava实战|3|9-10|1-16||机房|||19:00-21:30|\nC影视鉴赏|7|6|10-16双||||||\nC形势与政策|5|8-9|1-8||||||\nC形势与政策|5|8-9|12-16||||||</string>
+    <string name="ai_prompt_title">让 AI 帮你转换截图（wedo 原生格式）</string>
+    <string name="ai_prompt_hint">把下面的 Prompt 复制给豆包、ChatGPT 等 AI，连同课表截图一起发送，AI 会输出 #wedo-v1 格式文本，整段复制粘贴回上方输入框即可导入。</string>
+    <string name="ai_prompt_text">任务：把接下来发给你的课表截图（或文件内容），转换成 wedo-v1 纯文本格式输出。除了转换结果，不要输出任何解释、问候、Markdown 代码围栏或多余文字。输出第一行必须是 #wedo-v1。\n\n========== 一、格式规则 ==========\n\n第一行固定写：#wedo-v1\n\n其余每行一条记录，用竖线 | 分隔列。三种行：\n\n1. T 行（表信息，可选，最多一行）：\nT表名|学期开始日期|总周数|每天节数\n· 学期开始日期格式 YYYY-MM-DD，必须是第 1 周的周一\n· 课表上明确写出才填，没写的信息留空；可以只写到有值的列，例如 T|2026-03-02\n· 课表完全没提这些就整个 T 行不要输出，禁止猜测\n\n2. N 行（每节课的上下课时间，可选，每节课一行）：\nN节号|开始时间|结束时间\n· 例如 N3|10:00|10:45\n· 只有课表明确给出每节课的时间表才输出；时间用 24 小时制 HH:mm，8:00 要写成 08:00\n· 课表没给时间表就不要输出任何 N 行\n\n3. C 行（课程，主体，每门课每出现一次写一行）：\nC课名|星期|节次|周次|教师|教室|颜色|备注|上课时间|组\n固定 10 列、9 个竖线。没有内容的列留空，但竖线不能少。各列填法：\n  第1列 课名：照抄课表原文，一字不改，任何语言都原样保留\n  第2列 星期：周一至周日分别写 1 2 3 4 5 6 7\n  第3列 节次：第3-4节写 3-4；单节第6节写 6\n  第4列 周次：见「二、周次规则」\n  第5列 教师：课表有就照抄，没有留空\n  第6列 教室：同上\n  第7列 颜色：恒留空\n  第8列 备注：课表上有备注或说明才写，否则留空\n  第9列 上课时间：仅当课表对该课明确标出具体钟点（如晚课）才写 HH:mm-HH:mm，否则留空\n  第10列 组：恒留空\n\n========== 二、周次规则 ==========\n\n先从课表提取这门课的上课周集合，再按顺序判断：\n1. 连续区间且不限奇偶 → 写 S-E，如 1-16\n2. 区间内全部是单周（课表写「单周」「奇数周」）→ 写 S-E单，如 1-15单\n3. 区间内全部是双周（「双周」「偶数周」）→ 写 S-E双，如 2-16双\n4. 零散周（如「1-8周，10周，12-16周」）→ 按连续段拆开，每段写一个独立的 C 行，课名、星期、节次等其余列原样照抄：\n   · 全周连续段写 S-E（如 1-8、12-16）\n   · 孤立单周写 S定（如 10定）\n   · 纯奇数连续段写 S-E单，纯偶数连续段写 S-E双\n   · 段内不连续又非纯奇偶的写 S-E定（如 6,7 两周写 6-7定）\n5. 课表完全没提周次 → 写 1-16\n\n========== 三、提取规则 ==========\n\n· 同一门课一周出现多次（不同天或不同节）→ 写多个 C 行，一个上课时刻一行，不要合并成一行\n· 节次必须从课表的「第 X 节」读出；若整张课表没有节次只有时间，把全天不重叠的时间段按先后编为第 1、2、3…节，并用这些时间输出对应的 N 行\n· 课名、教师、教室照抄原文；文本里若含 | \ \\" &amp;amp;lt; { ( 这几个字符，在每个字符前加一个 \；文本内需要换行时写成 \n 两个字符，制表符写成 \t\n· 课表上没有的信息一律留空，禁止编造教师、教室、时间或周次\n\n========== 四、输出自检（在心里核对，不要输出清单） ==========\n\n· 第一行是 #wedo-v1，除此之外没有任何多余文字，输出到最后一行记录为止\n· 每个 C 行恰好 9 个竖线、10 列\n· 星期是 1-7 的数字；时间小时两位（08:00 不是 8:00）\n· 周次列只出现 S-E、S-E单、S-E双、S-E定、S定 五种形态\n· 课名与课表原文一致；没有编造任何内容\n\n========== 五、示例输出 ==========\n\n#wedo-v1\nT|2026-03-02\nN1|08:00|08:45\nN2|08:55|09:40\nN3|10:00|10:45\nN4|10:55|11:40\nN5|14:00|14:45\nN6|14:55|15:40\nN7|16:00|16:45\nN8|16:55|17:40\nN9|19:00|19:45\nN10|19:55|20:40\nC高等数学A|1|1-2|1-16|张三|A101||||\nC高等数学A|3|3-4|1-16|张三|A101||||\nC大学英语|2|3-4|1-15单|李四|C301||||\nC数据结构|4|3-4|2-16双|王五|C302||||\nC体育|4|5-6|3-4定||||||\nCJava实战|3|9-10|1-16||机房|||19:00-21:30|\nC影视鉴赏|7|6|10-16双||||||\nC形势与政策|5|8-9|1-8||||||\nC形势与政策|5|8-9|12-16||||||</string>
 
     <string name="format_wakeup_share_when">从 WakeUp 课程表 app 整体搬家。在 WakeUp 里点「分享课程」生成的整段文字，原样粘贴即可。</string>
     <string-array name="format_wakeup_share_spec">
@@ -145,7 +151,7 @@
     </string-array>
     <string name="format_wakeup_json_example" formatted="false">{\n  "name": "我的课表",\n  "startDate": "2026-09-07",\n  "courses": [\n    {"name":"高等数学","teacher":"张三","position":"A101","day":1,"startNode":1,"step":2,"startWeek":1,"endWeek":16,"type":0}\n  ]\n}</string>
 
-    <string name="format_ics_when">学校教务系统或 WakeUp 导出的日历文件（.ics）。用「从文件导入」选它、在文件管理器里点文件选 Sleepy 打开，或用文本编辑器打开后复制全部内容粘贴。</string>
+    <string name="format_ics_when">学校教务系统或 WakeUp 导出的日历文件（.ics）。用「从文件导入」选它、在文件管理器里点文件选 wedo 打开，或用文本编辑器打开后复制全部内容粘贴。</string>
     <string-array name="format_ics_spec">
         <item>文本必须以 BEGIN:VCALENDAR 开头 —— 复制时漏掉第一行就识别不了</item>
         <item>每节课是一条事件：SUMMARY 是课名、LOCATION 是教室，老师从描述里自动识别</item>
@@ -167,7 +173,7 @@
     </string-array>
     <string name="format_csv_example" formatted="false">课程名,教师,教室,星期,节次,周次,类型\n高等数学,张三,A101,周一,1-2,1-16,每周\n大学英语,李四,B202,3,3-4,1-16,单周</string>
 
-    <string name="format_html_when">教务网页课表：浏览器「另存为网页」得到的 .html 文件、复制的表格源码，或在文件管理器里点 .html 文件选 Sleepy 打开。</string>
+    <string name="format_html_when">教务网页课表：浏览器「另存为网页」得到的 .html 文件、复制的表格源码，或在文件管理器里点 .html 文件选 wedo 打开。</string>
     <string-array name="format_html_spec">
         <item>文本必须以 &lt;!DOCTYPE、&lt;html、&lt;table 之类的标签开头 —— 前面带一段普通文字就识别不了，删掉再粘</item>
         <item>页面里要有表格，且表头行里能找到「课程」字样</item>
@@ -177,9 +183,9 @@
     </string-array>
     <string name="format_html_example" formatted="false">&lt;table&gt;\n&lt;tr&gt;&lt;td&gt;课程&lt;/td&gt;&lt;td&gt;教师&lt;/td&gt;&lt;td&gt;教室&lt;/td&gt;&lt;td&gt;星期&lt;/td&gt;&lt;td&gt;节次&lt;/td&gt;&lt;td&gt;周次&lt;/td&gt;&lt;/tr&gt;\n&lt;tr&gt;&lt;td&gt;高等数学&lt;/td&gt;&lt;td&gt;张三&lt;/td&gt;&lt;td&gt;A101&lt;/td&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;1-2&lt;/td&gt;&lt;td&gt;1-16&lt;/td&gt;&lt;/tr&gt;\n&lt;/table&gt;</string>
 
-    <string name="format_plain_when">Sleepy 原生格式（sleepy-v1）：密度高、格式整齐、容错强。适合手打，更适合让 AI 从课表截图生成（见下方 Prompt）。旧的制表符格式仍可导入。</string>
+    <string name="format_plain_when">wedo 原生格式（wedo-v1）：密度高、格式整齐、容错强。适合手打，更适合让 AI 从课表截图生成（见下方 Prompt）。旧的制表符格式仍可导入。</string>
     <string-array name="format_plain_spec">
-        <item>第一行固定写 #sleepy-v1</item>
+        <item>第一行固定写 #wedo-v1</item>
         <item>课程行格式固定：C课名|星期|节次|周次|教师|教室|颜色|备注|上课时间|组，共 10 列 9 个竖线</item>
         <item>没有内容的列留空，但竖线不能少</item>
         <item>星期填 1-7（周一=1）；节次写区间 1-2，单节写 6</item>
@@ -190,11 +196,11 @@
         <item>表信息行（可选）：T表名|开学日期|总周数|每天节数，开学日期须为第 1 周周一</item>
         <item>无法识别的行会列在导入预览里，不会静默丢弃</item>
     </string-array>
-    <string name="format_plain_example" formatted="false">#sleepy-v1\nT我的课表|2026-03-02|20|12\nNd\nC高等数学A|1|1-2|1-16|张三|A101||||\nC大学英语|2|3-4|1-15单|李四|C301||||\nC体育|4|5-6|3-4定||||||\nC影视鉴赏|7|6|10-16双||||||</string>
+    <string name="format_plain_example" formatted="false">#wedo-v1\nT我的课表|2026-03-02|20|12\nNd\nC高等数学A|1|1-2|1-16|张三|A101||||\nC大学英语|2|3-4|1-15单|李四|C301||||\nC体育|4|5-6|3-4定||||||\nC影视鉴赏|7|6|10-16双||||||</string>
     <string name="import_dropped_title">有 %1$d 行没能识别</string>
     <string name="import_dropped_hint">这些行被跳过了，检查格式后可以重新导入：</string>
     <string name="import_warnings_title">提示</string>
-    <string name="export_native_title">Sleepy 原生格式</string>
+    <string name="export_native_title">wedo 原生格式</string>
     <string name="export_native_subtitle">完整备份·体积最小·推荐迁移分享</string>
     <string name="import_start_date_required">请填写学期开始日期</string>
     <string name="start_date_format">日期格式应为YYYY-MM-DD</string>
@@ -303,7 +309,7 @@
     <string name="export_ics_title">ICS 日历</string>
     <string name="export_ics_subtitle">标准 iCalendar 格式，可导入系统日历 / Google / Apple Calendar</string>
     <string name="export_share_chooser">分享课表</string>
-    <string name="export_saved_to">已保存到 Download/Sleepy/%1$s</string>
+    <string name="export_saved_to">已保存到 Download/wedo/%1$s</string>
     <string name="export_copied_hint">已调起分享面板</string>
     <string name="export_failed">导出失败，请重试</string>
     <string name="mine_stat_tables">课表数</string>
@@ -312,10 +318,15 @@
 
     <!-- More Settings -->
         <string name="settings_high_refresh">高刷新率</string>
-    <string name="settings_nav_style">底栏样式</string>
-    <string name="settings_nav_style_docked">贴底</string>
-    <string name="settings_nav_style_floating">悬浮</string>
     <string name="settings_section_display">画面</string>
+    <string name="settings_section_date_layout">日期与布局</string>
+    <string name="settings_section_system">系统</string>
+    <string name="settings_schedule_layout">课表布局</string>
+    <string name="settings_visible_days_all">每天</string>
+    <string name="settings_visible_days_weekdays">周一至周五</string>
+    <string name="settings_visible_days_count">%1$d 天</string>
+    <string name="settings_view_scale">网格视图</string>
+    <string name="settings_week_layout">周视图</string>
     <string name="settings_language">语言 / Language</string>
     <string name="settings_display_mode">课程时间显示</string>
     <string name="settings_display_node">节次</string>
@@ -429,12 +440,12 @@
 
     <!-- Widget / Common UI -->
     <string name="widget_create_schedule">请先创建课表</string>
-    <string name="widget_open_sleepy">打开 Sleepy 开始添加</string>
+    <string name="widget_open_wedo">打开 wedo 开始添加</string>
     <string name="widget_edit_section_schedule">呈现的课表</string>
     <string name="widget_edit_default_label">默认（跟随当前课表）</string>
     <string name="widget_manage_title">管理桌面小组件</string>
     <string name="widget_edit_title">编辑小组件</string>
-    <string name="widget_manage_empty">暂未在桌面添加 Sleepy 小组件。长按桌面空白处 → 小组件 → 选 Sleepy 即可添加。</string>
+    <string name="widget_manage_empty">暂未在桌面添加 wedo 小组件。长按桌面空白处 → 小组件 → 选 wedo 即可添加。</string>
     <string name="widget_manage_entry">管理桌面小组件</string>
     <string name="more_sections">还有 %1$d 节…</string>
     <string name="tomorrow">明天</string>
@@ -445,7 +456,7 @@
     <!-- JW Import -->
     <string name="jw_no_url">该学校暂未配置教务 URL</string>
     <string name="jw_pending_title">该学校暂未实现教务导入</string>
-    <string name="jw_pending_msg">%1$s 的教务系统未在 Sleepy 适配列表中。\n\n你可以：\n1. 点击「申请适配」提交给开发者\n2. 点击「手动输入 URL」在 WebView 打开并登录\n3. 暂用 HTML / CSV 文件导入，或手动添加课程</string>
+    <string name="jw_pending_msg">%1$s 的教务系统未在 wedo 适配列表中。\n\n你可以：\n1. 点击「申请适配」提交给开发者\n2. 点击「手动输入 URL」在 WebView 打开并登录\n3. 暂用 HTML / CSV 文件导入，或手动添加课程</string>
     <string name="jw_pending_supported">已支持</string>
     <string name="jw_pending_pending">待适配</string>
     <string name="jw_pending_grad">研究生</string>
@@ -472,7 +483,7 @@
     <string name="jw_diag_no_container">%1$s 的页面未找到课表容器。可能原因：①抓取时机过早课表未加载；②页面为图片课表或跨域 iframe；③教务系统已升级，请反馈开发者</string>
     <string name="jw_diag_header_no_node">%1$s 的课表缺少逐节行头。可能原因：①图片课表（请用文件/手动导入）；②组头被合并（如“第一节-第二节”），请反馈开发者</string>
     <string name="jw_diag_image_cells">%1$s 的课表单元格为图片，无法识别。请改用 HTML/CSV 文件导入或手动添加课程</string>
-    <string name="jw_diag_empty_semester">%1$s 的页面声明本学期暂无课程。请确认已选对学期，或下学期开学后再导入</string>
+    <string name="jw_diag_empty_semester">%1$s 的页面声明本学期暂无课程。请确认教务侧学期是否已切换到正确学期，或下学期开学后再导入</string>
     <string name="jw_diag_wrong_protocol">%1$s 的学校标注协议与实际页面不一致。可能原因：①学校已切换教务系统；②抓取协议选择有误。请反馈开发者</string>
     <string name="jw_diag_unknown_empty">%1$s 解析结果为空，未找到明确原因。请重试或反馈开发者。诊断特征：%2$s</string>
     <string name="jw_diag_campus_vpn_hint">该校教务系统仅校内可访问。若在校外，请先连接校园网或 VPN 后再试</string>
@@ -496,6 +507,13 @@
     <string name="jw_import_page">导入此页</string>
     <string name="jw_fetch_timeout">抓取超时：教务服务器长时间无响应，请检查网络后重试</string>
     <string name="jw_fetch_no_courses">抓取成功但未解析到课程：请确认页面已显示本学期课表且学期选择正确</string>
+
+    <!-- TASK-03 教务导入失败页（REQ-P2-03 / REQ-P2-07）：原因 + 下一步动作 -->
+    <string name="jw_failure_title">导入失败</string>
+    <string name="jw_failure_retry">重试抓取</string>
+    <string name="jw_failure_retry_hint">请返回到教务系统的「个人课表」页，再点「重试抓取」</string>
+    <string name="jw_failure_use_file">改用文件导入</string>
+    <string name="jw_failure_manual_add">手动添加课程</string>
 
     <!-- School Select -->
     <string name="select_school">选择学校</string>
@@ -522,7 +540,7 @@
 
     <!-- About -->
     <string name="mine_about">关于</string>
-    <string name="mine_about_body">Sleepy 课程表 v%1$s\n\n一个极简、干净、本地优先的课表工具。\n所有数据均存储在你的设备上，不上传任何服务器。\n\n· 无广告\n· 无追踪\n· 支持 WakeUp / ICS / CSV / HTML / 纯文本 导入</string>
+    <string name="mine_about_body">wedo课程表 v%1$s\n\n一个极简、干净、本地优先的课表工具。\n所有数据均存储在你的设备上，不上传任何服务器。\n\n· 无广告\n· 无追踪\n· 支持 WakeUp / ICS / CSV / HTML / 纯文本 导入</string>
 
     <!-- Day of week array (index 0 = Mon) -->
     <string-array name="day_names">
@@ -543,11 +561,7 @@
     <!-- v1.0.20 提醒功能 -->
     <string name="reminder_title">提醒</string>
     <string name="reminder_master_title">开启提醒</string>
-    <string name="reminder_master_sub">允许 Sleepy 发送课程通知</string>
-    <string name="reminder_daily_title">每日提醒</string>
-    <string name="reminder_daily_sub">每天在指定时间推送今日课程摘要</string>
-    <string name="reminder_daily_time_label">提醒时间</string>
-    <string name="reminder_daily_preview">示例：今日 15 号 您有 3 节课 第一节课 高等数学 于 08:00 在 教学楼A101 上课</string>
+    <string name="reminder_master_sub">允许 wedo 发送课程通知</string>
     <string name="reminder_before_class_title">每节课前提醒</string>
     <string name="reminder_before_class_sub">在每节课开始前提醒下节课信息</string>
     <string name="reminder_before_minutes_label">提前</string>
@@ -555,30 +569,14 @@
     <string name="reminder_before_class_preview">示例：下节课 高等数学 于 08:00 在 教学楼A101 上课</string>
     <string name="reminder_banner_title">横幅提醒</string>
     <string name="reminder_banner_sub">在系统通知栏显示课前横幅</string>
-    <string name="reminder_fluid_title">流体云 / 超级岛</string>
-    <string name="reminder_fluid_sub">在支持的小米、OPPO 手机上显示实时课程卡片</string>
-    <string name="reminder_fluid_fields">胶囊主显示内容</string>
-    <string name="reminder_fluid_fields_hint">选择一个主显示内容</string>
-    <string name="reminder_fluid_field_name">课程名称</string>
-    <string name="reminder_fluid_field_time">上课时间</string>
-    <string name="reminder_fluid_field_room">上课地点</string>
-    <string name="reminder_fluid_field_teacher">任课老师</string>
-    <string name="reminder_fluid_note">点击通知后可展开课程详情。具体是否显示为流体云/超级岛由手机系统、通知权限和厂商服务资格决定。</string>
-    <string name="reminder_pick_time">选择提醒时间</string>
     <string name="action_confirm">确定</string>
     <string name="action_cancel">取消</string>
     <!-- Notification channels -->
-    <string name="notif_channel_daily">每日课程提醒</string>
-    <string name="notif_channel_daily_desc">每天在指定时间推送今日课程摘要</string>
     <string name="notif_channel_before_class">课前提醒</string>
     <string name="notif_channel_before_class_desc">每节课开始前推送下节课信息</string>
-    <string name="notif_channel_fluid">流体云 / 超级岛</string>
-    <string name="notif_channel_fluid_desc">课前显示可展开的课程实时卡片</string>
+    <string name="notif_channel_before_class_silent">课前提醒（静音）</string>
+    <string name="notif_channel_before_class_silent_desc">每节课开始前推送下节课信息（不弹出悬浮横幅）</string>
     <!-- Notification content -->
-    <string name="notif_daily_title">今日 %1$d 号，您有 %2$d 节课</string>
-    <string name="notif_daily_text_first">第一节课 %1$s 于 %2$s 在 %3$s 上课</string>
-    <string name="notif_daily_title_no_course">今日 %1$d 号，今天没有课程</string>
-    <string name="notif_daily_text_no_course">好好休息，享受一天！</string>
     <string name="notif_before_class_title">课前提醒</string>
     <string name="notif_before_class_text">下节课 %1$s 于 %2$s 在 %3$s 上课</string>
     <string name="notif_before_class_text_with_teacher">下节课 %1$s 于 %2$s 在 %3$s 上课，老师：%4$s</string>
@@ -588,7 +586,6 @@
     <string name="about_title">关于</string>
     <string name="about_version">版本信息</string>
     <string name="about_version_detail">版本 %1$s（构建 %2$d）</string>
-    <string name="about_update">获取更新</string>
     <string name="about_update_detail">GitHub 主站不可用时，自动回退镜像下载</string>
     <string name="about_update_checking">正在检查更新…</string>
     <string name="about_update_latest">当前已是最新版本 v%1$s</string>
@@ -605,30 +602,21 @@
     <string name="schedule_week_prefix">第 %1$d 周</string>
     <string name="today_semester_out_hint">学期范围外，课程仅供参考</string>
     <string name="about_author">作者</string>
-    <string name="about_author_name">Lingion</string>
+    <string name="about_author_name">Joshmax010</string>
     <string name="about_source">开源地址</string>
-    <string name="about_source_url">github.com/lingion/sleepy</string>
+    <string name="about_source_url">github.com/Joshmax010/wedo-Schedule</string>
     <string name="about_feedback">反馈与建议</string>
     <string name="about_feedback_detail">提交 Bug 或新想法到 GitHub Issue，或通过邮件联系作者</string>
     <string name="about_feedback_github">GitHub Issue</string>
-    <string name="about_feedback_email">邮件反馈</string>
-    <string name="about_feedback_email_subject">[Sleepy 反馈]</string>
-    <string name="about_feedback_email_body">请描述你遇到的问题或建议：\n\n— 环境 —\n（选填）\n</string>
-    <string name="about_feedback_no_mail_app">未找到可用的邮件应用，请改用 GitHub Issue</string>
     <string name="about_license_title">开源声明</string>
-    <string name="about_license_body">本应用部分教务导入适配参考了以下开源项目的公开实现。按跨校普适项目 / 单校项目两类组织，单校卡展开后可查看该校所参考的所有学生维护项目。
-
-跨校普适：WakeUp 课程表 (YZune, Apache-2.0) 与 WakeupSchedule_BUPT (dIT8Zv, Apache-2.0) 强智/强智变体/老版正方/URP/青果/湖南科大等十二个教务解析器;WakeupSchedule_Kotlin (Apache-2.0) 经典金智 EAMS;时光课程表 cqu.js 重庆大学门户 REST;shiguang_warehouse (XingHeYuZhuan, MIT) 武汉理工与经典 EAMS、新正方网格视图;zfn_api (openschoolcn, MPL-2.0) 与 FlowCourse (jiaweiyaya, GPL-3.0) 新正方 kbList 形态交叉验证;iwut (TokenTeam, AGPL-3.0, 仅参考协议形态) 武汉理工节次映射;「上课」shangkeschedule (qiqqqqq517, Apache-2.0) 与 WakeUp 课程表学校登记数据名单复核。
-
-按学校致谢（每校一条卡，展开看明细）—— 合肥工业大学 HFUT：HFUT-Schedule (Chiu-xaH, MIT)、HfutOpenApi (BoynChan, MIT)、hfut_schedule_hacker (Aoi-cn)、django-hfut-auth (elonzh, MIT);东南大学 SEU：SEUTimetable (sakimidare, Apache-2.0)、Aetik-yue/hormone、luzy99/SEUAutoLogin;浙江大学 ZJU：zju-ical-py (Xecades, LGPL-2.1);中国科学技术大学 USTC：USTC-timetable-to-ics (1970633640);四川大学 SCU：ScuTimetable (Z-P-J);东北大学 NEU：neu_wisedu2wakeup (CreamPig233)、PopulusYang/NeuTimetable、neucn/elise、RekaYOO/NEU-JWXT-Toolkit、PeterPtroc/neu-jwxt-to-wakeup、leavesvv-source/NEU-Timetable;重庆大学 CQU：321CQU/pymycqu、BillYang2016/CQU-class2ics、haowang02/CourseMonitor、LengerHu/CQU_classtabletoics、Hagb/cqu_timetable_new、VayneDuan/CQU-Grade-Monitor、weearc/cm-http-api、barryZZJ/course_to_calander_converter;武汉理工大学 WHUT：courseTable (acm910);电子科技大学 UESTC：MilLoong/UESTC-EAMS-Helper-App、MilLoong/UESTC-EAMS-Helper-Python、KaranocaVe/UESTCJWCWatchdog、whtsky/uestc-eams-cleartimeout-userscript、Sunmxt/UESTC-EAMS;广东工业大学 GDUT：N0tExpectErr0r/GDUT-ClassTimeTable、Richard-Zheng/GDUT-Schedule-ng、StarArchive/gdut-course-frontend、StarArchive/gdut-course-backend、HoneQ7/GDUT_iOS_Timetable;广东财经大学 GDUFE：jkgeekJack/Android-GDUFE-JWC-SDK-1.0.0、Kiteio/GDUFE-wrapper;广东金融学院 GDUf：Kiteio/Punica、gduf-finmind;广东外语外贸大学 GDUFS：yongjianzheng/Gdufszhushou、Crazioker/agency;广东医科大学 GDMU：由用户提供采集包实锤 zf_new 协议形态 (新正方 zftal-ui-v5 裸 /kbcx/ 路径), 参见 docs/release-notes-v1.0.49.md;长沙理工大学 CSUST：zHElEARN/CSUSTKit、CreaMakers/EduSpider、timeisthe/CSUSTDataGet、Julius-lq/EduAdminSystem、JS-CAUTION/csust-course-schedule;北京邮电大学 BUPT：helium777/bupt-course-grab、JmPotato/BUPT-Grader、Seizzzz/Auto-Login-BUPT;北京大学 PKU：zhongxinghong/PKUAutoElective、thezzisu/pku-elective、Hovennnnn/PKUAutoElective2023、Lihhan/AutoElective_4_PKU、AuYang261/PKU_Elective_Toolset;北京化工大学 BUCT：MarkYangKp/ZhengFangJY;中国科学院大学 UCAS：ldiex/UCAS_Course_Schedule_Convertor (Python, 13 节次 + 选课周次映射)、Hurray0/UCAS_GET_Course (Python, xkgo.ucas.ac.cn 选课抓取脚本)、cld378632668/ucas_course_tool (Java, UCAS 课程工具)、GentleCP/UCAS-Helper (TypeScript, UCAS 课程/成绩辅助);北京航空航天大学 BUAA：APassbyDreg/BUAA_JW_Utils (Python 工具集, ieas2.1 选课 + 评教 URL 锚点)、SE2020-TopUnderstanding/BUAA-Campus-Tools-Backend (Python, jwxt-7001.e2.buaa.edu.cn/ieas2.1/kbcx/queryGrkb 课表 endpoint 实锤)、fondoger/buaa-teacher-evaluation (MIT, 一键评教 sso.buaa.edu.cn CAS)、Cauchy1412/BUAAGetCourse (Python 抢课脚本)、KKRainbow/JWOneShotEval (PHP, 校内 IP 锚点等价);北京林业大学 BJFU：Bloomberg2000/bjfu_course_ics_generator、Bloomberg2000/bjfu_util.py;安徽大学 AHU：MoeclubM/AHU-AIO (Dart, 新教务 REST 客户端, lib/jw/api/jw_api.dart)、qiqqqqq517/shangkeschschedule (Apache-2.0) 「上课」AHU 适配器 (WebVPN+CAS+get-data 协议族共识, ahu.js)、abydym/Ahu_Plus (GPL-3.0, Kotlin 同栈, JwModels.kt+CourseRepository.kt print-data+get-data 双轨)、Landon-3314/AHU-TimeTable (Flutter, academic_course_api_parser.dart print-data activities 字段映射)、Zeraora-807/Anhui-Univ-DSH-Tool (TypeScript DeepSeek Harness, print-data studentTableVms 提取)、MuxYang/AhuCourseSelectCLI (Python 选课 CLI, NEGATIVE: course-selection-api 协议族不入 EAMS5)、Tonyseth/AHU_JW_GPA_Calculator (油猴脚本 GPA 计算, INDIRECT)、curdbin/AHU-API (Python, NEGATIVE: 旧正方 ASP.NET jw1.ahu.cn/jw2.ahu.cn)、UponNoise/AHU_SBI_DMT (Python, NEGATIVE: 旧正方 jwxt3.ahu.edu.cn);东北林业大学 NEFU：bboy-xp/nefu-crawler、heyMahalo/crouse_select;东华大学 DHU：tk.dcmmcc、Bad-086/DHU_CourseMonitor;云南财经大学 YNUFE：NINIYOYYO/ynufe-campus-app、MiaoWuNYA/ynufeRealLogin;北京理工大学 BIT：BIT-Login (BIT101-dev);北京信息科技大学 BISTU：iBistu (ProjektMing);安徽建筑大学 AHU-JZ：JdaAssist (CH4019, MIT);重庆邮电大学移通学院 CQYTU：CQYTZFCheckScores (xM3GAN, Apache-2.0);华南农业大学 SCAU：ScheduleXParser_SCAU (greyovo);齐鲁工业大学 QLU：JW-spider (Zhy423310825);渤海大学 BHU：BohaiServiceDome (joun233);东北石油大学 NEPU：WeNEPU (cutiechi);南京理工大学 NUST：HeraldStudentCurriculum (idailylife)。</string>
-    <string name="about_license_detail">开源许可与致谢</string>
-    <string name="license_page_title">开源许可与致谢</string>
+    <string name="about_license_detail">开源许可</string>
+    <string name="license_page_title">开源许可</string>
     <string name="license_gpl_section">许可证</string>
-    <string name="license_gpl_body">Sleepy 是一款开源的智能课表应用，源代码基于 GNU General Public License v3.0 协议发布。任何人都可以自由使用、修改和分发本软件。欢迎通过 GitHub 参与贡献。</string>
-    <string name="license_attribution_section">教务适配致谢</string>
-    <string name="license_attribution_note">本应用部分教务导入适配参考了以下开源项目的公开实现，在此一并致谢。</string>
-    <string name="license_foundational_section">跨校普适项目</string>
-    <string name="license_perschool_section">按学校致谢</string>
+    <string name="license_gpl_body">wedo 是一款开源的智能课表应用，源代码基于 GNU General Public License v3.0 协议发布。任何人都可以自由使用、修改和分发本软件。欢迎通过 GitHub 参与贡献。</string>
+    <string name="license_origin_section">项目来源</string>
+    <string name="license_origin_body">本应用是在 Sleepy · 轻课表（GNU GPL v3.0）基础上开发的衍生作品。按 GPL-3.0 要求，上游著作权声明与许可证继续保留，详见仓库根目录的 NOTICE 与 LICENSE。</string>
+    <string name="license_third_party_section">第三方来源</string>
+    <string name="license_third_party_note">以上项目仅用于协议形态与解析逻辑的参考或移植，完整许可证文本以各项目仓库为准。</string>
     <string name="about_update_check">自动检查更新</string>
     <string name="about_update_check_detail">启动时自动检查 GitHub Releases, 发现新版本会在「关于」页顶部提示</string>
     <string name="about_update_available">新版 %1$s 可用,点此查看</string>
@@ -660,7 +648,20 @@
     <string name="theme_mode_light">浅色</string>
     <string name="theme_mode_dark">深色</string>
     <string name="appearance_section_theme">主题色彩</string>
+    <!-- Apple 化：主题色从「5 套预设」改为「12 个 iOS 系统色的强调色选择」 -->
+    <string name="appearance_accent_title">强调色</string>
+    <string name="appearance_accent_desc">选中态、链接与主按钮使用的颜色</string>
+    <string name="appearance_accent_preview">预览</string>
     <string name="appearance_section_display">课程显示</string>
+    <string name="appearance_section_material">材质</string>
+    <string name="settings_glass_quality">玻璃画质</string>
+    <string name="settings_glass_quality_smooth">流畅</string>
+    <string name="settings_glass_quality_balanced">平衡</string>
+    <string name="settings_glass_quality_fine">精致</string>
+    <string name="settings_motion">界面动效</string>
+    <string name="settings_motion_sub">关闭后减少位移与回弹</string>
+    <string name="settings_haptics">触觉反馈</string>
+    <string name="settings_haptics_sub">换周与长按时提供震动反馈</string>
     <string name="appearance_section_widget">小组件</string>
     <!-- i18n: hardcoded string extraction -->
     <string name="edit_period_input">输入</string>
@@ -713,4 +714,54 @@
     <string name="edge_insert_start_label">起始时间</string>
     <string name="edge_insert_end_label">结束时间</string>
     <string name="edge_insert_ok">添加</string>
+
+    <!-- TASK-05 E-(2): 导入向导 i18n（ImportWizard.kt 去硬编码） -->
+    <string name="import_wiz_title_detail">选择来源</string>
+    <string name="import_wiz_title_preview">预览与确认</string>
+    <string name="import_wiz_title_done">完成</string>
+    <string name="import_wiz_close">关闭</string>
+    <string name="import_wiz_pick_way">选择导入方式</string>
+    <string name="import_wiz_source_jw">教务直连</string>
+    <string name="import_wiz_jw_subtitle">登录学校教务系统抓取课表</string>
+    <string name="import_wiz_source_file">从文件导入</string>
+    <string name="import_wiz_source_text">粘贴课表文本</string>
+    <string name="import_wiz_source_manual">手动添加课程</string>
+    <string name="import_wiz_file_sub">日历(.ics) / CSV / 文本 / HTML</string>
+    <string name="import_wiz_text_sub">复制课表文字后粘贴</string>
+    <string name="import_wiz_detail_file">选择一个课表文件，解析后预览</string>
+    <string name="import_wiz_detail_text">把课表文本粘贴到下面，解析后预览</string>
+    <string name="import_wiz_pick_file">选择文件</string>
+    <string name="import_wiz_parse_preview">解析并预览</string>
+    <string name="import_wiz_metric_course">课程</string>
+    <string name="import_wiz_metric_conflict">冲突</string>
+    <string name="import_wiz_view_schedule">查看课表</string>
+    <string name="import_wiz_again">再导入一份</string>
+
+    <!-- TASK-05 A: 设置页四组标题 -->
+    <string name="settings_group_display">显示</string>
+    <string name="settings_group_notify">通知</string>
+    <string name="settings_privacy">隐私</string>
+    <!-- TASK-06 i18n: P3 课表面 + 导入向导「教务直连行」去硬编码（循环依赖修复） -->
+    <string name="schedule_v3_empty_title">把这一周，安排得清清楚楚</string>
+    <string name="schedule_v3_empty_hint">从教务系统、日历文件或手动添加开始</string>
+    <string name="schedule_v3_add_cta">添加课表</string>
+    <string name="schedule_week_empty_no_courses">这张课表还没有课程 · 点击 ＋ 添加</string>
+    <string name="schedule_week_empty_free">本周没有课程，好好享受自由时间</string>
+    <string name="schedule_more_export">导出 / 分享课表</string>
+    <string name="week_header_prev">上一周</string>
+    <string name="week_header_next">下一周</string>
+    <string name="week_header_title">第 %1$d 周</string>
+    <string name="week_header_title_range">第 %1$d 周 · %2$s</string>
+    <string name="week_picker_title">选择周次</string>
+    <string name="week_picker_progress">学期进度</string>
+    <string name="week_picker_progress_detail">第 %1$d 周 / 共 %2$d 周</string>
+    <string name="week_picker_back_to_current">回到本周</string>
+    <string name="week_picker_grid_week">第 %1$d 周</string>
+    <string name="week_picker_grid_current">第 %1$d 周，本周</string>
+    <string name="week_picker_chip_current">本周</string>
+    <string name="week_picker_chip_week">周</string>
+    <string name="week_range_long_format">%1$d月%2$d日 – %3$d月%4$d日</string>
+    <string name="settings_privacy_dialog_title">隐私与安全说明</string>
+    <string name="settings_privacy_dialog_body">登录在学校官方网页中完成，应用不读取或保存密码。\n\n解析后的课表只保存在本机，不上传到项目维护者服务器，也不进入系统云备份。\n\n应用只访问经过验证的教务域名，不会绕过验证码、证书错误或学校访问控制。\n\n你可以随时退出教务会话或清除本地课表。\n\n本项目与吉林建筑大学不存在官方合作或授权关系，源代码依据 GPL-3.0 公开。</string>
+    <string name="export_saved_no_app">已保存到「下载」：%1$s（当前设备没有可分享的应用）</string>
 </resources>

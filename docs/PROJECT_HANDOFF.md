@@ -8,11 +8,13 @@
 
 ## 0. 接手时先读的结论
 
-wedo 是从 [Sleepy · 轻课表](https://github.com/lingion/sleepy) 派生的 Android 原生、本地优先课程表。当前默认使用蓝色、明亮通透的周视图和 Android 原生 Compose 交互；已开放吉林建筑大学（JLJU）官方网页登录导入，同时提供日历文件、通用文件、文本和手动添加入口。无自建账号和后端，不依赖 Google Play Services。代码仍保留大量 Sleepy 的类名、包名、页面和解析器，不能因为名称带 `Sleepy`/`WakeUp` 就视为无用代码。
+wedo 是从 [Sleepy · 轻课表](https://github.com/lingion/sleepy) 派生的 Android 原生、本地优先课程表。当前默认使用蓝色、明亮通透的周视图和 Android 原生 Compose 交互；已开放吉林建筑大学（JLJU）官方网页登录导入，同时提供日历文件、通用文件、文本和手动添加入口。无自建账号和后端，不依赖 Google Play Services。
+
+**2026-09-27 内核重构已完成**：包名、类名、应用内文案全部改为 wedo；30 个上游教务协议解析器（含 `schools.json` 182 校目录、DFS iframe 抓取、5 段上游 fetch JS）已删除，教务链路收敛为单一 JLJU 新版正方。导入格式标识由 `#sleepy-v1` 改为 `#wedo-v1`，导入端兼容旧标识。
 
 接手者最需要记住的五件事：
 
-1. **应用 ID 与源码包名不同**：安装包 `com.wedo.schedule`，Debug 为 `com.wedo.schedule.debug`；Kotlin `namespace`/主要源码包仍为 `com.lingion.sleepy`。不要为“统一命名”贸然全仓换包。
+1. **包名已统一为 `com.wedo.schedule`**：安装包同名，Debug 为 `com.wedo.schedule.debug`；Kotlin `namespace` 与源码目录同为 `com.wedo.schedule`。
 2. **首页是已实现的 MVP，不是设计稿**：七日周网格、紧凑周切换、彩色课程卡和悬浮 Dock 在代码中；已移除的历史 `UI_DESIGN.md` 曾有过时措辞，以本手册和当前源码为准。
 3. **WakeUp 迁移的产品入口是其“导出为日历文件”产生的 ICS**；并不存在经用户证实的“WakeUp JSON 导出文件”入口。通用 JSON 解析仍保留，但不能营销为 WakeUp JSON 兼容。
 4. **教务直连目前只公开 JLJU**。`assets/schools.json` 和多所学校解析器是继承的能力/研究材料，不代表它们在 wedo 已验证或已对用户开放。
@@ -32,7 +34,7 @@ wedo 是从 [Sleepy · 轻课表](https://github.com/lingion/sleepy) 派生的 A
 
 设计和业务约束如下：
 
-- Android 8.0/API 26 起；学校账号仅由官方网页承接，应用不创建密码表单、不采集明文密码，不绕验证码和 TLS。
+- Android 13/API 33 起；学校账号仅由官方网页承接，应用不创建密码表单、不采集明文密码，不绕验证码和 TLS。
 - 教务数据默认在本机处理和保存；无云同步、用户中心、广告、埋点服务或自建课表后端。
 - 先使 JLJU 适配可靠，再按真实证据逐校扩展。UI 用“教务直连/选择学校”，不要在通用入口写死 JLJU。
 - 课程显示字段是一套**所有课程共用**的模板，不做每门课独立字段勾选；但允许对课程组手动换色。
@@ -44,10 +46,10 @@ wedo 是从 [Sleepy · 轻课表](https://github.com/lingion/sleepy) 派生的 A
 
 ### 2.1 仓库及版本
 
-- 上游仓库：`https://github.com/lingion/sleepy.git`；基准提交 `08a1f26a5d7b1a117e2216d92804b202ddde228d`；本仓仍保留上游历史，远端名 `upstream`。
+- 上游仓库：`https://github.com/lingion/sleepy.git`；基准提交 `08a1f26a5d7b1a117e2216d92804b202ddde228d`。Git 历史与根目录 `LICENSE`/`NOTICE` 保留上游归属（GPL-3.0 要求）；`upstream` 远端已移除。
 - 项目远端：`https://github.com/Joshmax010/wedo-Schedule.git`，远端名 `origin`；默认分支 `main`。编辑代码时先核对 `git status` 和本地/远端差异，不覆盖他人未提交改动。
-- `app/build.gradle.kts`：`applicationId = com.wedo.schedule`、`minSdk = 26`、`compileSdk = targetSdk = 37`、`versionName = 0.1.0`、`versionCode = 1`。Debug 加 `.debug` 后缀；Release 当前配置为**未签名**。
-- 打包只生成 `arm64-v8a`、`armeabi-v7a`、`x86_64` ABI 包，无 universal APK；只打包简体中文资源，上游其他语言资源仍在源码中。
+- `app/build.gradle.kts`：`applicationId = com.wedo.schedule`、`minSdk = 33`、`compileSdk = targetSdk = 37`、`versionName = 0.1.0`、`versionCode = 1`。Debug 加 `.debug` 后缀；Release 当前配置为**未签名**。
+- 打包只生成 `arm64-v8a`、`armeabi-v7a`、`x86_64` ABI 包，无 universal APK。
 
 ### 2.2 主要技术选择
 
@@ -74,15 +76,15 @@ wedo 是从 [Sleepy · 轻课表](https://github.com/lingion/sleepy) 派生的 A
 ./scripts/scan-secrets.ps1
 ```
 
-Debug APK 位于 `app/build/outputs/apk/debug/` 下的 ABI 分包；安装前按模拟器/手机 ABI 选包。若用 MuMu，先确认模拟器 API 与 ABI，不要假定它代表最低 API 26。调试安装包与正式包 ID 不同，二者数据不会自动互通。涉及 UI、安全或数据库的变更，单元测试之外还需在设备/模拟器上做流程验证。不要把真实账号、HAR、Cookie、课表或签名材料放进源码目录。
+Debug APK 位于 `app/build/outputs/apk/debug/` 下的 ABI 分包；安装前按模拟器/手机 ABI 选包。若用 MuMu，先确认模拟器 API 与 ABI，不要假定它代表最低 API 33。调试安装包与正式包 ID 不同，二者数据不会自动互通。涉及 UI、安全或数据库的变更，单元测试之外还需在设备/模拟器上做流程验证。不要把真实账号、HAR、Cookie、课表或签名材料放进源码目录。
 
 ## 3. 代码地图与架构数据流
 
 以下路径均相对于仓库根目录：
 
 ```text
-app/src/main/java/com/lingion/sleepy/
-├─ SleepyApp.kt                 应用级数据库/仓库初始化
+app/src/main/java/com/wedo/schedule/
+├─ WedoApp.kt                   应用级数据库/仓库初始化
 ├─ MainActivity.kt              首页路由、导入面板、Dock、返回栈与外部 Intent
 ├─ WedoPrivacyConsent.kt       首次启动隐私确认
 ├─ data/
@@ -123,7 +125,7 @@ test/fixtures/jlju/             只含脱敏结构证据
 
 ### 3.1 启动与导航
 
-`MainActivity` 是启动页。首次启动由 `WedoPrivacyConsent` 要求明确接受；拒绝则退出。接受状态在 `SharedPreferences("wedo_privacy")` 中。主界面由 `SleepyThemeProvider`、`WedoDisplayProvider` 和 `WedoBackground` 包裹，`MainActivity.AppRoot` 自己管理根 Tab、覆盖页面栈和导入弹层：
+`MainActivity` 是启动页。首次启动由 `WedoPrivacyConsent` 要求明确接受；拒绝则退出。接受状态在 `SharedPreferences("wedo_privacy")` 中。主界面由 `WedoThemeProvider`、`WedoDisplayProvider` 和 `WedoBackground` 包裹，`MainActivity.AppRoot` 自己管理根 Tab、覆盖页面栈和导入弹层：
 
 - 可见 Dock 三个入口：左“课表”、中“＋”、右“设置”。“创建、导入与管理”是从设置继续进入的内部页面，并非第三个常驻 Dock 项。
 - 设置页/管理页返回课表；覆盖页按栈逐层返回；课表根页面双击返回键退出。
@@ -134,7 +136,7 @@ test/fixtures/jlju/             只含脱敏结构证据
 
 - `TimeTableEntity`：一张课表/学期，含 `startDate`（`yyyy-MM-dd`，保存时按周一规范化）、`maxWeek`、`nodesPerDay`、`timeJson`、默认标记、智慧节次配置等。
 - `CourseEntity`：一条上课记录，含 `tableId`、课程组 `groupId`、名称/教师/教室/备注、星期 `day=1..7`、起始节 `startNode`（1-based）、连续节数 `step`、起止周和单双周 `type`，以及颜色、非常规节次/时间等。**同一门课可以有多条记录**（不同周、地点、星期、时间）。删除“这次课程”只删除该记录；课程组操作依 `groupId`。
-- Room 数据库名仍为 `sleepy.db`，版本 5；使用明确迁移，不使用破坏性回退。增字段/改表时必须补 Migration 和旧库升级测试，不能通过卸载 App 掩盖迁移问题。
+- Room 数据库名为 `wedo.db`，版本 5；使用明确迁移，不使用破坏性回退。增字段/改表时必须补 Migration 和旧库升级测试，不能通过卸载 App 掩盖迁移问题。历史库名 `sleepy.db` 仍在 `AppDatabase.LEGACY_DB_NAME` 中保留一处，**仅供首次开库前的一次性文件搬迁**（见 `AppDatabase.adoptLegacyDatabaseFile`）：新库文件已存在则不动，`-wal`/`-shm`/`-journal` 伴生文件同批 rename，任一步失败即回滚并中止。这是纯文件改名，schema 与 version 均未变，**不要**为此写 Migration。
 - 当前周由 `ScheduleViewModel` 调用 `DateUtils.currentWeek(startDate)` 计算，周标题今日日期显式使用 `Asia/Shanghai`。`DateUtils` 默认日期参数则使用设备本地日期；若要全链路保证中国时区或学期外“假期/非教学周”，需单独核对并补测试，**不要把目标文档的描述当作现有完全实现**。
 - `CourseEntity.inWeek` 依据起止周及单双周决定是否显示。`type=3` 代码层仍按记录范围显示，离散周依解析阶段拆分为多条记录；后续若改周次模型，须保留此兼容语义并测试混合周、单双周和重复导入。
 - 设置持久化并非全在 DataStore：wedo 显示项放在 `SharedPreferences("wedo_display")`，主题、显示星期、冲突样式等放在继承的 `AppPrefs`，首次隐私同意又是单独的 `wedo_privacy`。修改设置前先查真理源，避免同名状态写两处。
@@ -147,7 +149,12 @@ test/fixtures/jlju/             只含脱敏结构证据
 
 `WedoDesign.kt` 的 `wedoColors` 对五套静态预设统一覆盖浅色/深色背景及 surface 层级，默认的**海蓝**强调色约为浅色 `#1764D9`、深色 `#80B5FF`（默认键由 `AppPrefs.getThemeKey` 指向 `ocean`）。`ThemePresets` 仍保留预设色和系统取色：`default`、`spring`、`ocean`、`peach`、`slate`、`system`；`AppearanceScreen` 可选主题色与浅/深/跟随系统。静态预设换强调色后仍以冷调蓝白/藏蓝为表面基底；Android 12/API 31+ 选择 `system` 时 `SleepyThemeProvider` 走 Material You 动态取色，不能把它当作完全相同的调色板。`WedoBackground` 的背景渐变另由组件固定绘制。别把 `Theme.kt` 中继承的紫色 `LightScheme` 常量误判为用户实际看到的 wedo 首页默认视觉；以 `SleepyThemeProvider` 的选择分支和 `WedoBackground` 的最终结果为准。
 
-`WedoBackground` 负责纵向冷色渐变和两处淡蓝径向环境光。`Modifier.wedoGlass` 用低透明渐变、细边缘亮线和柔和阴影叠加模拟玻璃。它可在 API 26 工作，但**不是实时背景模糊、折射或 AGSL Shader**。`quality` 为流畅/平衡/精致三档，默认平衡；低内存设备自动减轻装饰。精致档刻意降低白色不透明度，避免“透明拉满后露出一张白卡”的旧问题。评审视觉时需要同时看浅/深色、低内存、不同壁纸/背景及弱性能设备，不能只看静态生图。
+`WedoBackground` 负责纵向冷色渐变和两处淡蓝径向环境光。**玻璃材质已按「全面取消玻璃质感」的指令移除**：`WedoShell.kt` 里原 `Modifier.wedoGlass` 及其调用点均已改为实色卡片，`WedoGlassTokens.kt` 仅保留 `wedoGlassSpec` 纯逻辑内核（无渲染入口）。评审时不要再假设界面上存在玻璃卡片。
+
+> 设计规范的唯一权威来源是 `docs/glass/00_MASTER.md`（液态玻璃主索引，含全部 M/V/O/Q 编号与推导过程）。
+> 面向实现的条款正文见 `docs/DESIGN_SPEC_V4_GLASS.md`（材质与运动，已取代 v2 的材质章节）；
+> `docs/DESIGN_SPEC_V2.md` 的色彩 / 字阶 / 间距 / 圆角 / 组件 / 无障碍章节仍然有效。
+> 本节与上述文件冲突时**以它们为准**。
 
 ### 4.2 首页空间分配
 
@@ -219,13 +226,13 @@ WakeUp 目前用户可见的“导出为日历文件”是本项目迁移入口�
 
 本地已有 JLJU 解析、WebView 安全契约、课程颜色、ICS 解析、外部打开 MIME、导入错误提示等测试。新增功能至少遵循“纯解析单测 + 数据边界测试 + Compose/UI/设备冒烟”三层验证。课程周次必须覆盖普通周、单双周、离散周、跨节次、同名不同地点、重叠课程、空学期与部分损坏输入。用户真机账号只由本人输入，不要求提供认证材料。
 
-发布仍未完成的门包括：完整 SSO 回跳、验证码条件、会话过期/维护响应、JLJU 重新导入且旧数据不丢、WakeUp 真实 ICS 脱敏样本、API 26 与字体放大/5-6 日布局、至少三名不同课程结构测试者、本地库升级和安全许可复核。`docs/RELEASING.md` 所说的 `v*` 标签签名发布目前只是计划；当前 `release` build type 未签名，仓库中没有自动签名/上传 Release 的工作流。不要声称已有 GitHub `1.0.0` Release。
+发布仍未完成的门包括：完整 SSO 回跳、验证码条件、会话过期/维护响应、JLJU 重新导入且旧数据不丢、WakeUp 真实 ICS 脱敏样本、API 33 与字体放大/5-6 日布局、至少三名不同课程结构测试者、本地库升级和安全许可复核。`docs/RELEASING.md` 所说的 `v*` 标签签名发布目前只是计划；当前 `release` build type 未签名，仓库中没有自动签名/上传 Release 的工作流。不要声称已有 GitHub `1.0.0` Release。
 
 ## 8. 常见修改任务从哪里开始
 
 | 需求 | 首先阅读/修改 | 必须补的验证 |
 | --- | --- | --- |
-| 调整首页布局/顶部/ Dock | `MainActivity.kt`、`ScheduleScreen.kt`、`WedoWeekHeader.kt`、`WedoGlass.kt`、`CourseTableView.kt` | 切周、纵向滚动收起/恢复、手势栏遮挡、浅/深色、API 26 |
+| 调整首页布局/顶部/ Dock | `MainActivity.kt`、`ScheduleScreen.kt`、`WedoWeekHeader.kt`、`WedoGlass.kt`、`CourseTableView.kt` | 切周、纵向滚动收起/恢复、手势栏遮挡、浅/深色、API 33 |
 | 调整课程卡信息或颜色 | `WedoCourseCard.kt`、`WedoDesign.kt`、`CourseColorUtil.kt`、`WedoSettingsScreen.kt` | 名称稳定色、手选色、对比度、字号放大、字段全局设置、冲突红色 |
 | 调整主题/玻璃性能 | `Theme.kt`、`ThemePresets.kt`、`WedoDesign.kt`、`WedoGlass.kt`、`AppearanceScreen.kt` | 主题预设与系统取色、低内存回退、动效关闭、明暗背景 |
 | 增加学校 | 先补真实脱敏证据和夹具，再改 `JwImportViewModel.defaultWedoSchools()`、必要时 `JwParserRegistry`/Parser、`JwWebViewLoginScreen` 白名单 | 官方入口与回跳、无课、单双周、会话失效、异常响应、域名安全测试 |
@@ -242,7 +249,7 @@ WakeUp 目前用户可见的“导出为日历文件”是本项目迁移入口�
 
 **接着 30 分钟**：从 `MainActivity → ScheduleScreen → CardsGridView → WedoCourseCard` 走一遍首页，从 `ImportSheet → JwImportActivity → JwImportViewModel → Room` 走一遍导入；用公开脱敏夹具看测试，不打开或提交私有 HAR。安装对应 ABI 的 Debug 包，以假课程体验滚动、切周、课程详情、导入预览、深浅色与设置。
 
-**最后 30 分钟**：选一个小改动，先找对应回归测试再改代码；跑相关单测、`lintDebug`、`assembleDebug`、敏感信息扫描；记录当前证据仍不足的内容。任何计划进入发布的变更都要额外检查真机、API 26、备份/TLS、许可和 `docs/RELEASING.md` 与真实 CI 的一致性。
+**最后 30 分钟**：选一个小改动，先找对应回归测试再改代码；跑相关单测、`lintDebug`、`assembleDebug`、敏感信息扫描；记录当前证据仍不足的内容。任何计划进入发布的变更都要额外检查真机、API 33、备份/TLS、许可和 `docs/RELEASING.md` 与真实 CI 的一致性。
 
 ## 10. 接手后需要优先偿还的风险
 

@@ -2,19 +2,27 @@
     <string name="app_name">wedo Schedule</string>
     <string name="widget_today_label">Today\'s Classes</string>
     <string name="widget_today_small_label">Today\'s Classes · Small</string>
-    <string name="widget_week_list_label">This Week (List)</string>
-    <string name="widget_week_list_small_label">This Week (List) · Small</string>
     <string name="widget_week_grid_label">This Week (Grid)</string>
     <string name="widget_week_grid_small_label">This Week (Grid) · Small</string>
-    <string name="widget_twoday_label">Next Two Days</string>
-    <string name="widget_twoday_small_label">Next Two Days · Small</string>
-    <string name="widget_week_view_label">This Week (View)</string>
-    <string name="widget_week_view_small_label">This Week (View) · Small</string>
 
     <string name="tab_schedule">Schedule</string>
     <string name="tab_today">Today</string>
+    <string name="tab_settings">Settings</string>
     <string name="tab_mine">Me</string>
     <string name="tab_manage">Manage</string>
+
+    <!-- Today screen (P1) -->
+    <string name="today_next_class">Next class</string>
+    <string name="today_in_progress">In progress</string>
+    <string name="today_countdown">in %1$d min</string>
+    <string name="today_countdown_soon">Starting soon</string>
+    <string name="today_running_remaining">In class · %1$d min left</string>
+    <string name="today_running_soon_end">In class · ending soon</string>
+    <string name="today_no_more_class">All done for today</string>
+    <string name="today_no_table_title">No schedule yet</string>
+    <string name="today_no_table_hint">Import from your school portal, a file, or add manually</string>
+    <string name="today_import_cta">Import schedule</string>
+    <string name="today_week_has_days">%1$d more day(s) with classes this week</string>
 
     <string name="schedule_empty">No schedule yet</string>
     <string name="schedule_empty_hint">Go to Manage to import, or manually create your first course.</string>
@@ -22,7 +30,6 @@
     <string name="schedule_manual_first">Create first course</string>
     <string name="schedule_add_course">Add Course</string>
     <string name="share_sheet_title">Share Schedule</string>
-    <string name="schedule_share_table">Share Schedule</string>
     <string name="exit_press_back_again">Press back again to exit</string>
     <string name="schedule_current_week">Week %1$d</string>
     <string name="schedule_no_course_today">No classes today</string>
@@ -64,7 +71,6 @@
     <string name="import_paste">Paste Text</string>
     <string name="import_paste_hint">Paste schedule text…</string>
     <string name="import_file">Import from File</string>
-    <string name="import_qr">Scan QR</string>
     <string name="import_jw">Connect to School</string>
     <string name="import_manual">Manual Add</string>
     <string name="import_success">Import successful</string>
@@ -109,7 +115,7 @@
     <string name="format_html">HTML table</string>
     <string name="format_html_desc">&lt;table&gt; format, parse by row after detecting headers</string>
     <string name="format_plain">Plain text</string>
-    <string name="format_plain_desc">Sleepy native format, one course per line, pipe-separated</string>
+    <string name="format_plain_desc">wedo native format, one course per line, pipe-separated</string>
 
     <!-- Format detail dialogs: wording must match ScheduleParser behavior -->
     <string name="format_help_spec">Recognition requirements</string>
@@ -118,9 +124,9 @@
     <string name="format_detail_content_desc">View format details</string>
     <string name="copy_prompt">Copy prompt</string>
     <string name="copied">Copied</string>
-    <string name="ai_prompt_title">Let AI convert your screenshot (Sleepy native format)</string>
-    <string name="ai_prompt_hint">Copy the prompt below to any AI assistant (Doubao, ChatGPT…) together with your timetable screenshot. The AI outputs #sleepy-v1 text - paste it back into the field above to import.</string>
-    <string name="ai_prompt_text">Task: Convert the timetable screenshot (or file content) I send next into the sleepy-v1 plain-text format. Output nothing besides the conversion result itself - no explanations, no greetings, no markdown code fences. The first line of your output must be #sleepy-v1.\n\n========== 1. Format rules ==========\n\nThe first line is always: #sleepy-v1\n\nEvery other line is one record, with columns separated by a vertical bar |. Three kinds of lines:\n\n1. T line (table info, optional, at most one):\nTtableName|termStartDate|totalWeeks|nodesPerDay\n· The start date format is YYYY-MM-DD and must be the Monday of week 1\n· Fill in only what the timetable explicitly states; leave unspecified fields empty. You may stop after the last known column, e.g. T|2026-03-02\n· If the timetable does not mention these at all, omit the T line entirely. Never guess.\n\n2. N line (per-period times, optional, one line per period):\nNnumber|startTime|endTime\n· e.g. N3|10:00|10:45\n· Only output N lines if the timetable explicitly provides a period-time table. Use 24-hour HH:mm; write 8:00 as 08:00\n· No period-time table in the timetable -&gt; output no N lines at all\n\n3. C line (courses, the main body, one line per occurrence):\nCname|day|nodes|weeks|teacher|room|color|note|time|group\nAlways exactly 10 columns / 9 bars. Empty columns stay empty, but the bars must not be dropped. Column rules:\n  Col 1 name: copy the timetable verbatim, character for character, any language\n  Col 2 day: Monday..Sunday = 1 2 3 4 5 6 7\n  Col 3 nodes: periods 3-4 = 3-4; single period 6 = 6\n  Col 4 weeks: see \"2. Week rules\"\n  Col 5 teacher: copy from the timetable; empty if absent\n  Col 6 room: same\n  Col 7 color: always empty\n  Col 8 note: only if the timetable states a note; otherwise empty\n  Col 9 time: only when the timetable explicitly marks a clock time for this course (e.g. evening class), as HH:mm-HH:mm; otherwise empty\n  Col 10 group: always empty\n\n========== 2. Week rules ==========\n\nExtract the set of weeks each course meets, then decide in order:\n1. A continuous range with no odd/even restriction -&gt; S-E, e.g. 1-16\n2. All odd weeks within the range (\"odd weeks\") -&gt; S-E单, e.g. 1-15单\n3. All even weeks (\"even weeks\") -&gt; S-E双, e.g. 2-16双\n4. Scattered weeks (e.g. \"weeks 1-8, 10, 12-16\") -&gt; split into maximal runs, one C line each, copying all other columns:\n   · A full-week run -&gt; S-E (e.g. 1-8, 12-16)\n   · A lone single week -&gt; S定 (e.g. 10定)\n   · A purely odd run -&gt; S-E单; a purely even run -&gt; S-E双\n   · A run that is neither continuous nor purely odd/even -&gt; S-E定 (e.g. weeks 6,7 -&gt; 6-7定)\n5. The timetable says nothing about weeks -&gt; 1-16\n\n========== 3. Extraction rules ==========\n\n· A course meeting multiple times per week (different days or periods) -&gt; multiple C lines, one per meeting; never merge into one line\n· Read period numbers from \"period X\" in the timetable; if it has only times and no periods, number the non-overlapping time slots 1, 2, 3... top to bottom and emit matching N lines\n· Copy names, teachers and rooms verbatim; if a text contains | \ \" &amp;lt; { ( escape each with a leading \; a newline inside text is the two characters \n and a tab is \t\n· Anything the timetable does not state stays empty. Never invent teachers, rooms, times or weeks.\n\n========== 4. Output self-check (verify silently, do not print) ==========\n\n· First line is #sleepy-v1 and nothing else precedes or follows the records\n· Every C line has exactly 9 bars / 10 columns\n· Day is a digit 1-7; hours are two digits (08:00, not 8:00)\n· The weeks column only ever shows S-E, S-E单, S-E双, S-E定 or S定\n· Names match the timetable verbatim; nothing was invented\n\n========== 5. Example output ==========\n\n#sleepy-v1\nT|2026-03-02\nN1|08:00|08:45\nN2|08:55|09:40\nN3|10:00|10:45\nN4|10:55|11:40\nN5|14:00|14:45\nN6|14:55|15:40\nN7|16:00|16:45\nN8|16:55|17:40\nN9|19:00|19:45\nN10|19:55|20:40\nC高等数学A|1|1-2|1-16|张三|A101||||\nC高等数学A|3|3-4|1-16|张三|A101||||\nC大学英语|2|3-4|1-15单|李四|C301||||\nC数据结构|4|3-4|2-16双|王五|C302||||\nC体育|4|5-6|3-4定||||||\nCJava实战|3|9-10|1-16||机房|||19:00-21:30|\nC影视鉴赏|7|6|10-16双||||||\nC形势与政策|5|8-9|1-8||||||\nC形势与政策|5|8-9|12-16||||||</string>
+    <string name="ai_prompt_title">Let AI convert your screenshot (wedo native format)</string>
+    <string name="ai_prompt_hint">Copy the prompt below to any AI assistant (Doubao, ChatGPT…) together with your timetable screenshot. The AI outputs #wedo-v1 text - paste it back into the field above to import.</string>
+    <string name="ai_prompt_text">Task: Convert the timetable screenshot (or file content) I send next into the wedo-v1 plain-text format. Output nothing besides the conversion result itself - no explanations, no greetings, no markdown code fences. The first line of your output must be #wedo-v1.\n\n========== 1. Format rules ==========\n\nThe first line is always: #wedo-v1\n\nEvery other line is one record, with columns separated by a vertical bar |. Three kinds of lines:\n\n1. T line (table info, optional, at most one):\nTtableName|termStartDate|totalWeeks|nodesPerDay\n· The start date format is YYYY-MM-DD and must be the Monday of week 1\n· Fill in only what the timetable explicitly states; leave unspecified fields empty. You may stop after the last known column, e.g. T|2026-03-02\n· If the timetable does not mention these at all, omit the T line entirely. Never guess.\n\n2. N line (per-period times, optional, one line per period):\nNnumber|startTime|endTime\n· e.g. N3|10:00|10:45\n· Only output N lines if the timetable explicitly provides a period-time table. Use 24-hour HH:mm; write 8:00 as 08:00\n· No period-time table in the timetable -&gt; output no N lines at all\n\n3. C line (courses, the main body, one line per occurrence):\nCname|day|nodes|weeks|teacher|room|color|note|time|group\nAlways exactly 10 columns / 9 bars. Empty columns stay empty, but the bars must not be dropped. Column rules:\n  Col 1 name: copy the timetable verbatim, character for character, any language\n  Col 2 day: Monday..Sunday = 1 2 3 4 5 6 7\n  Col 3 nodes: periods 3-4 = 3-4; single period 6 = 6\n  Col 4 weeks: see \"2. Week rules\"\n  Col 5 teacher: copy from the timetable; empty if absent\n  Col 6 room: same\n  Col 7 color: always empty\n  Col 8 note: only if the timetable states a note; otherwise empty\n  Col 9 time: only when the timetable explicitly marks a clock time for this course (e.g. evening class), as HH:mm-HH:mm; otherwise empty\n  Col 10 group: always empty\n\n========== 2. Week rules ==========\n\nExtract the set of weeks each course meets, then decide in order:\n1. A continuous range with no odd/even restriction -&gt; S-E, e.g. 1-16\n2. All odd weeks within the range (\"odd weeks\") -&gt; S-E单, e.g. 1-15单\n3. All even weeks (\"even weeks\") -&gt; S-E双, e.g. 2-16双\n4. Scattered weeks (e.g. \"weeks 1-8, 10, 12-16\") -&gt; split into maximal runs, one C line each, copying all other columns:\n   · A full-week run -&gt; S-E (e.g. 1-8, 12-16)\n   · A lone single week -&gt; S定 (e.g. 10定)\n   · A purely odd run -&gt; S-E单; a purely even run -&gt; S-E双\n   · A run that is neither continuous nor purely odd/even -&gt; S-E定 (e.g. weeks 6,7 -&gt; 6-7定)\n5. The timetable says nothing about weeks -&gt; 1-16\n\n========== 3. Extraction rules ==========\n\n· A course meeting multiple times per week (different days or periods) -&gt; multiple C lines, one per meeting; never merge into one line\n· Read period numbers from \"period X\" in the timetable; if it has only times and no periods, number the non-overlapping time slots 1, 2, 3... top to bottom and emit matching N lines\n· Copy names, teachers and rooms verbatim; if a text contains | \ \" &amp;lt; { ( escape each with a leading \; a newline inside text is the two characters \n and a tab is \t\n· Anything the timetable does not state stays empty. Never invent teachers, rooms, times or weeks.\n\n========== 4. Output self-check (verify silently, do not print) ==========\n\n· First line is #wedo-v1 and nothing else precedes or follows the records\n· Every C line has exactly 9 bars / 10 columns\n· Day is a digit 1-7; hours are two digits (08:00, not 8:00)\n· The weeks column only ever shows S-E, S-E单, S-E双, S-E定 or S定\n· Names match the timetable verbatim; nothing was invented\n\n========== 5. Example output ==========\n\n#wedo-v1\nT|2026-03-02\nN1|08:00|08:45\nN2|08:55|09:40\nN3|10:00|10:45\nN4|10:55|11:40\nN5|14:00|14:45\nN6|14:55|15:40\nN7|16:00|16:45\nN8|16:55|17:40\nN9|19:00|19:45\nN10|19:55|20:40\nC高等数学A|1|1-2|1-16|张三|A101||||\nC高等数学A|3|3-4|1-16|张三|A101||||\nC大学英语|2|3-4|1-15单|李四|C301||||\nC数据结构|4|3-4|2-16双|王五|C302||||\nC体育|4|5-6|3-4定||||||\nCJava实战|3|9-10|1-16||机房|||19:00-21:30|\nC影视鉴赏|7|6|10-16双||||||\nC形势与政策|5|8-9|1-8||||||\nC形势与政策|5|8-9|12-16||||||</string>
 
     <string name="format_wakeup_share_when">Migrating everything from the WakeUp app. Copy the entire text generated by WakeUp\'s "Share courses" and paste it as-is.</string>
     <string-array name="format_wakeup_share_spec">
@@ -140,7 +146,7 @@
     </string-array>
     <string name="format_wakeup_json_example" formatted="false">{\n  "name": "My table",\n  "startDate": "2026-09-07",\n  "courses": [\n    {"name":"Calculus","teacher":"John","position":"A101","day":1,"startNode":1,"step":2,"startWeek":1,"endWeek":16,"type":0}\n  ]\n}</string>
 
-    <string name="format_ics_when">Calendar files (.ics) exported from your school system or WakeUp. Pick the file via "Import from file", tap it in your file manager and choose Sleepy, or open it in a text editor and paste everything.</string>
+    <string name="format_ics_when">Calendar files (.ics) exported from your school system or WakeUp. Pick the file via "Import from file", tap it in your file manager and choose wedo, or open it in a text editor and paste everything.</string>
     <string-array name="format_ics_spec">
         <item>Text must start with BEGIN:VCALENDAR — dropping the first line breaks recognition</item>
         <item>Each class is one event: SUMMARY = course name, LOCATION = room; teacher is read from the description</item>
@@ -162,7 +168,7 @@
     </string-array>
     <string name="format_csv_example" formatted="false">course,teacher,room,weekday,period,weeks,type\nCalculus,John,A101,Monday,1-2,1-16,weekly\nEnglish,Mary,B202,3,3-4,1-16,odd</string>
 
-    <string name="format_html_when">Timetable web pages saved as .html, copied table source, or tap the .html file in your file manager and choose Sleepy.</string>
+    <string name="format_html_when">Timetable web pages saved as .html, copied table source, or tap the .html file in your file manager and choose wedo.</string>
     <string-array name="format_html_spec">
         <item>Text must start with a tag like &lt;!DOCTYPE, &lt;html, or &lt;table — any plain text before it breaks detection, delete it first</item>
         <item>The page must contain a table whose header row includes "course"</item>
@@ -172,9 +178,9 @@
     </string-array>
     <string name="format_html_example" formatted="false">&lt;table&gt;\n&lt;tr&gt;&lt;td&gt;course&lt;/td&gt;&lt;td&gt;teacher&lt;/td&gt;&lt;td&gt;room&lt;/td&gt;&lt;td&gt;weekday&lt;/td&gt;&lt;td&gt;period&lt;/td&gt;&lt;td&gt;weeks&lt;/td&gt;&lt;/tr&gt;\n&lt;tr&gt;&lt;td&gt;Calculus&lt;/td&gt;&lt;td&gt;John&lt;/td&gt;&lt;td&gt;A101&lt;/td&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;1-2&lt;/td&gt;&lt;td&gt;1-16&lt;/td&gt;&lt;/tr&gt;\n&lt;/table&gt;</string>
 
-    <string name="format_plain_when">Sleepy native format (sleepy-v1): compact, tidy and fault-tolerant. Great for handwriting and even better for letting AI convert a timetable screenshot (see the prompt below). The legacy tab-separated format still imports.</string>
+    <string name="format_plain_when">wedo native format (wedo-v1): compact, tidy and fault-tolerant. Great for handwriting and even better for letting AI convert a timetable screenshot (see the prompt below). The legacy tab-separated format still imports.</string>
     <string-array name="format_plain_spec">
-        <item>First line is always #sleepy-v1</item>
+        <item>First line is always #wedo-v1</item>
         <item>Course line layout: Cname|day|nodes|weeks|teacher|room|color|note|time|group - exactly 10 columns / 9 pipes</item>
         <item>Empty columns stay empty, but the pipes must not be dropped</item>
         <item>Day is 1-7 (Monday=1); nodes as a range 1-2, or a single node 6</item>
@@ -185,11 +191,11 @@
         <item>Table line (optional): Tname|startDate|totalWeeks|nodesPerDay; startDate must be the Monday of week 1</item>
         <item>Unrecognized lines are listed in the import preview, never silently dropped</item>
     </string-array>
-    <string name="format_plain_example" formatted="false">#sleepy-v1\nTMy timetable|2026-03-02|20|12\nNd\nC高等数学A|1|1-2|1-16|张三|A101||||\nC大学英语|2|3-4|1-15单|李四|C301||||\nC体育|4|5-6|3-4定||||||\nC影视鉴赏|7|6|10-16双||||||</string>
+    <string name="format_plain_example" formatted="false">#wedo-v1\nTMy timetable|2026-03-02|20|12\nNd\nC高等数学A|1|1-2|1-16|张三|A101||||\nC大学英语|2|3-4|1-15单|李四|C301||||\nC体育|4|5-6|3-4定||||||\nC影视鉴赏|7|6|10-16双||||||</string>
     <string name="import_dropped_title">%1$d lines could not be parsed</string>
     <string name="import_dropped_hint">These lines were skipped. Check their format and re-import:</string>
     <string name="import_warnings_title">Notes</string>
-    <string name="export_native_title">Sleepy Native</string>
+    <string name="export_native_title">wedo Native</string>
     <string name="export_native_subtitle">Full backup · smallest size · recommended for migration</string>
     <string name="import_start_date_required">Please enter semester start date</string>
     <string name="start_date_format">Date format must be YYYY-MM-DD</string>
@@ -271,10 +277,15 @@
     <string name="mine_stat_week">Week</string>
 
         <string name="settings_high_refresh">High refresh rate</string>
-    <string name="settings_nav_style">Bottom bar style</string>
-    <string name="settings_nav_style_docked">Docked</string>
-    <string name="settings_nav_style_floating">Floating</string>
     <string name="settings_section_display">Display</string>
+    <string name="settings_section_date_layout">Dates &amp; Layout</string>
+    <string name="settings_section_system">System</string>
+    <string name="settings_schedule_layout">Schedule Layout</string>
+    <string name="settings_visible_days_all">Every Day</string>
+    <string name="settings_visible_days_weekdays">Monday–Friday</string>
+    <string name="settings_visible_days_count">%1$d days</string>
+    <string name="settings_view_scale">Grid View</string>
+    <string name="settings_week_layout">Week View</string>
     <string name="settings_language">Language</string>
     <string name="settings_display_mode">Time Display</string>
     <string name="settings_display_node">Periods</string>
@@ -339,12 +350,12 @@
 
     <!-- Widget / Common UI -->
     <string name="widget_create_schedule">Please create a schedule first</string>
-    <string name="widget_open_sleepy">Open Sleepy to add</string>
+    <string name="widget_open_wedo">Open wedo to add</string>
     <string name="widget_edit_section_schedule">Schedule</string>
     <string name="widget_edit_default_label">Default (follow current schedule)</string>
     <string name="widget_manage_title">Manage Widgets</string>
     <string name="widget_edit_title">Edit Widget</string>
-    <string name="widget_manage_empty">No Sleepy widget added to home screen yet. Long-press empty space → Widgets → pick Sleepy to add.</string>
+    <string name="widget_manage_empty">No wedo widget added to home screen yet. Long-press empty space → Widgets → pick wedo to add.</string>
     <string name="widget_manage_entry">Manage Widgets</string>
     <string name="more_sections">%1$d more...</string>
     <string name="tomorrow">Tomorrow</string>
@@ -401,7 +412,7 @@
     <string name="delete_period">Delete this period</string>
 
     <string name="mine_about">About</string>
-    <string name="mine_about_body">Sleepy Schedule v%1$s\n\nA minimal, clean, local-first schedule app.\nAll data stays on your device — nothing is uploaded.\n\n· No ads\n· No tracking\n· Supports WakeUp / ICS / CSV / HTML / plain text import</string>
+    <string name="mine_about_body">wedo Schedule v%1$s\n\nA minimal, clean, local-first schedule app.\nAll data stays on your device — nothing is uploaded.\n\n· No ads\n· No tracking\n· Supports WakeUp / ICS / CSV / HTML / plain text import</string>
 
     <string-array name="day_names">
         <item>Mon</item>
@@ -444,6 +455,15 @@
     <string name="theme_mode_dark">Dark</string>
     <string name="appearance_section_theme">Theme colors</string>
     <string name="appearance_section_display">Course display</string>
+    <string name="appearance_section_material">Material</string>
+    <string name="settings_glass_quality">Glass quality</string>
+    <string name="settings_glass_quality_smooth">Smooth</string>
+    <string name="settings_glass_quality_balanced">Balanced</string>
+    <string name="settings_glass_quality_fine">Fine</string>
+    <string name="settings_motion">Interface motion</string>
+    <string name="settings_motion_sub">Reduce movement and bounce when off</string>
+    <string name="settings_haptics">Haptic feedback</string>
+    <string name="settings_haptics_sub">Vibrate on week changes and long presses</string>
     <string name="appearance_section_widget">Widget</string>
     <string name="about_update_latest">You\'re on the latest version v%1$s</string>
     <string name="update_found_title">New version v%1$s available</string>
@@ -454,35 +474,25 @@
     <string name="update_retry">Retry</string>
     <string name="update_download_failed">Download failed: %1$s</string>
     <string name="about_author">Author</string>
-    <string name="about_author_name">Lingion</string>
-    <string name="about_license_body">Parts of the course-import adapters in this app are based on the publicly available implementations of the following open-source projects. They are organized in two tiers: cross-university foundational projects and per-school projects. Tap a school card to expand and view all student-maintained projects referenced for that school.
-
-Cross-university foundational projects: WakeUp Schedule (YZune, Apache-2.0) and WakeupSchedule_BUPT (dIT8Zv, Apache-2.0) — reference implementations for twelve educational-system parsers (Qingzhi and variants, legacy Zhengfang, URP, Chengfang, HNUST); WakeupSchedule_Kotlin (Apache-2.0) for classic Wisedu EAMS; the cqu.js adapter from Shiguang Schedule for Chongqing University portal REST; shiguang_warehouse (XingHeYuZhuan, MIT) for WHUT kcbcxby, classic EAMS and new-Zhengfang grid view; zfn_api (openschoolcn, MPL-2.0) and FlowCourse (jiaweiyaya, GPL-3.0) for new-Zhengfang kbList cross-validation; iwut (TokenTeam, AGPL-3.0, protocol shape only) for WHUT section mapping; Shangke Schedule shangkeschedule (qiqqqqq517, Apache-2.0) and WakeUp Schedule school registries used for cross-checking our school list.
-
-Per-school attribution (one card per school, expand to see details) — Hefei University of Technology HFUT: HFUT-Schedule (Chiu-xaH, MIT), HfutOpenApi (BoynChan, MIT), hfut_schedule_hacker (Aoi-cn), django-hfut-auth (elonzh, MIT); Southeast University SEU: SEUTimetable (sakimidare, Apache-2.0), Aetik-yue/hormone, luzy99/SEUAutoLogin; Zhejiang University ZJU: zju-ical-py (Xecades, LGPL-2.1); USTC: USTC-timetable-to-ics (1970633640); Sichuan University SCU: ScuTimetable (Z-P-J); Northeastern University NEU: neu_wisedu2wakeup (CreamPig233), PopulusYang/NeuTimetable, neucn/elise, RekaYOO/NEU-JWXT-Toolkit, PeterPtroc/neu-jwxt-to-wakeup, leavesvv-source/NEU-Timetable; Chongqing University CQU: 321CQU/pymycqu, BillYang2016/CQU-class2ics, haowang02/CourseMonitor, LengerHu/CQU_classtabletoics, Hagb/cqu_timetable_new, VayneDuan/CQU-Grade-Monitor, weearc/cm-http-api, barryZZJ/course_to_calander_converter; Wuhan University of Technology WHUT: courseTable (acm910); UESTC: MilLoong/UESTC-EAMS-Helper-App, MilLoong/UESTC-EAMS-Helper-Python, KaranocaVe/UESTCJWCWatchdog, whtsky/uestc-eams-cleartimeout-userscript, Sunmxt/UESTC-EAMS; Guangdong University of Technology GDUT: N0tExpectErr0r/GDUT-ClassTimeTable, Richard-Zheng/GDUT-Schedule-ng, StarArchive/gdut-course-frontend, StarArchive/gdut-course-backend, HoneQ7/GDUT_iOS_Timetable; Guangdong University of Finance and Economics GDUFE: jkgeekJack/Android-GDUFE-JWC-SDK-1.0.0, Kiteio/GDUFE-wrapper; Guangdong University of Finance GDUf: Kiteio/Punica, gduf-finmind; Guangdong University of Foreign Studies GDUFS: yongjianzheng/Gdufszhushou, Crazioker/agency; Guangdong Medical University GDMU: user-supplied capture package confirmed zf_new protocol (new ZhengFang zftal-ui-v5 bare /kbcx/ path), see docs/release-notes-v1.0.49.md; Changsha University of Science and Technology CSUST: zHElEARN/CSUSTKit, CreaMakers/EduSpider, timeisthe/CSUSTDataGet, Julius-lq/EduAdminSystem, JS-CAUTION/csust-course-schedule; Beijing University of Posts and Telecommunications BUPT: helium777/bupt-course-grab, JmPotato/BUPT-Grader, Seizzzz/Auto-Login-BUPT; Peking University PKU: zhongxinghong/PKUAutoElective, thezzisu/pku-elective, Hovennnnn/PKUAutoElective2023, Lihhan/AutoElective_4_PKU, AuYang261/PKU_Elective_Toolset; Beijing University of Chemical Technology BUCT: MarkYangKp/ZhengFangJY; University of Chinese Academy of Sciences UCAS: ldiex/UCAS_Course_Schedule_Convertor (Python, 13-section + course-week mapping), Hurray0/UCAS_GET_Course (Python, xkgo.ucas.ac.cn course-fetch script), cld378632668/ucas_course_tool (Java, UCAS course utility), GentleCP/UCAS-Helper (TypeScript, UCAS course/grade helper); Beihang University BUAA: APassbyDreg/BUAA_JW_Utils (Python toolset, ieas2.1 course-select + evaluation URL anchors), SE2020-TopUnderstanding/BUAA-Campus-Tools-Backend (Python, jwxt-7001.e2.buaa.edu.cn/ieas2.1/kbcx/queryGrkb schedule endpoint), fondoger/buaa-teacher-evaluation (MIT, one-click evaluation via sso.buaa.edu.cn CAS), Cauchy1412/BUAAGetCourse (Python course-grabber script), KKRainbow/JWOneShotEval (PHP, intra-campus IP anchor); Beijing Forestry University BJFU: Bloomberg2000/bjfu_course_ics_generator, Bloomberg2000/bjfu_util.py; Anhui University AHU: MoeclubM/AHU-AIO (Dart, new academic REST client, lib/jw/api/jw_api.dart), qiqqqqq517/shangkeschschedule (Apache-2.0) AHU adapter (WebVPN+CAS+get-data protocol family consensus, ahu.js), abydym/Ahu_Plus (GPL-3.0, Kotlin same-stack, JwModels.kt+CourseRepository.kt print-data+get-data dual-track), Landon-3314/AHU-TimeTable (Flutter, academic_course_api_parser.dart print-data activities field mapping), Zeraora-807/Anhui-Univ-DSH-Tool (TypeScript DeepSeek Harness, print-data studentTableVms extraction), MuxYang/AhuCourseSelectCLI (Python course-select CLI, NEGATIVE: course-selection-api protocol family outside EAMS5), Tonyseth/AHU_JW_GPA_Calculator (userscript GPA, INDIRECT), curdbin/AHU-API (Python, NEGATIVE: legacy ZhengFang ASP.NET jw1.ahu.cn/jw2.ahu.cn), UponNoise/AHU_SBI_DMT (Python, NEGATIVE: legacy ZhengFang jwxt3.ahu.edu.cn); Northeast Forestry University NEFU: bboy-xp/nefu-crawler, heyMahalo/crouse_select; Donghua University DHU: tk.dcmmcc, Bad-086/DHU_CourseMonitor; Yunnan University of Finance and Economics YNUFE: NINIYOYYO/ynufe-campus-app, MiaoWuNYA/ynufeRealLogin; Beijing Institute of Technology BIT: BIT-Login (BIT101-dev); Beijing Information Science and Technology University BISTU: iBistu (ProjektMing); Anhui Jianzhu University AHU-JZ: JdaAssist (CH4019, MIT); Chongqing College of Mobile Telecommunications CQYTU: CQYTZFCheckScores (xM3GAN, Apache-2.0); South China Agricultural University SCAU: ScheduleXParser_SCAU (greyovo); Qilu University of Technology QLU: JW-spider (Zhy423310825); Bohai University BHU: BohaiServiceDome (joun233); Northeast Petroleum University NEPU: WeNEPU (cutiechi); Nanjing University of Science and Technology NUST: HeraldStudentCurriculum (idailylife).</string>
-    <string name="about_license_detail">License &amp; Acknowledgements</string>
-    <string name="license_page_title">License &amp; Acknowledgements</string>
+    <string name="about_author_name">Joshmax010</string>
+    <string name="about_license_detail">License</string>
+    <string name="license_page_title">License</string>
     <string name="license_gpl_section">License</string>
-    <string name="license_gpl_body">Sleepy is an open-source smart class schedule app. The source code is released under the GNU General Public License v3.0. Anyone is free to use, modify, and distribute this software. Contributions via GitHub are welcome.</string>
-    <string name="license_attribution_section">Academic System Acknowledgements</string>
-    <string name="license_attribution_note">Parts of the academic-system import adapters reference public implementations from the following open-source projects, with thanks to all.</string>
-    <string name="license_foundational_section">Cross-university foundational projects</string>
-    <string name="license_perschool_section">Per-school acknowledgements</string>
+    <string name="license_gpl_body">wedo is an open-source smart class schedule app. The source code is released under the GNU General Public License v3.0. Anyone is free to use, modify, and distribute this software. Contributions via GitHub are welcome.</string>
+    <string name="license_origin_section">Origin</string>
+    <string name="license_origin_body">This app is a derivative work based on Sleepy (GNU GPL v3.0). As required by GPL-3.0, upstream copyright notices and the license are retained; see NOTICE and LICENSE in the repository root.</string>
+    <string name="license_third_party_section">Third-party sources</string>
+    <string name="license_third_party_note">The projects above inform protocol shapes or were ported into the parser. Refer to each repository for the full license text.</string>
     <string name="about_update_check">Check for updates automatically</string>
     <string name="about_update_check_detail">Checks GitHub Releases on app start; a banner appears on the About page when a new version is found</string>
     <string name="about_update_available">Version %1$s is available — tap to view</string>
     <string name="about_license_title">Open Source License</string>
     <string name="about_source">Source Code</string>
-    <string name="about_source_url">github.com/lingion/sleepy</string>
+    <string name="about_source_url">github.com/Joshmax010/wedo-Schedule</string>
     <string name="about_feedback">Feedback &amp; Suggestions</string>
     <string name="about_feedback_detail">Report bugs or share ideas via GitHub Issue, or contact the author by email</string>
     <string name="about_feedback_github">GitHub Issue</string>
-    <string name="about_feedback_email">Email</string>
-    <string name="about_feedback_email_subject">[Sleepy Feedback]</string>
-    <string name="about_feedback_email_body">Please describe the issue or idea:\n\n— Environment —\n(optional)\n</string>
-    <string name="about_feedback_no_mail_app">No email app found. Please use GitHub Issue instead.</string>
     <string name="about_title">About</string>
-    <string name="about_update">Check for Updates</string>
     <string name="about_update_checking">Checking for updates…</string>
     <string name="about_update_detail">If GitHub is unavailable, the app will fall back to the mirror automatically</string>
     <string name="about_version">Version</string>
@@ -499,7 +509,7 @@ Per-school attribution (one card per school, expand to see details) — Hefei Un
     <string name="export_no_table">No schedule available to export</string>
     <string name="export_pick_table">Choose a timetable to export</string>
     <string name="export_current_table_badge">Current timetable</string>
-    <string name="export_saved_to">Saved to Download/Sleepy/%1$s</string>
+    <string name="export_saved_to">Saved to Download/wedo/%1$s</string>
     <string name="export_share_chooser">Share Schedule</string>
     <string name="export_share_subtitle">Short text format, pasteable into any chat app</string>
     <string name="export_share_title">Share as Text</string>
@@ -515,7 +525,7 @@ Per-school attribution (one card per school, expand to see details) — Hefei Un
     <string name="jw_pending_input_url">Enter URL Manually</string>
     <string name="jw_pending_legacy">Legacy</string>
     <string name="jw_pending_manual">Add Course Manually</string>
-    <string name="jw_pending_msg">The course registration system for %1$s is not yet supported by Sleepy.\n\nYou can:\n1. Tap \"Request Support\" to submit to the developer\n2. Tap \"Enter URL Manually\" to open and log in via WebView\n3. Temporarily import via HTML / CSV file, or add courses manually</string>
+    <string name="jw_pending_msg">The course registration system for %1$s is not yet supported by wedo.\n\nYou can:\n1. Tap \"Request Support\" to submit to the developer\n2. Tap \"Enter URL Manually\" to open and log in via WebView\n3. Temporarily import via HTML / CSV file, or add courses manually</string>
     <string name="jw_pending_pending">Pending</string>
     <string name="jw_pending_supported">Supported</string>
     <string name="jw_pending_title">This school\'s course registration import is not yet available</string>
@@ -528,15 +538,9 @@ Per-school attribution (one card per school, expand to see details) — Hefei Un
     <string name="notif_before_class_title">Class Reminder</string>
     <string name="notif_channel_before_class">Before-class Reminder</string>
     <string name="notif_channel_before_class_desc">Notifies you about the next class before each one starts</string>
-    <string name="notif_channel_daily">Daily Schedule Reminder</string>
-    <string name="notif_channel_daily_desc">Pushes a daily course summary at a specified time</string>
-    <string name="notif_channel_fluid">Fluid Cloud / Super Island</string>
-    <string name="notif_channel_fluid_desc">Shows an expandable real-time course card before class</string>
-    <string name="notif_daily_text_first">First class: %1$s at %2$s in %3$s</string>
-    <string name="notif_daily_text_no_course">Take a break and enjoy the day!</string>
+    <string name="notif_channel_before_class_silent">Before-class Reminder (Silent)</string>
+    <string name="notif_channel_before_class_silent_desc">Notifies you about the next class before each one starts (no banner)</string>
     <!-- 无序数句式: 英语序数后缀仅 1st/21st/31st 匹配 st, 硬编码 %1$dst 在其余日期全错 -->
-    <string name="notif_daily_title">Today is day %1$d of the month, you have %2$d classes</string>
-    <string name="notif_daily_title_no_course">Today is day %1$d of the month, no classes today</string>
     <string name="notif_room_unknown">Unknown room</string>
     <string name="reminder_banner_sub">Show a before-class banner in the notification bar</string>
     <string name="reminder_banner_title">Banner Reminder</string>
@@ -545,22 +549,8 @@ Per-school attribution (one card per school, expand to see details) — Hefei Un
     <string name="reminder_before_class_title">Before-class Reminder</string>
     <string name="reminder_before_minutes_label">Advance</string>
     <string name="reminder_before_minutes_unit">minutes</string>
-    <string name="reminder_daily_preview">Example: Today the 15th, you have 3 classes. First class Advanced Math at 08:00 in Building A101</string>
-    <string name="reminder_daily_sub">Push a daily course summary at a specified time</string>
-    <string name="reminder_daily_time_label">Reminder Time</string>
-    <string name="reminder_daily_title">Daily Reminder</string>
-    <string name="reminder_fluid_field_name">Course Name</string>
-    <string name="reminder_fluid_field_room">Location</string>
-    <string name="reminder_fluid_field_teacher">Teacher</string>
-    <string name="reminder_fluid_field_time">Time</string>
-    <string name="reminder_fluid_fields">Capsule Primary Content</string>
-    <string name="reminder_fluid_fields_hint">Choose a primary display field</string>
-    <string name="reminder_fluid_note">Tap the notification to expand course details. Whether it appears as Fluid Cloud / Super Island depends on the phone system, notification permissions, and manufacturer service eligibility.</string>
-    <string name="reminder_fluid_sub">Show real-time course cards on supported Xiaomi and OPPO phones</string>
-    <string name="reminder_fluid_title">Fluid Cloud / Super Island</string>
-    <string name="reminder_master_sub">Allow Sleepy to send course notifications</string>
+    <string name="reminder_master_sub">Allow wedo to send course notifications</string>
     <string name="reminder_master_title">Enable Reminders</string>
-    <string name="reminder_pick_time">Pick Reminder Time</string>
     <string name="reminder_title">Reminders</string>
     <string name="school_count_supported">%1$d supported</string>
     <string name="school_count_total">%1$d total</string>
@@ -665,4 +655,54 @@ Per-school attribution (one card per school, expand to see details) — Hefei Un
     <string name="edge_insert_start_label">Start time</string>
     <string name="edge_insert_end_label">End time</string>
     <string name="edge_insert_ok">Add</string>
+
+    <!-- TASK-05 E-(2): 导入向导 i18n（ImportWizard.kt 去硬编码） -->
+    <string name="import_wiz_title_detail">Choose Source</string>
+    <string name="import_wiz_title_preview">Preview &amp; Confirm</string>
+    <string name="import_wiz_title_done">Done</string>
+    <string name="import_wiz_close">Close</string>
+    <string name="import_wiz_pick_way">Choose import method</string>
+    <string name="import_wiz_source_jw">Direct Portal</string>
+    <string name="import_wiz_jw_subtitle">Sign in to your school portal to fetch your schedule</string>
+    <string name="import_wiz_source_file">Import from File</string>
+    <string name="import_wiz_source_text">Paste Schedule Text</string>
+    <string name="import_wiz_source_manual">Add Course Manually</string>
+    <string name="import_wiz_file_sub">Calendar (.ics) / CSV / Text / HTML</string>
+    <string name="import_wiz_text_sub">Copy your schedule text and paste it here</string>
+    <string name="import_wiz_detail_file">Pick a schedule file to parse and preview</string>
+    <string name="import_wiz_detail_text">Paste your schedule text below to parse and preview</string>
+    <string name="import_wiz_pick_file">Pick File</string>
+    <string name="import_wiz_parse_preview">Parse &amp; Preview</string>
+    <string name="import_wiz_metric_course">Courses</string>
+    <string name="import_wiz_metric_conflict">Conflicts</string>
+    <string name="import_wiz_view_schedule">View Schedule</string>
+    <string name="import_wiz_again">Import Another</string>
+
+    <!-- TASK-05 A: 设置页四组标题 -->
+    <string name="settings_group_display">Display</string>
+    <string name="settings_group_notify">Notifications</string>
+    <string name="settings_privacy">Privacy</string>
+    <!-- TASK-06 i18n: P3 schedule surface + import wizard JW row de-hardcoding -->
+    <string name="schedule_v3_empty_title">Plan your week, clearly</string>
+    <string name="schedule_v3_empty_hint">Start from your school portal, a calendar file, or add manually</string>
+    <string name="schedule_v3_add_cta">Add Schedule</string>
+    <string name="schedule_week_empty_no_courses">No courses in this schedule yet · Tap ＋ to add</string>
+    <string name="schedule_week_empty_free">No classes this week — enjoy your free time</string>
+    <string name="schedule_more_export">Export / Share schedule</string>
+    <string name="week_header_prev">Previous week</string>
+    <string name="week_header_next">Next week</string>
+    <string name="week_header_title">Week %1$d</string>
+    <string name="week_header_title_range">Week %1$d · %2$s</string>
+    <string name="week_picker_title">Choose week</string>
+    <string name="week_picker_progress">Term progress</string>
+    <string name="week_picker_progress_detail">Week %1$d of %2$d</string>
+    <string name="week_picker_back_to_current">Back to current week</string>
+    <string name="week_picker_grid_week">Week %1$d</string>
+    <string name="week_picker_grid_current">Week %1$d, current week</string>
+    <string name="week_picker_chip_current">This wk</string>
+    <string name="week_picker_chip_week">wk</string>
+    <string name="week_range_long_format">%1$d/%2$d – %3$d/%4$d</string>
+    <string name="settings_privacy_dialog_title">Privacy &amp; security</string>
+    <string name="settings_privacy_dialog_body">Sign-in happens on your school\'s official website; the app never reads or stores your password.\n\nParsed schedules stay only on this device. They are never uploaded to the maintainer\'s server, and are excluded from system cloud backups.\n\nThe app only connects to verified academic domains and never bypasses captchas, certificate errors, or school access controls.\n\nYou can sign out of the portal session or delete local schedules at any time.\n\nThis project is not affiliated with or endorsed by Jilin Jianzhu University. Source code is published under GPL-3.0.</string>
+    <string name="export_saved_no_app">Saved to Downloads: %1$s (no app available to share)</string>
 </resources>

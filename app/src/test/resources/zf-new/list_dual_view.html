@@ -8,12 +8,12 @@
 <!-- 视图开关:list 视图 -->
 <button id="shcPDF" data-type="list" title="导出PDF">导出</button>
 
-<!-- 新正方点击查询后渲染的列表视图
-     对照 shiguang parserList():
-       day      = tbody 在 #kblist_table 里的索引 (0 跳过, 1-7 = 周一~周日)
+<!-- 新正方点击查询后渲染的列表视图。本项目解析器读取的契约:
+       day      = tbody 在 #kblist_table 里的序号 (0 是视图控制区, 1-7 = 周一~周日)
        sections = tr 内 td[0].text() (须为 "N-M" 纯数字段)
-       name     = td[1] .title font
-       font[0]  = 周数串, font[1] = 上课地点, font[2] = 教师 (教师 后必须跟 U+3000 全角空格)
+       name     = td[1] .title 的文本
+       字段段   = td[1] 内带中文标签的片段: 周数：/ 上课地点：/ 教师　：
+                  (按标签认领, 不依赖出现顺序; 教师 后有 U+3000 全角空格)
      tbody[1] 只有表头无课程; tbody[2]/[3] 分别承载周二/周三课程 -->
 <table id="kblist_table" border="0" cellspacing="0" cellpadding="0">
   <tbody>

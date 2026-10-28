@@ -6,12 +6,12 @@ plugins {
 }
 
 android {
-    namespace = "com.lingion.sleepy"
+    namespace = "com.wedo.schedule"
     compileSdk = 37
 
     defaultConfig {
         applicationId = "com.wedo.schedule"
-        minSdk = 26
+        minSdk = 33
         targetSdk = 37
         versionCode = 1
         versionName = "0.1.0"
@@ -79,7 +79,13 @@ android {
         abi {
             isEnable = true
             reset()
-            include("arm64-v8a", "armeabi-v7a", "x86_64")
+            // scripts/build.sh 默认注入 x86_64（MuMu 模拟器）；直接跑 Gradle 时仍出全 ABI。
+            val requestedAbi = providers.gradleProperty("wedo.abi").orNull
+            if (requestedAbi.isNullOrBlank()) {
+                include("arm64-v8a", "armeabi-v7a", "x86_64")
+            } else {
+                include(requestedAbi)
+            }
             isUniversalApk = false
         }
     }
@@ -99,7 +105,7 @@ kotlin {
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2024.10.00")
+    val composeBom = platform("androidx.compose:compose-bom:2025.10.01")
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
@@ -118,6 +124,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-process:2.8.7")
+    // LifecycleEventEffect / LifecycleResumeEffect — 课表页在 ON_RESUME 重算"当前周"
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
 
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.8.3")

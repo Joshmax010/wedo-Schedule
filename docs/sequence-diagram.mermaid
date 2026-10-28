@@ -1,0 +1,64 @@
+%% wedo V3 关键调用流程
+%% 1) 新导航骨架（Tab 换轴 + 覆盖页栈 + 返回键分层 + 常驻 tab bar）
+sequenceDiagram
+    autonumber
+    participant U as 用户
+    participant MA as MainActivity.AppRoot
+    participant TB as WedoTabBar
+    participant VM as ScheduleViewModel
+    participant OV as Overlay 屏幕
+    participant ACT as JwImportActivity
+
+    U->>MA: 启动 App
+    Note over MA: currentTab = Tab.Today（Q3 首屏）
+    MA->>TB: 渲染常驻 3 项 tab bar（Liquid Glass 控件层）
+    MA->>VM: 交给 TodayScreen 渲染倒计时+时间轴
+
+    U->>TB: 点「课表」
+    TB->>MA: setCurrentTab(Tab.Schedule)
+    MA->>VM: ScheduleScreen ON_RESUME → refreshCurrentWeek()
+    VM-->>MA: state.currentWeek 刷新（selectedWeek 仅跟随态同步）
+
+    U->>MA: 课表页顶部 ＋
+    MA->>OV: pushOverlay(OverlayScreen.Import)
+    MA-->>U: 全屏 ImportWizard（Step1 选择来源）
+
+    U->>MA: 系统返回键
+    MA->>MA: BackHandler(enabled = hasOverlay())
+    alt 覆盖页栈非空
+        MA->>OV: popOverlay()（逐层只退一级）
+    else 栈空且 currentTab != Schedule
+        MA->>MA: currentTab = Tab.Schedule
+    else 栈空且 currentTab == Schedule
+        MA->>MA: 双击退出（2s 内二次返回 finish）
+    end
+
+    U->>OV: Step1 选「从教务系统导入」
+    OV->>MA: onJwImportRequested
+    MA->>ACT: startActivity(JwImportActivity)
+    ACT-->>U: 学校选择 → WebView 登录 → 抓取/解析 → 配置确认 → 单事务落库
+    ACT-->>MA: finish()（onImported）
+    MA->>MA: currentTab = Tab.Schedule（定位新学期）
+
+%% 2) 导入向导（全屏分步，水平滑动）
+flowchart TD
+    A[入口: 课表页＋ / 今天页CTA / 设置·导入课表] --> B[OverlayScreen.Import 全屏向导]
+    B --> C{Step1 选择来源}
+    C -->|教务系统 特色| D[JwImportActivity 独立 Activity]
+    C -->|从文件导入| E[filePicker → buildImportPreview]
+    C -->|粘贴文本导入| F[输入框 → buildImportPreview]
+    C -->|手动添加课程| G[OverlayScreen.AddCourse]
+    D --> H{教务抓取 / 解析}
+    H -->|成功| I[ConfigureConfirm: 起始日 / 表名 / 节次]
+    I --> J[importAsNewTable 单事务: 建表+落库, 失败回滚]
+    J --> K[Step4 完成 → 跳课表 Tab 定位新学期]
+    H -->|失败| L[失败页: 原因 + 下一步动作]
+    L -->|改用文件导入| E
+    L -->|手动添加课程| G
+    L -->|重试抓取| D
+    E --> M[ImportPreviewDialog: 预览 + 冲突处理]
+    F --> M
+    M --> N{应用方式}
+    N -->|新建 / 追加 / 覆盖| O[applyImportPreview → Room]
+    O --> K
+    M -->|取消| B
