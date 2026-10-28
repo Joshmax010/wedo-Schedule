@@ -100,6 +100,7 @@ ui/components/
 | 用途 | 文件 |
 |---|---|
 | 推导过程与全部编号 | `docs/glass/00_MASTER.md` |
-| 实现条款正文 | `docs/DESIGN_SPEC_V4_GLASS.md` |
+| 实现条款正文 | `docs/glass/DESIGN_SPEC_V4_GLASS.md`（G-001…G-072） |
+| 当前实现参数定稿 | `docs/glass/02_visual_system.md` 附录 A |
 | 色彩 / 字阶 / 间距 / 圆角 | `docs/DESIGN_SPEC_V2.md`（材质章节已被 v4 取代） |
 | 技术债 | `docs/glass/TECH_DEBT.md` |
