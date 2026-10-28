@@ -1,0 +1,36 @@
+name: JW Import Kit CI
+on:
+  pull_request:
+    paths: ['extras/jw-import-kit/**', '.github/workflows/jw-import-kit.yml']
+  push:
+    branches: [main]
+    paths: ['extras/jw-import-kit/**', '.github/workflows/jw-import-kit.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager 'platforms;android-37.0' 'build-tools;37.0.0' 'platform-tools'
+      - name: Check source credentials
+        shell: pwsh
+        run: ./scripts/scan-secrets.ps1
+      - name: Test, lint and build independent kit
+        working-directory: extras/jw-import-kit
+        run: |
+          chmod +x gradlew
+          ./gradlew :library:testDebugUnitTest :library:lintDebug :demo:lintDebug :demo:assembleDebug :library:assembleRelease --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jw-import-kit-builds
+          path: |
+            extras/jw-import-kit/demo/build/outputs/apk/debug/*.apk
+            extras/jw-import-kit/library/build/outputs/aar/*.aar

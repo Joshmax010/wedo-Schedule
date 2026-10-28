@@ -1,6 +1,6 @@
 # 发布说明
 
-当前状态：仅配置 Android Debug CI；下面的签名、版本标签和 Release 上传流程是发布前必须实现的要求，不代表现有工作流已经具备。精简后 `.github/workflows/` 只保留 `android.yml`。
+当前状态：主 App 仅配置 Android Debug CI；下面的签名、版本标签和 Release 上传流程是发布前必须实现的要求，不代表现有工作流已经具备。独立教务开发包另由 `jw-import-kit.yml` 验证和 `jw-import-kit-v*` 预览 Release 分发，不替代主 App 发布流程。
 
 ## 版本
 
