@@ -275,6 +275,14 @@
 
         <string name="settings_high_refresh">高リフレッシュレート</string>
     <string name="settings_section_display">画面</string>
+    <string name="settings_section_date_layout">日付とレイアウト</string>
+    <string name="settings_section_system">システム</string>
+    <string name="settings_schedule_layout">時間割のレイアウト</string>
+    <string name="settings_visible_days_all">毎日</string>
+    <string name="settings_visible_days_weekdays">月曜～金曜</string>
+    <string name="settings_visible_days_count">%1$d 日</string>
+    <string name="settings_view_scale">グリッド表示</string>
+    <string name="settings_week_layout">週表示</string>
     <string name="settings_language">言語 / Language</string>
     <string name="settings_display_mode">時間表示</string>
     <string name="settings_display_node">時限</string>
@@ -444,6 +452,15 @@
     <string name="theme_mode_dark">ダーク</string>
     <string name="appearance_section_theme">テーマカラー</string>
     <string name="appearance_section_display">授業の表示</string>
+    <string name="appearance_section_material">マテリアル</string>
+    <string name="settings_glass_quality">ガラス品質</string>
+    <string name="settings_glass_quality_smooth">スムーズ</string>
+    <string name="settings_glass_quality_balanced">バランス</string>
+    <string name="settings_glass_quality_fine">ファイン</string>
+    <string name="settings_motion">画面の動き</string>
+    <string name="settings_motion_sub">オフにすると移動と跳ね返りを抑えます</string>
+    <string name="settings_haptics">触覚フィードバック</string>
+    <string name="settings_haptics_sub">週の切り替えや長押しで振動します</string>
     <string name="appearance_section_widget">ウィジェット</string>
     <string name="about_update_latest">最新バージョン v%1$s です</string>
     <string name="update_found_title">新しいバージョン v%1$s があります</string>

@@ -167,33 +167,11 @@ object AppPrefs {
     }
 
 
-    // ===== 强调色 =====
+    // ===== 强调色（已移除用户配置）=====
     //
-    // 键名仍叫 KEY_THEME（改名会丢掉老用户的设置），但**存的值语义已变**：
-    // 从「预设主题 key」（"ocean"/"spring"…）改为「iOS 系统色名」（"Blue"/"Indigo"…）。
-    // 旧值经 WedoSystemColor.byName 回落为默认系统蓝，不会崩，只是老用户
-    // 的外观会被重置一次 —— 这次重设本来就要重设外观，可以接受。
-
-    fun getThemeKey(ctx: Context): String =
-        sp(ctx).getString(KEY_THEME, WedoSystemColor.DEFAULT_NAME) ?: WedoSystemColor.DEFAULT_NAME
-
-    fun setThemeKey(ctx: Context, key: String) {
-        sp(ctx).edit().putString(KEY_THEME, key).apply()
-    }
-
-    fun themeKeyFlow(ctx: Context): Flow<String> = callbackFlow {
-        val listener = SharedPreferences.OnSharedPreferenceChangeListener { sp, k ->
-            if (k == KEY_THEME) {
-                val v = sp.getString(KEY_THEME, WedoSystemColor.DEFAULT_NAME)
-                    ?: WedoSystemColor.DEFAULT_NAME
-                trySend(v)
-            }
-        }
-        val sp = sp(ctx)
-        sp.registerOnSharedPreferenceChangeListener(listener)
-        trySend(getThemeKey(ctx))
-        awaitClose { sp.unregisterOnSharedPreferenceChangeListener(listener) }
-    }.distinctUntilChanged()
+    // 强调色统一固定为 iOS 蓝（WedoSystemColor.Default），不再让用户选择。
+    // 保留 getThemeKey 仅为兼容小组件数据模型（WidgetData.themeKey）的历史字段。
+    fun getThemeKey(ctx: Context): String = WedoSystemColor.DEFAULT_NAME
 
     // ===== 提醒 =====
 

@@ -59,14 +59,14 @@
              会 OOM, 且 content:// 的 pathPattern 匹配不到文件名 — 垃圾 intent 收益为零。
              ManifestExternalOpenFilterTest 锁定此注册面。 -->
         <activity
-            android:name=".ui.screen.imports.ImportReceiverActivity"
+            android:name=".ui.screens.imports.ImportReceiverActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.Wedo.Splash" />
 
         <activity-alias
             android:name=".OpenJsonAlias"
-            android:targetActivity=".ui.screen.imports.ImportReceiverActivity"
+            android:targetActivity=".ui.screens.imports.ImportReceiverActivity"
             android:exported="true"
             android:label="@string/app_name">
             <intent-filter android:label="@string/app_name">
@@ -172,7 +172,7 @@
 
         <!-- 教务直连导入 Activity (v1.0.8 新增) -->
         <activity
-            android:name=".ui.screen.imports.JwImportActivity"
+            android:name=".ui.screens.imports.JwImportActivity"
             android:exported="false"
             android:label="教务直连导入"
             android:theme="@style/Theme.Wedo" />

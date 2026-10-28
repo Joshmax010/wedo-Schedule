@@ -9,6 +9,7 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import com.wedo.schedule.data.AppDatabase
 import com.wedo.schedule.data.entity.*
+import com.wedo.schedule.ui.settings.WedoSettingsStore
 import com.wedo.schedule.ui.theme.*
 import com.wedo.schedule.util.AppPrefs
 import kotlinx.coroutines.runBlocking
@@ -29,9 +30,9 @@ class WedoUiSmokeTest {
         val db = AppDatabase.get(context)
         val previousDefault = runBlocking { db.timeTableDao().getDefault()?.id }
         val mode = AppPrefs.getThemeMode(context)
-        val theme = AppPrefs.getThemeKey(context)
         val days = AppPrefs.getVisibleDays(context)
-        val display = WedoPreferences.read(WedoPreferences.prefs(context))
+        WedoSettingsStore.init(context)
+        val previousQuality = WedoSettingsStore.state.value.quality
         val privacy = context.getSharedPreferences("wedo_privacy", Context.MODE_PRIVATE)
         val accepted = privacy.getBoolean("accepted_v1", false)
         val acceptedPresent = privacy.contains("accepted_v1")
@@ -55,8 +56,7 @@ class WedoUiSmokeTest {
         var scenario: ActivityScenario<MainActivity>? = null
         try {
             privacy.edit().putBoolean("accepted_v1", true).commit()
-            WedoPreferences.write(context, WedoDisplay(quality = "fine"))
-            AppPrefs.setThemeKey(context, ThemePresets.KEY_OCEAN)
+            WedoSettingsStore.setQuality(context, "fine")
             AppPrefs.setThemeMode(context, AppPrefs.THEME_MODE_LIGHT)
             AppPrefs.setVisibleDays(context, (1..7).toSet())
             scenario = ActivityScenario.launch(MainActivity::class.java)
@@ -65,32 +65,31 @@ class WedoUiSmokeTest {
             }
             compose.waitUntil(15_000) { compose.onAllNodesWithText("高等数学").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText("第 2 周").assertIsDisplayed()
-            compose.onNodeWithTag("wedo-dock").assertIsDisplayed()
             capture(context, "home-light")
-            compose.onNodeWithContentDescription("下一周").performClick()
-            compose.waitUntil(5_000) { compose.onAllNodesWithText("第 3 周").fetchSemanticsNodes().isNotEmpty() }
-            compose.onNodeWithContentDescription("上一周").performClick()
-            compose.waitUntil(5_000) { compose.onAllNodesWithText("第 2 周").fetchSemanticsNodes().isNotEmpty() }
-            compose.waitForIdle()
             compose.onNodeWithTag("week-grid-scroll-2").performTouchInput { swipeUp() }
-            compose.waitUntil(5_000) { compose.onAllNodesWithTag("wedo-dock").fetchSemanticsNodes().isEmpty() }
-            capture(context, "dock-hidden")
+            capture(context, "home-scrolled")
             compose.onNodeWithTag("week-grid-scroll-2").performTouchInput { swipeDown() }
-            compose.waitUntil(5_000) { compose.onAllNodesWithTag("wedo-dock").fetchSemanticsNodes().isNotEmpty() }
             compose.onNode(hasText("高等数学") and hasAnyAncestor(hasTestTag("week-grid-scroll-2"))).performClick()
             compose.onNodeWithText("编辑这节课").performScrollTo().assertIsDisplayed()
             compose.waitForIdle()
             capture(context, "course-detail")
             androidx.test.espresso.Espresso.pressBack()
-            compose.onNodeWithContentDescription("添加课表").performClick()
-            compose.onNodeWithText("从 WakeUp 迁移").assertIsDisplayed()
-            compose.onNodeWithText("先在 WakeUp 选择“导出为日历文件”").assertIsDisplayed()
-            compose.onAllNodesWithText("WakeUp JSON 文件").assertCountEquals(0)
-            capture(context, "add-schedule")
+            compose.onNodeWithContentDescription("添加课程").performClick()
+            compose.onNodeWithText("从文件导入").assertIsDisplayed()
+            compose.onNodeWithText("教务直连").assertIsDisplayed()
+            capture(context, "import-source")
             androidx.test.espresso.Espresso.pressBack()
             compose.onNodeWithText("设置").performClick()
-            compose.onNodeWithText("外观与手感").assertIsDisplayed()
+            compose.onNodeWithText("外观与主题").assertIsDisplayed()
             capture(context, "settings")
+            compose.onNodeWithText("外观与主题").performClick()
+            compose.onNodeWithText("材质").performScrollTo().assertIsDisplayed()
+            capture(context, "appearance")
+            androidx.test.espresso.Espresso.pressBack()
+            compose.onNodeWithText("通用").performClick()
+            compose.onNodeWithText("日期与布局").assertIsDisplayed()
+            capture(context, "general")
+            androidx.test.espresso.Espresso.pressBack()
             compose.onNodeWithText("课表").performClick()
             AppPrefs.setThemeMode(context, AppPrefs.THEME_MODE_DARK)
             scenario.recreate()
@@ -99,9 +98,8 @@ class WedoUiSmokeTest {
         } finally {
             scenario?.close()
             AppPrefs.setThemeMode(context, mode)
-            AppPrefs.setThemeKey(context, theme)
             AppPrefs.setVisibleDays(context, days)
-            WedoPreferences.write(context, display)
+            WedoSettingsStore.setQuality(context, previousQuality)
             if (acceptedPresent) privacy.edit().putBoolean("accepted_v1", accepted).commit()
             else privacy.edit().remove("accepted_v1").commit()
             runBlocking {

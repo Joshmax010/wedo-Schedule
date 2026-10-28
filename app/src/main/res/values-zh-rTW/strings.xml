@@ -275,6 +275,14 @@
 
         <string name="settings_high_refresh">高重新整理率</string>
     <string name="settings_section_display">畫面</string>
+    <string name="settings_section_date_layout">日期與佈局</string>
+    <string name="settings_section_system">系統</string>
+    <string name="settings_schedule_layout">課表佈局</string>
+    <string name="settings_visible_days_all">每天</string>
+    <string name="settings_visible_days_weekdays">週一至週五</string>
+    <string name="settings_visible_days_count">%1$d 天</string>
+    <string name="settings_view_scale">網格檢視</string>
+    <string name="settings_week_layout">週檢視</string>
     <string name="settings_language">語言 / Language</string>
     <string name="settings_display_mode">課程時間顯示</string>
     <string name="settings_display_node">節次</string>
@@ -444,6 +452,15 @@
     <string name="theme_mode_dark">深色</string>
     <string name="appearance_section_theme">主題色彩</string>
     <string name="appearance_section_display">課程顯示</string>
+    <string name="appearance_section_material">材質</string>
+    <string name="settings_glass_quality">玻璃畫質</string>
+    <string name="settings_glass_quality_smooth">流暢</string>
+    <string name="settings_glass_quality_balanced">平衡</string>
+    <string name="settings_glass_quality_fine">精緻</string>
+    <string name="settings_motion">介面動效</string>
+    <string name="settings_motion_sub">關閉後減少位移與回彈</string>
+    <string name="settings_haptics">觸覺回饋</string>
+    <string name="settings_haptics_sub">換週與長按時提供震動回饋</string>
     <string name="appearance_section_widget">小工具</string>
     <string name="about_update_latest">目前已是最新版本 v%1$s</string>
     <string name="update_found_title">發現新版本 v%1$s</string>

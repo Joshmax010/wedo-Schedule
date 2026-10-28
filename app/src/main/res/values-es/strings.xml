@@ -275,6 +275,14 @@
 
         <string name="settings_high_refresh">Frecuencia de actualización alta</string>
     <string name="settings_section_display">Pantalla</string>
+    <string name="settings_section_date_layout">Fechas y diseño</string>
+    <string name="settings_section_system">Sistema</string>
+    <string name="settings_schedule_layout">Diseño del horario</string>
+    <string name="settings_visible_days_all">Todos los días</string>
+    <string name="settings_visible_days_weekdays">Lunes–viernes</string>
+    <string name="settings_visible_days_count">%1$d días</string>
+    <string name="settings_view_scale">Vista de cuadrícula</string>
+    <string name="settings_week_layout">Vista semanal</string>
     <string name="settings_language">Idioma / Language</string>
     <string name="settings_display_mode">Visualización de hora</string>
     <string name="settings_display_node">Períodos</string>
@@ -444,6 +452,15 @@
     <string name="theme_mode_dark">Oscuro</string>
     <string name="appearance_section_theme">Colores del tema</string>
     <string name="appearance_section_display">Visualización de cursos</string>
+    <string name="appearance_section_material">Material</string>
+    <string name="settings_glass_quality">Calidad del cristal</string>
+    <string name="settings_glass_quality_smooth">Fluida</string>
+    <string name="settings_glass_quality_balanced">Equilibrada</string>
+    <string name="settings_glass_quality_fine">Refinada</string>
+    <string name="settings_motion">Movimiento de la interfaz</string>
+    <string name="settings_motion_sub">Reduce el desplazamiento y el rebote al desactivarlo</string>
+    <string name="settings_haptics">Respuesta háptica</string>
+    <string name="settings_haptics_sub">Vibra al cambiar de semana y al mantener pulsado</string>
     <string name="appearance_section_widget">Widget</string>
     <string name="about_update_latest">Ya tienes la última versión v%1$s</string>
     <string name="update_found_title">Nueva versión v%1$s disponible</string>

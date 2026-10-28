@@ -396,14 +396,12 @@ object WedoTheme {
 @Composable
 fun WedoThemeProvider(
     darkTheme: Boolean = false,
-    themeKey: String = WedoSystemColor.Default.name,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
 
-    // themeKey 现在是强调色名；未知名回落默认（兼容旧的 "ocean"/"default" 等 preset key）
-    val accent = WedoSystemColor.byName(themeKey)
-    val accentColor = accent.color(darkTheme)
+    // 强调色不再是用户配置：统一固定为 iOS 蓝，彩色语义交给列表图标块。
+    val accentColor = WedoSystemColor.Default.color(darkTheme)
 
     val wakeColors = appleScheme(accentColor, darkTheme)
 
@@ -454,7 +452,6 @@ fun WedoThemeProvider(
     CompositionLocalProvider(
         LocalWakeUpColors provides wakeColors,
         LocalCoursePalette provides if (darkTheme) DarkCoursePalette else LightCoursePalette,
-        LocalWedoAccent provides accent,
         LocalWedoDark provides darkTheme
     ) {
         // 系统栏外观随应用主题联动(官方 edge-to-edge 指南): enableEdgeToEdge 是一次性

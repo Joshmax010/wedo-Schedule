@@ -11,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId = "com.wedo.schedule"
-        minSdk = 26
+        minSdk = 33
         targetSdk = 37
         versionCode = 1
         versionName = "0.1.0"
@@ -79,7 +79,13 @@ android {
         abi {
             isEnable = true
             reset()
-            include("arm64-v8a", "armeabi-v7a", "x86_64")
+            // scripts/build.sh 默认注入 x86_64（MuMu 模拟器）；直接跑 Gradle 时仍出全 ABI。
+            val requestedAbi = providers.gradleProperty("wedo.abi").orNull
+            if (requestedAbi.isNullOrBlank()) {
+                include("arm64-v8a", "armeabi-v7a", "x86_64")
+            } else {
+                include(requestedAbi)
+            }
             isUniversalApk = false
         }
     }
@@ -99,7 +105,7 @@ kotlin {
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2024.10.00")
+    val composeBom = platform("androidx.compose:compose-bom:2025.10.01")
     implementation(composeBom)
     androidTestImplementation(composeBom)
 

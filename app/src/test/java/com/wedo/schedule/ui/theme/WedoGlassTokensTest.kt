@@ -100,7 +100,88 @@ class WedoGlassTokensTest {
         }
     }
 
-    // ---------- 4. 规范数值对账 ----------
+    // ---------- 4. P1 A/B/Smooth G0 矩阵 ----------
+
+    @Test
+    fun `balanced is the quiet A recipe`() {
+        val light = buildGlassSpec(
+            WedoGlassQuality.Balanced,
+            dark = false,
+            level = WedoGlassLevel.Card,
+            surface = WedoGlassSurfaceClass.Content,
+        )
+        assertEquals(WedoGlassTokens.CARD_FILL_BALANCED_LIGHT, light.cardFillAlpha, 0.0001f)
+        assertEquals(WedoGlassTokens.HAIRLINE_BALANCED_LIGHT, light.hairlineAlpha, 0.0001f)
+        assertEquals(WedoGlassTokens.RIM_BALANCED_LIGHT, light.rimAlpha, 0.0001f)
+        assertEquals(WedoGlassTokens.INNER_HIGHLIGHT_BALANCED, light.innerHighlightAlpha, 0.0001f)
+        assertTrue(light.materialEnabled)
+        assertEquals(WedoGlassSurfaceClass.Content, light.surface)
+
+        val dark = buildGlassSpec(WedoGlassQuality.Balanced, dark = true, level = WedoGlassLevel.Card)
+        assertEquals(WedoGlassTokens.CARD_FILL_BALANCED_DARK, dark.cardFillAlpha, 0.0001f)
+        assertEquals("深色只保留单层 rim，不与 hairline 叠加", 0f, dark.hairlineAlpha, 0.0001f)
+        assertEquals(WedoGlassTokens.RIM_BALANCED_DARK, dark.rimAlpha, 0.0001f)
+        assertEquals("深色不画顶部内高光，避免白色亮条", 0f, dark.innerHighlightAlpha, 0.0001f)
+        assertTrue("浅色仍保留内高光", light.innerHighlightAlpha > 0f)
+    }
+
+    @Test
+    fun `fine is the lifted B recipe`() {
+        val light = buildGlassSpec(WedoGlassQuality.Fine, dark = false, level = WedoGlassLevel.Card)
+        assertEquals(WedoGlassTokens.CARD_FILL_FINE_LIGHT, light.cardFillAlpha, 0.0001f)
+        assertEquals(WedoGlassTokens.HAIRLINE_FINE_LIGHT, light.hairlineAlpha, 0.0001f)
+        assertEquals(WedoGlassTokens.RIM_FINE_LIGHT, light.rimAlpha, 0.0001f)
+        assertEquals(WedoGlassTokens.INNER_HIGHLIGHT_FINE, light.innerHighlightAlpha, 0.0001f)
+        assertTrue("B 的卡片面层必须比 A 更透", light.cardFillAlpha < WedoGlassTokens.CARD_FILL_BALANCED_LIGHT)
+        assertTrue("B 的 hairline 必须比 A 更强", light.hairlineAlpha > WedoGlassTokens.HAIRLINE_BALANCED_LIGHT)
+
+        val dark = buildGlassSpec(WedoGlassQuality.Fine, dark = true, level = WedoGlassLevel.Card)
+        assertEquals(WedoGlassTokens.CARD_FILL_FINE_DARK, dark.cardFillAlpha, 0.0001f)
+        assertEquals("深色 Fine 也不叠加 hairline", 0f, dark.hairlineAlpha, 0.0001f)
+    }
+
+    @Test
+    fun `smooth is the lightest G0 recipe`() {
+        listOf(false, true).forEach { dark ->
+            val spec = buildGlassSpec(WedoGlassQuality.Smooth, dark, WedoGlassLevel.Card)
+            assertEquals(WedoGlassTokens.CARD_FILL_SMOOTH, spec.cardFillAlpha, 0.0001f)
+            assertEquals(0f, spec.innerHighlightAlpha, 0.0001f)
+            assertFalse(spec.innerHighlight)
+            assertEquals(0f, spec.elevation.value, 0.0001f)
+        }
+    }
+
+    @Test
+    fun `base surface never renders material`() {
+        val base = buildGlassSpec(
+            WedoGlassQuality.Balanced,
+            dark = false,
+            level = WedoGlassLevel.Card,
+            surface = WedoGlassSurfaceClass.Base,
+        )
+        assertFalse("BASE 只提供明度场，不得渲染材质", base.materialEnabled)
+        assertTrue("CONTENT 仍必须可渲染 G0", buildGlassSpec(
+            WedoGlassQuality.Balanced,
+            dark = false,
+            level = WedoGlassLevel.Card,
+            surface = WedoGlassSurfaceClass.Content,
+        ).materialEnabled)
+    }
+
+    @Test
+    fun `quota defaults to G0 and is carried through`() {
+        val spec = buildGlassSpec(
+            WedoGlassQuality.Balanced,
+            dark = false,
+            level = WedoGlassLevel.Sheet,
+            surface = WedoGlassSurfaceClass.Float,
+            quota = WedoGlassQuotaGrade.G1,
+        )
+        assertEquals(WedoGlassSurfaceClass.Float, spec.surface)
+        assertEquals(WedoGlassQuotaGrade.G1, spec.quota)
+    }
+
+    // ---------- 5. 规范数值对账 ----------
 
     @Test
     fun `tokens match the liquid glass specification`() {

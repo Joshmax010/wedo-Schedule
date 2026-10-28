@@ -24,8 +24,8 @@ import androidx.compose.ui.unit.dp
 import com.wedo.schedule.ui.theme.WedoAppleType
 import com.wedo.schedule.WedoApp
 import com.wedo.schedule.data.entity.CourseEntity
-import com.wedo.schedule.ui.component.CardsGridView
-import com.wedo.schedule.ui.component.TimeSlot
+import com.wedo.schedule.ui.components.CardsGridView
+import com.wedo.schedule.ui.components.TimeSlot
 import com.wedo.schedule.ui.theme.WedoTheme
 import com.wedo.schedule.util.AppPrefs
 import com.wedo.schedule.util.DateUtils
@@ -61,9 +61,7 @@ class WeekGridPreviewActivity : ComponentActivity() {
             val dark = androidx.compose.runtime.remember(systemDark) {
                 com.wedo.schedule.util.AppPrefs.isDarkMode(this@WeekGridPreviewActivity, systemDark)
             }
-            val themeKey by AppPrefs.themeKeyFlow(this@WeekGridPreviewActivity)
-                .collectAsState(initial = AppPrefs.getThemeKey(this@WeekGridPreviewActivity))
-            com.wedo.schedule.ui.theme.WedoThemeProvider(darkTheme = dark, themeKey = themeKey) {
+            com.wedo.schedule.ui.theme.WedoThemeProvider(darkTheme = dark) {
                 AppScheduleScreen()
             }
         }
@@ -118,7 +116,7 @@ class WeekGridPreviewActivity : ComponentActivity() {
 
 private data class ScreenData(
     val courses: List<CourseEntity>,
-    val timeSlots: List<com.wedo.schedule.ui.component.TimeSlot>,
+    val timeSlots: List<com.wedo.schedule.ui.components.TimeSlot>,
     val visibleDays: Set<Int>,
     val startDate: String,
     val currentWeek: Int,

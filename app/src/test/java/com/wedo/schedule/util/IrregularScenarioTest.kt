@@ -533,7 +533,7 @@ class IrregularScenarioTest {
     }
 
     /** 每行时长(分钟) — 交叉验证测试用的独立取值路径. */
-    private fun rowMinutes(slot: com.wedo.schedule.ui.component.TimeSlot): Float =
+    private fun rowMinutes(slot: com.wedo.schedule.ui.components.TimeSlot): Float =
         java.time.temporal.ChronoUnit.MINUTES.between(slot.start, slot.end).toFloat()
 
     // ===============================================================

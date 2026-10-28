@@ -43,7 +43,7 @@ class CourseNotificationScheduler(private val context: Context) {
 
         /**
          * 「横幅提醒」关闭时使用的低干扰渠道：同内容但不触发悬浮横幅（heads-up）。
-         * Android 8+（本 app minSdk=26）横幅由渠道重要度决定，故用双渠道表达开关语义。
+         * Android 13+（本 app minSdk=33）横幅由渠道重要度决定，故用双渠道表达开关语义。
          */
         const val CHANNEL_BEFORE_CLASS_SILENT = "wedo_before_class_silent"
 

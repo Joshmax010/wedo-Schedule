@@ -734,9 +734,6 @@ fun interface Easing {
  * 强调色**只在三处出现**：选中态、链接、主按钮。
  * 这个克制程度是 Apple 观感的核心 —— 一旦强调色铺满界面，就退回成普通安卓 App 了。
  */
-val LocalWedoAccent = staticCompositionLocalOf { WedoSystemColor.Default }
-
-/** 当前是否深色模式（供课程块配色等需要自行推导颜色的场景使用） */
 val LocalWedoDark = staticCompositionLocalOf { false }
 
 /** 便捷入口 */
@@ -750,7 +747,7 @@ object WedoApple {
     val accent: Color
         @Composable
         @ReadOnlyComposable
-        get() = LocalWedoAccent.current.color(LocalWedoDark.current)
+        get() = WedoSystemColor.Default.color(LocalWedoDark.current)
 
     /**
      * 当前强调色的**图标 / UI 组件**版本（门槛 3:1）。
@@ -762,7 +759,7 @@ object WedoApple {
     val accentIcon: Color
         @Composable
         @ReadOnlyComposable
-        get() = LocalWedoAccent.current.readableColor(LocalWedoDark.current, WedoColorRole.Icon)
+        get() = WedoSystemColor.Default.readableColor(LocalWedoDark.current, WedoColorRole.Icon)
 
     /**
      * 当前强调色的**文字**版本（门槛 4.5:1）。
@@ -777,7 +774,7 @@ object WedoApple {
     val accentText: Color
         @Composable
         @ReadOnlyComposable
-        get() = LocalWedoAccent.current.readableColor(LocalWedoDark.current, WedoColorRole.Text)
+        get() = WedoSystemColor.Default.readableColor(LocalWedoDark.current, WedoColorRole.Text)
 
     /** 当前是否深色 */
     val isDark: Boolean

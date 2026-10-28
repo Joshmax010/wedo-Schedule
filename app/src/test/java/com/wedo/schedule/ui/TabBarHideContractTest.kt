@@ -3,7 +3,7 @@ package com.wedo.schedule.ui
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import com.wedo.schedule.TestProjectFiles
-import com.wedo.schedule.ui.component.TabBarVisibilityState
+import com.wedo.schedule.ui.components.TabBarVisibilityState
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -95,9 +95,9 @@ class TabBarHideContractTest {
     @Test
     fun allThreeTabPages_attachScrollConnection() {
         listOf(
-            "app/src/main/java/com/wedo/schedule/ui/screen/schedule/ScheduleScreen.kt",
-            "app/src/main/java/com/wedo/schedule/ui/screen/today/TodayScreen.kt",
-            "app/src/main/java/com/wedo/schedule/ui/screen/mine/WedoSettingsScreen.kt"
+            "app/src/main/java/com/wedo/schedule/ui/screens/schedule/ScheduleScreen.kt",
+            "app/src/main/java/com/wedo/schedule/ui/screens/today/TodayScreen.kt",
+            "app/src/main/java/com/wedo/schedule/ui/screens/mine/WedoSettingsScreen.kt"
         ).forEach { path ->
             assertTrue(
                 "$path 未挂 scrollConnection（该页底栏不会隐藏）",
@@ -107,11 +107,17 @@ class TabBarHideContractTest {
     }
 
     @Test
-    fun tabBar_usesOwnLayerSize_notHardcodedHeight() {
-        val src = executableLines(read("app/src/main/java/com/wedo/schedule/ui/component/WedoTabBar.kt"))
-        assertTrue(
-            "滑出位移必须用自身图层高度（size.height），不得写死高度魔数",
-            src.contains("translationY = size.height * hideFraction")
+    fun tabBar_collapsesFully_withoutHardcodedHeight() {
+        // 2026-10-21 真机反馈：只做 translationY 会在底部留下空白条，
+        // 因此改为 AnimatedVisibility 滑出后整体撤出组合；这里锁住
+        // 「彻底撤出 + 不写死高度」，不再要求旧 translationY 实现。
+        val src = executableLines(read("app/src/main/java/com/wedo/schedule/ui/components/WedoTabBar.kt"))
+        assertTrue("底栏必须用 AnimatedVisibility 滑出", src.contains("AnimatedVisibility("))
+        assertTrue("退出动画必须按自身尺寸滑出", src.contains("slideOutVertically"))
+        assertTrue("退出位移目标必须是自身高度", src.contains("targetOffsetY = { it }"))
+        assertFalse(
+            "不得用写死的 52dp 计算隐藏位移",
+            src.contains("52.dp *")
         )
     }
 }

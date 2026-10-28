@@ -1,0 +1,67 @@
+// AGSL · Liquid Glass L2（P4 灰度，只做边缘折射与轻色散）
+// uniform 契约（顺序由 GlassUniforms 锁定）：
+// 0: uSize (float2)        面板像素尺寸
+// 1: uCornerRadius (float) 胶囊/圆角半径（px）
+// 2: uRefraction (float)   边缘位移强度（px）
+// 3: uBevel (float)        边缘带宽度（px）
+// 4: uDispersion (float)   RGB 色散强度（px）
+// 5: uTintAlpha (float)    额外面层染色（0 = 只折射）
+// 6: uRimAlpha (float)     边缘 rim 增亮
+// 7: uHairlineAlpha (float) 外沿 hairline 压暗
+uniform shader uContent;
+uniform float2 uSize;
+uniform float uCornerRadius;
+uniform float uRefraction;
+uniform float uBevel;
+uniform float uDispersion;
+uniform float uTintAlpha;
+uniform float uRimAlpha;
+uniform float uHairlineAlpha;
+
+half4 main(float2 fragCoord) {
+    float2 size = max(uSize, float2(1.0));
+    float radius = clamp(uCornerRadius, 0.0, min(size.x, size.y) * 0.5);
+    float2 center = size * 0.5;
+    float2 halfSize = size * 0.5;
+    float2 fromCenter = fragCoord - center;
+    float2 absPos = abs(fromCenter);
+
+    // Rounded-rect SDF；距离必须用 float，half 在数百像素上会有台阶（O-80）。
+    float2 q = absPos - (halfSize - radius);
+    float sd = length(max(q, float2(0.0))) + min(max(q.x, q.y), 0.0) - radius;
+
+    float bevel = max(uBevel, 1.0);
+    float edge = 1.0 - clamp(sd / bevel, 0.0, 1.0);
+
+    // 折射方向朝**内**：从边缘往里取像素。
+    // 朝外取会越过图层边界拿到空内容，表现为边缘的蓝/白弧线伪影。
+    float2 normal = fromCenter / max(length(fromCenter), 0.0001);
+    float2 offset = -normal * (edge * uRefraction);
+
+    // 采样坐标夹回图层内，杜绝越界采样。
+    float2 lo = float2(0.0);
+    float2 hi = size - float2(1.0);
+    float2 samplePos = clamp(fragCoord + offset, lo, hi);
+    half4 color = uContent.eval(samplePos);
+
+    if (uDispersion > 0.0 && edge > 0.0) {
+        float2 redOffset = -normal * (edge * (uRefraction + uDispersion));
+        float2 blueOffset = -normal * (edge * max(uRefraction - uDispersion, 0.0));
+        color.r = uContent.eval(clamp(fragCoord + redOffset, lo, hi)).r;
+        color.b = uContent.eval(clamp(fragCoord + blueOffset, lo, hi)).b;
+    }
+
+    // 材质差额补足：L1 已有 Compose 层 tint / rim；这里只做可选的轻补强。
+    if (uTintAlpha > 0.0) {
+        color = mix(color, half4(1.0, 1.0, 1.0, color.a), half(uTintAlpha));
+    }
+    // rim 收窄到最外沿 1~2px，且默认 alpha 很低；大幅 rim 由 Compose 层负责。
+    float rim = smoothstep(-1.5, 0.0, sd) * smoothstep(0.0, 1.5, -sd);
+    color.rgb = mix(color.rgb, half3(1.0, 1.0, 1.0), half(rim * uRimAlpha));
+
+    float hairline = 1.0 - smoothstep(0.0, 1.5, abs(sd));
+    color.rgb = mix(color.rgb, half3(0.0, 0.0, 0.0), half(hairline * uHairlineAlpha));
+
+    // AGSL 不允许提前退出；clip 已由 Compose shape 处理。
+    return color;
+}

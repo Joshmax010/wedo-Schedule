@@ -82,10 +82,12 @@ class NavigationSkeletonContractTest {
 
     @Test
     fun mainActivity_hasNoWedoDockWiring() {
-        // REQ-P0-02：移除浮动 Dock 挂载及其 AnimatedVisibility 容器。
+        // REQ-P0-02：移除浮动 Dock 挂载。ADR-22 允许新的底栏动画使用
+        // AnimatedVisibility，因此这里只锁住 Dock 本体与旧状态，不再一棍子打死动画。
         val src = executableLines(mainSrc)
         assertFalse("MainActivity 不得再调用 WedoDock", src.contains("WedoDock"))
-        assertFalse("旧 Dock 的 AnimatedVisibility 容器应一并删除", src.contains("AnimatedVisibility"))
+        assertFalse("不得再声明 dockVisible", src.contains("dockVisible"))
+        assertFalse("不得再引用 PILL_NAV_HEIGHT", src.contains("PILL_NAV_HEIGHT"))
     }
 
     @Test
@@ -191,7 +193,7 @@ class NavigationSkeletonContractTest {
 
     private companion object {
         const val MAIN_ACTIVITY = "app/src/main/java/com/wedo/schedule/MainActivity.kt"
-        const val WEDO_TAB_BAR = "app/src/main/java/com/wedo/schedule/ui/component/WedoTabBar.kt"
-        const val WEDO_SHELL = "app/src/main/java/com/wedo/schedule/ui/component/WedoShell.kt"
+        const val WEDO_TAB_BAR = "app/src/main/java/com/wedo/schedule/ui/components/WedoTabBar.kt"
+        const val WEDO_SHELL = "app/src/main/java/com/wedo/schedule/ui/components/WedoShell.kt"
     }
 }

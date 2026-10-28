@@ -25,16 +25,22 @@ class ScheduleHeaderLayoutContractTest {
 
     private val mainSrc by lazy { read("app/src/main/java/com/wedo/schedule/MainActivity.kt") }
     private val screenSrc by lazy {
-        read("app/src/main/java/com/wedo/schedule/ui/screen/schedule/ScheduleScreen.kt")
+        read("app/src/main/java/com/wedo/schedule/ui/screens/schedule/ScheduleScreen.kt")
     }
     private val headerSrc by lazy {
-        read("app/src/main/java/com/wedo/schedule/ui/screen/schedule/WedoWeekHeader.kt")
+        read("app/src/main/java/com/wedo/schedule/ui/screens/schedule/WedoWeekHeader.kt")
     }
     private val tabBarSrc by lazy {
-        read("app/src/main/java/com/wedo/schedule/ui/component/WedoTabBar.kt")
+        read("app/src/main/java/com/wedo/schedule/ui/components/WedoTabBar.kt")
     }
     private val settingsSrc by lazy {
-        read("app/src/main/java/com/wedo/schedule/ui/screen/mine/WedoSettingsScreen.kt")
+        read("app/src/main/java/com/wedo/schedule/ui/screens/mine/WedoSettingsScreen.kt")
+    }
+    private val generalSrc by lazy {
+        read("app/src/main/java/com/wedo/schedule/ui/screens/mine/GeneralSettingsScreen.kt")
+    }
+    private val generalDetailSrc by lazy {
+        read("app/src/main/java/com/wedo/schedule/ui/screens/mine/GeneralDetailScreens.kt")
     }
 
     // ───────────── 顶栏：⋯ 改分享，直达导出页 ─────────────
@@ -108,51 +114,40 @@ class ScheduleHeaderLayoutContractTest {
     // ───────────── 冲突课程样式：左边距对齐 ─────────────
 
     @Test
-    fun conflictStyleTitle_hasHorizontalPaddingToAlignWithRows() {
-        val src = executableLines(settingsSrc)
-        // 两个坑叠在一起：
-        //  1. padding 写在 modifier= 那一行，与 stringResource 不同行；
-        //  2. 不能用「找到下一个 `)`」来界定块——`stringResource(R.string.x)` 自己就带右括号，
-        //     会在 padding 之前就被截断（第一版就是这么写错的，第一轮全量测试直接 FAIL）。
-        // 故取资源名之后的**定长窗口**来断言。
-        val start = src.indexOf("R.string.settings_conflict_style")
-        assertTrue("未找到冲突样式标题", start >= 0)
-        // 2026-10-06：标题已改为「图标 + 文字」的 Row，padding 挂在 Row 上，
-        // 故向前多取一段窗口（标题行在资源名之前）。
-        // 窗口要足够大：modifier 里的 padding 与资源名之间还夹着 Icon(...) 整块（>400 字符）
-        val from = maxOf(0, start - 900)
-        val window = src.substring(from, minOf(start + 400, src.length))
-
+    fun conflictStyleEntry_livesInGeneralSettings() {
+        // 设置信息架构收敛后，冲突样式不再是外层设置首页的弹窗，而是通用页里
+        // 的一行入口，点击后进入独立的二级页。
+        val src = executableLines(generalSrc)
         assertTrue(
-            "标题行必须带水平左边距 16dp（原来只有 padding(top=8dp)，贴到 x=0 与上方设置行不对齐）：\n$window",
-            window.contains("start = 16.dp")
+            "通用设置必须保留冲突样式入口",
+            src.contains("R.string.settings_conflict_style")
         )
-        assertTrue("标题须保留右边距：\n$window", window.contains("end = 16.dp"))
         assertTrue(
-            "冲突样式标题须带图标（与上方三行 SettingsItem 对齐）：\n$window",
-            window.contains("Icons.Outlined.CallSplit")
+            "入口必须显示当前样式值",
+            src.contains("value = conflictStyleValue")
+        )
+        assertTrue(
+            "入口必须打开二级页",
+            src.contains("onClick = onOpenConflictStyle")
         )
     }
 
     @Test
-    fun conflictStyleChips_useSharedWedoChipWithFixedHeight() {
-        // 2026-10-06：chip 已抽成全 app 共享组件 ui/component/WedoChip.kt
-        // （原先设置页私有 + SmartPeriodEditor 用 Material FilterChip，两套长相）。
-        val settings = executableLines(settingsSrc)
+    fun conflictStyleDetail_usesSharedSettingsControls() {
+        // 旧实现用 WedoChip；新二级页统一走 WedoChoiceSetting + WedoSliderSetting，
+        // 不能退回到页面私有 chip 或直接写裸颜色。
+        val detail = executableLines(generalDetailSrc)
         assertTrue(
-            "设置页须使用共享 WedoChip",
-            settings.contains("WedoChip(label = label")
-        )
-        val chip = executableLines(
-            TestProjectFiles.read("app/src/main/java/com/wedo/schedule/ui/component/WedoChip.kt")
+            "冲突样式二级页必须使用共享 WedoChoiceSetting",
+            detail.contains("WedoChoiceSetting(")
         )
         assertTrue(
-            "chip 必须用固定高度（heightIn 会让选中/未选中因描边层叠而参差）",
-            chip.contains(".height(WedoChipHeight)")
+            "三种样式必须写入 AppPrefs",
+            detail.contains("AppPrefs.setConflictStyle")
         )
         assertTrue(
-            "选中态必须是 accent 实底 + 白字（2026-10-06 主题统一硬规则）",
-            chip.contains("if (selected) WedoApple.accent else") && chip.contains("if (selected) Color.White else")
+            "间距微调必须使用共享 WedoSliderSetting",
+            detail.contains("WedoSliderSetting(")
         )
     }
 }

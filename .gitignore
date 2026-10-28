@@ -10,6 +10,9 @@ local.properties
 .idea/
 captures/
 
+# 改造前基线截图含真实课表/教师/教室，绝不提交或外发
+evidence/baseline/
+
 # wedo: credentials and education-system capture artifacts must never be committed
 .env
 .env.*
@@ -59,4 +62,12 @@ CONTRIBUTING.md
 # AI 工作流的 spec/design/task 产物只在本地保留,禁止入库。
 # 2026-09-09 task-7-report.md 误入库已移除,整目录兜底忽略。
 .superpowers/
+
+# 本地 AI 工作记忆与参考研究（仅本机保留,禁止 push）
+# .workbuddy/: 助手的项目记忆与工作日志。
+# Research/: 第三方项目的调研材料（含个人署名）,属他人成果,不入本仓。
+# dist/: 本地构建产物与设计稿导出。
+.workbuddy/
+Research/
+dist/
 

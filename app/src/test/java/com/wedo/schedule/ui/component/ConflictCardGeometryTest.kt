@@ -1,4 +1,4 @@
-package com.wedo.schedule.ui.component
+package com.wedo.schedule.ui.components
 
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp

@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
+import com.wedo.schedule.ui.settings.WedoSettingsStore
+import com.wedo.schedule.util.SystemAccessibility
 
 /** Display preferences are independent of course and authentication data. */
 data class WedoDisplay(
@@ -19,13 +21,23 @@ object WedoPreferences {
     fun prefs(context: Context): SharedPreferences =
         context.applicationContext.getSharedPreferences("wedo_display", Context.MODE_PRIVATE)
 
-    fun read(p: SharedPreferences) = WedoDisplay(
+    /**
+     * 只读取不以材质开关为语义的字段。
+     *
+     * 三个材质开关的读写统一走 [com.wedo.schedule.ui.settings.WedoSettingsStore]，
+     * 这里不重复读取，避免两个状态源漂移。
+     */
+    fun readBase(p: SharedPreferences) = WedoDisplay(
         density = p.getString("density", "balanced") ?: "balanced",
-        quality = p.getString("quality", "balanced") ?: "balanced",
         fields = p.getStringSet("fields", setOf("name", "room", "teacher"))!!.toSet(),
+        ghostCourses = p.getBoolean("ghost", false),
+    )
+
+    /** 兼容旧调用；生产侧的三个材质开关不再经这里读写。 */
+    fun read(p: SharedPreferences) = readBase(p).copy(
+        quality = p.getString("quality", "balanced") ?: "balanced",
         motion = p.getBoolean("motion", true),
         haptics = p.getBoolean("haptics", true),
-        ghostCourses = p.getBoolean("ghost", false),
     )
 
     fun write(context: Context, value: WedoDisplay) {
@@ -50,16 +62,29 @@ val LocalWedoCollapsed = staticCompositionLocalOf { false }
 @Composable
 fun WedoDisplayProvider(content: @Composable () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
+    // 提前初始化单例，保证首帧就拿到持久化偏好；两个入口均幂等。
+    remember(context) {
+        WedoSettingsStore.init(context)
+        SystemAccessibility.start(context)
+    }
+    val settings by WedoSettingsStore.state.collectAsState()
+    val accessibility by SystemAccessibility.state.collectAsState()
     val prefs = remember(context) { WedoPreferences.prefs(context) }
-    var display by remember(prefs) { mutableStateOf(WedoPreferences.read(prefs)) }
+    var display by remember(prefs) { mutableStateOf(WedoPreferences.readBase(prefs)) }
     DisposableEffect(prefs) {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
-            display = WedoPreferences.read(prefs)
+            display = WedoPreferences.readBase(prefs)
         }
         prefs.registerOnSharedPreferenceChangeListener(listener)
         onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
     }
-    CompositionLocalProvider(LocalWedoDisplay provides display, content = content)
+    // 三个开关只由 WedoSettingsStore 提供；动效额外受系统动画倍率约束（M-36）。
+    val resolved = display.copy(
+        quality = settings.quality,
+        motion = settings.motion && accessibility.animationsEnabled,
+        haptics = settings.haptics,
+    )
+    CompositionLocalProvider(LocalWedoDisplay provides resolved, content = content)
 }
 
 /** Keep user accent selection, while giving every page the same blue-white/navy base. */

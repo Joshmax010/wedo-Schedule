@@ -1,6 +1,6 @@
 package com.wedo.schedule.data.jw
 
-import com.wedo.schedule.ui.screen.imports.ZF_NEW_FETCH_JS
+import com.wedo.schedule.ui.screens.imports.ZF_NEW_FETCH_JS
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

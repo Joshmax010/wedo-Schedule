@@ -1,0 +1,504 @@
+package com.wedo.schedule.ui.screens.mine
+
+import com.wedo.schedule.ui.components.WedoDialog
+import com.wedo.schedule.ui.components.WedoIconColors
+import com.wedo.schedule.ui.components.WedoIconTile
+import com.wedo.schedule.ui.components.WedoInsetCard
+import com.wedo.schedule.ui.components.WedoSectionHeader
+
+import android.content.Intent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.heightIn
+import com.wedo.schedule.ui.theme.WedoAppleType
+import com.wedo.schedule.data.entity.CourseEntity
+import com.wedo.schedule.WedoApp
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.wedo.schedule.R
+import com.wedo.schedule.data.parser.ScheduleExporter
+import com.wedo.schedule.data.parser.WedoNativeExporter
+import com.wedo.schedule.ui.screens.schedule.ScheduleViewModel
+import com.wedo.schedule.ui.theme.WedoTheme
+import com.wedo.schedule.ui.theme.WedoApple
+import com.wedo.schedule.ui.theme.noRippleClickable
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+/**
+ * 导出课表页 — 把当前课表导出为：
+ * 1. wedo JSON 备份（文件下载 + 分享，可重新导入 wedo）
+ * 2. wedo 分享文本（系统分享面板）
+ * 3. ICS 日历（文件下载 + 分享）
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun ExportScreen(
+    /** 2026-10-06：滚动状态由 AppRoot 持有，返回本页时保持原位 */
+    listState: LazyListState = rememberLazyListState(),
+    onBack: () -> Unit,
+    viewModel: ScheduleViewModel = viewModel()
+) {
+    val state by viewModel.state.collectAsState()
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val colors = WedoTheme.colors
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // 导出目标课表 — 本地选择, 不污染主页 selectedTableId/widget 默认表。
+    // 默认跟随当前课表; 用户切过一次后(pin)固定, 除非主页切到 pin 掉的表之外又变了。
+    var exportTableId by remember { mutableStateOf<Long?>(null) }
+    val effectiveId = exportTableId ?: state.selectedTableId
+    val table = state.tables.find { it.id == effectiveId } ?: state.currentTable
+    val tables = state.tables
+
+    // 选中表的课程: 当前表直接用 state.courses(已观察), 其他表选中时本地加载一次
+    var loadedCourses by remember(effectiveId) { mutableStateOf<List<CourseEntity>?>(null) }
+    LaunchedEffect(effectiveId, state.courses) {
+        val tid = effectiveId
+        if (table != null && tid != null && tid != state.selectedTableId) {
+            loadedCourses = withContext(Dispatchers.IO) {
+                WedoApp.get().repository.getCourses(tid)
+            }
+        } else {
+            loadedCourses = null
+        }
+    }
+    val courses = loadedCourses ?: state.courses
+
+    var showTablePicker by remember { mutableStateOf(false) }
+
+    Scaffold(
+        modifier = Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Transparent),
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.export_title), fontWeight = FontWeight.SemiBold) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                            contentDescription = stringResource(R.string.back),
+                            tint = com.wedo.schedule.ui.theme.WedoApple.accentIcon
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                    titleContentColor = colors.onBackground,
+                    navigationIconContentColor = colors.onBackground
+                )
+            )
+        }
+    ) { padding ->
+        if (table == null) {
+            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                Text(stringResource(R.string.export_no_table), color = colors.onSurfaceVariant)
+            }
+            return@Scaffold
+        }
+
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // 顶部信息行 — 点击拉出课表选择下拉(默认当前课表)
+            item { WedoSectionHeader(stringResource(R.string.manage_current_table)) }
+            item {
+                WedoInsetCard {
+                    Row(
+                        Modifier.fillMaxWidth().noRippleClickable { showTablePicker = true }
+                            .padding(horizontal = 13.dp, vertical = 11.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        WedoIconTile(
+                            icon = Icons.Outlined.CalendarMonth,
+                            color = WedoIconColors.blue,
+                            size = 42.dp,
+                            corner = 10.dp,
+                            glyphSize = 22.dp
+                        )
+                        Column(Modifier.weight(1f).padding(start = 11.dp)) {
+                            Text(table.name, style = WedoAppleType.body(), color = colors.onSurface)
+                            Text(
+                                "${ctx.getString(R.string.export_course_count, courses.size)} · ${ctx.getString(R.string.export_start_date, table.startDate)}",
+                                style = WedoAppleType.footnote(),
+                                color = colors.onSurfaceVariant
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Outlined.ExpandMore,
+                            contentDescription = stringResource(R.string.export_pick_table),
+                            tint = colors.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+
+            // 格式选项
+            item {
+                WedoInsetCard {
+                    ExportItem(
+                        icon = Icons.Outlined.Code,
+                        title = stringResource(R.string.export_json_title),
+                        subtitle = stringResource(R.string.export_json_subtitle),
+                        iconColor = WedoIconColors.blue,
+                        onClick = {
+                            scope.launch {
+                                exportAndShare(
+                                    ctx = ctx,
+                                    fileName = "wedo_${table.name}_${stamp()}.json",
+                                    mime = "application/json",
+                                    content = ScheduleExporter.exportWakeUpJson(table, courses),
+                                    displayName = table.name,
+                                    onResult = { msg -> snackbarHostState.showSnackbar(msg) }
+                                )
+                            }
+                        }
+                    )
+                    Divider(colors.outlineVariant.copy(alpha = WedoTheme.Alpha.hairline))
+                    ExportItem(
+                        icon = Icons.Outlined.Share,
+                        title = stringResource(R.string.export_share_title),
+                        subtitle = stringResource(R.string.export_share_subtitle),
+                        iconColor = WedoIconColors.green,
+                        onClick = {
+                            scope.launch {
+                                shareText(
+                                    ctx = ctx,
+                                    content = ScheduleExporter.exportWakeUpShareText(table, courses),
+                                    subject = table.name,
+                                    onResult = { msg -> snackbarHostState.showSnackbar(msg) }
+                                )
+                            }
+                        }
+                    )
+                    Divider(colors.outlineVariant.copy(alpha = WedoTheme.Alpha.hairline))
+                    ExportItem(
+                        icon = Icons.Outlined.CalendarMonth,
+                        title = stringResource(R.string.export_ics_title),
+                        subtitle = stringResource(R.string.export_ics_subtitle),
+                        iconColor = WedoIconColors.orange,
+                        onClick = {
+                            scope.launch {
+                                exportAndShare(
+                                    ctx = ctx,
+                                    fileName = "wedo_${table.name}_${stamp()}.ics",
+                                    mime = "text/calendar",
+                                    content = ScheduleExporter.exportIcs(table, courses),
+                                    displayName = table.name,
+                                    onResult = { msg -> snackbarHostState.showSnackbar(msg) }
+                                )
+                            }
+                        }
+                    )
+                    Divider(colors.outlineVariant.copy(alpha = WedoTheme.Alpha.hairline))
+                    ExportItem(
+                        icon = Icons.Outlined.Star,
+                        title = stringResource(R.string.export_native_title),
+                        subtitle = stringResource(R.string.export_native_subtitle),
+                        iconColor = WedoIconColors.purple,
+                        onClick = {
+                            scope.launch {
+                                exportAndShare(
+                                    ctx = ctx,
+                                    fileName = "wedo_${table.name}_${stamp()}.wedo",
+                                    mime = "text/plain",
+                                    // MIME 用 text/plain 规避 ImportReceiverActivity MIME 收窄问题(调查报告 P3)
+                                    content = WedoNativeExporter.exportFile(
+                                        table.name, table.startDate, table.maxWeek, table.nodesPerDay,
+                                        table.timeJson, courses
+                                    ),
+                                    displayName = table.name,
+                                    onResult = { msg -> snackbarHostState.showSnackbar(msg) }
+                                )
+                            }
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    // 导出课表选择弹窗 — 行样式对齐 ScheduleScreen TableSwitcherDialog(用户定版视觉)
+    if (showTablePicker) {
+        WedoDialog(
+            onDismissRequest = { showTablePicker = false },
+            titleContentColor = colors.onSurface,
+            textContentColor = colors.onSurfaceVariant,
+            title = { Text(stringResource(R.string.export_pick_table)) },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 360.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    tables.forEach { t ->
+                        val isSelected = t.id == effectiveId
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(WedoTheme.shapes.small)
+                                .background(if (isSelected) WedoApple.accent.copy(alpha = 0.12f) else Color.Transparent)
+                                .noRippleClickable {
+                                    exportTableId = t.id
+                                    showTablePicker = false
+                                }
+                                .padding(vertical = 10.dp, horizontal = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = t.name,
+                                    style = WedoAppleType.subheadline().copy(fontWeight = FontWeight.Medium),
+                                    color = if (isSelected) WedoApple.accentText else colors.onSurface,
+                                    maxLines = 2
+                                )
+                                if (t.id == state.selectedTableId) {
+                                    Text(
+                                        text = stringResource(R.string.export_current_table_badge),
+                                        style = WedoAppleType.caption2(),
+                                        color = colors.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Check,
+                                    contentDescription = null,
+                                    tint = WedoApple.accentIcon,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {}
+        )
+    }
+}
+
+/** internal: 顶栏分享底部弹窗(ShareScheduleSheet)复用同款条目视觉 */
+@Composable
+internal fun ExportItem(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    iconColor: Color = WedoIconColors.blue,
+    onClick: () -> Unit
+) {
+    val colors = WedoTheme.colors
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .noRippleClickable(onClick)
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // 彩色图标块：与设置页/全 app 列表行统一（iOS 设置语汇）。
+        WedoIconTile(icon = icon, color = iconColor)
+        Spacer(modifier = Modifier.size(12.dp))
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(text = title, style = WedoAppleType.body(), color = colors.onSurface)
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(text = subtitle, style = WedoAppleType.footnote(), color = colors.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun Divider(color: Color) {
+    HorizontalDivider(
+        modifier = Modifier.padding(start = 50.dp, end = 16.dp),
+        thickness = 0.5.dp,
+        color = color
+    )
+}
+
+internal fun stamp(): String =
+    SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+
+/** 用 MediaStore API 写到公共 Downloads 目录（无需存储权限，Android 10+），然后触发分享。
+ *  API 26-28 无 MediaStore.Downloads → 回退写到应用 cache 目录经 FileProvider 分享
+ *  internal: 顶栏分享底部弹窗(ShareScheduleSheet)复用 */
+internal suspend fun exportAndShare(
+    ctx: android.content.Context,
+    fileName: String,
+    mime: String,
+    content: String,
+    displayName: String,
+    onResult: suspend (String) -> Unit
+) {
+    withContext(Dispatchers.IO) {
+        val uri = withContext(Dispatchers.IO) {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                writeToDownloads(ctx, fileName, mime, content)
+            } else {
+                writeToCacheViaFileProvider(ctx, fileName, content)
+            }
+        }
+        if (uri == null) {
+            withContext(Dispatchers.Main) {
+                onResult(ctx.getString(R.string.export_failed))
+            }
+            return@withContext
+        }
+        withContext(Dispatchers.Main) {
+            val send = Intent(Intent.ACTION_SEND).apply {
+                type = mime
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_SUBJECT, displayName)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            // 2026-10-02 真机反馈：设备上没有能接收该 MIME 的应用时，
+            // Intent.createChooser 会抛 ActivityNotFoundException，系统弹「没有应用可执行此操作」，
+            // 而**文件其实已经写进「下载」目录**——异常把成功提示也一起吞了，用户以为啥都没发生。
+            // 这里兜住异常，明确告知「已保存到下载」，让用户知道去哪儿找。
+            val chooser = Intent.createChooser(send, ctx.getString(R.string.export_share_chooser))
+            val shared = runCatching { ctx.startActivity(chooser) }.isSuccess
+            onResult(
+                ctx.getString(
+                    if (shared) R.string.export_saved_to else R.string.export_saved_no_app,
+                    fileName
+                )
+            )
+        }
+    }
+}
+
+/** 仅在 Q(29)+ 被调用(API<29 由 exportAndShare 分流到 writeToCacheViaFileProvider):
+ *    MediaStore.Downloads 整族 API 29 新增, 函数内不再需要 Q 判断 */
+@androidx.annotation.RequiresApi(android.os.Build.VERSION_CODES.Q)
+private fun writeToDownloads(
+    ctx: android.content.Context,
+    fileName: String,
+    mime: String,
+    content: String
+): android.net.Uri? {
+    return try {
+        val values = android.content.ContentValues().apply {
+            put(android.provider.MediaStore.Downloads.DISPLAY_NAME, fileName)
+            put(android.provider.MediaStore.Downloads.MIME_TYPE, mime)
+            put(android.provider.MediaStore.Downloads.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS + "/wedo")
+            put(android.provider.MediaStore.Downloads.IS_PENDING, 1)
+        }
+        val resolver = ctx.contentResolver
+        val collection = android.provider.MediaStore.Downloads.getContentUri(
+            android.provider.MediaStore.VOLUME_EXTERNAL_PRIMARY
+        )
+        val uri = resolver.insert(collection, values) ?: return null
+        resolver.openOutputStream(uri)?.use { os -> os.write(content.toByteArray(Charsets.UTF_8)) }
+        values.clear()
+        values.put(android.provider.MediaStore.Downloads.IS_PENDING, 0)
+        resolver.update(uri, values, null, null)
+        uri
+    } catch (e: Exception) {
+        android.util.Log.e("ExportScreen", "writeToDownloads failed", e)
+        null
+    }
+}
+
+/** API 26-28 回退: 写入应用 cache 目录, 经 FileProvider(cache-path, 见 xml/file_paths.xml)生成 content Uri 供分享 */
+private fun writeToCacheViaFileProvider(
+    ctx: android.content.Context,
+    fileName: String,
+    content: String
+): android.net.Uri? {
+    return try {
+        val dir = java.io.File(ctx.cacheDir, "exports").apply { mkdirs() }
+        val file = java.io.File(dir, fileName)
+        file.writeText(content, Charsets.UTF_8)
+        androidx.core.content.FileProvider.getUriForFile(ctx, "${ctx.packageName}.fileprovider", file)
+    } catch (e: Exception) {
+        android.util.Log.e("ExportScreen", "writeToCacheViaFileProvider failed", e)
+        null
+    }
+}
+
+/** 直接分享文本 (internal: 顶栏分享底部弹窗复用) */
+internal suspend fun shareText(
+    ctx: android.content.Context,
+    content: String,
+    subject: String,
+    onResult: suspend (String) -> Unit
+) {
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, content)
+        putExtra(Intent.EXTRA_SUBJECT, subject)
+    }
+    // 同 exportAndShare：无接收方时 createChooser 会抛异常并弹系统提示。
+    // 纯文本没有落盘兜底，故失败时**复制到剪贴板**，让 export_copied_hint 这句提示名副其实。
+    val shared = runCatching {
+        ctx.startActivity(Intent.createChooser(intent, ctx.getString(R.string.export_share_chooser)))
+    }.isSuccess
+    if (!shared) {
+        runCatching {
+            val cm = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            cm.setPrimaryClip(android.content.ClipData.newPlainText(subject, content))
+        }
+    }
+    onResult(ctx.getString(R.string.export_copied_hint))
+}

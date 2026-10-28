@@ -1,7 +1,7 @@
 package com.wedo.schedule.util
 
 import com.wedo.schedule.data.entity.TimeTableEntity
-import com.wedo.schedule.ui.component.TimeSlot
+import com.wedo.schedule.ui.components.TimeSlot
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalTime

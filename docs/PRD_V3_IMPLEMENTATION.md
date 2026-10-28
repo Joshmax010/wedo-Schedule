@@ -21,7 +21,7 @@
 | 技术栈 | Android + Kotlin + Jetpack Compose（`app/src/main/java/com/wedo/schedule/`） |
 | 包名 | `com.wedo.schedule`（Debug：`com.wedo.schedule.debug`） |
 | 服务对象 | 单一学校：吉林建筑大学（JLJU，新版正方 `jwglxt`） |
-| 最低版本 | `minSdk = 26`；`compileSdk = targetSdk = 37` |
+| 最低版本 | `minSdk = 33`（Android 13）；`compileSdk = targetSdk = 37` |
 | 交付形态 | 源码 + 可构建 Debug APK；**本轮不做签名发布** |
 | 原始需求复述 | 按 `DESIGN_V3_INTERACTION.md` §7 落地路线，实现 P0–P5 六个阶段的重设计；用户后续自行真机验证 |
 

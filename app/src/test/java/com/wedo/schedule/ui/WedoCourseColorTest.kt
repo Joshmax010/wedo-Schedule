@@ -3,8 +3,8 @@ package com.wedo.schedule.ui
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import com.wedo.schedule.data.entity.CourseEntity
-import com.wedo.schedule.ui.component.wedoCourseColor
-import com.wedo.schedule.ui.component.wedoCourseTextColor
+import com.wedo.schedule.ui.components.wedoCourseColor
+import com.wedo.schedule.ui.components.wedoCourseTextColor
 import com.wedo.schedule.ui.theme.*
 import org.junit.Assert.*
 import org.junit.Test

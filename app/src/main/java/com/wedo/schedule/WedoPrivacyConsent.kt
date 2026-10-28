@@ -4,12 +4,12 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.wedo.schedule.ui.components.WedoDialog
 
 @Composable
 fun WedoPrivacyConsent(
@@ -17,7 +17,7 @@ fun WedoPrivacyConsent(
     onReject: () -> Unit,
 ) {
     BackHandler(onBack = onReject)
-    AlertDialog(
+    WedoDialog(
         onDismissRequest = {},
         title = { Text("隐私与安全说明") },
         text = {

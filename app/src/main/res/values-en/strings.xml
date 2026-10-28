@@ -278,6 +278,14 @@
 
         <string name="settings_high_refresh">High refresh rate</string>
     <string name="settings_section_display">Display</string>
+    <string name="settings_section_date_layout">Dates &amp; Layout</string>
+    <string name="settings_section_system">System</string>
+    <string name="settings_schedule_layout">Schedule Layout</string>
+    <string name="settings_visible_days_all">Every Day</string>
+    <string name="settings_visible_days_weekdays">Monday–Friday</string>
+    <string name="settings_visible_days_count">%1$d days</string>
+    <string name="settings_view_scale">Grid View</string>
+    <string name="settings_week_layout">Week View</string>
     <string name="settings_language">Language</string>
     <string name="settings_display_mode">Time Display</string>
     <string name="settings_display_node">Periods</string>
@@ -447,6 +455,15 @@
     <string name="theme_mode_dark">Dark</string>
     <string name="appearance_section_theme">Theme colors</string>
     <string name="appearance_section_display">Course display</string>
+    <string name="appearance_section_material">Material</string>
+    <string name="settings_glass_quality">Glass quality</string>
+    <string name="settings_glass_quality_smooth">Smooth</string>
+    <string name="settings_glass_quality_balanced">Balanced</string>
+    <string name="settings_glass_quality_fine">Fine</string>
+    <string name="settings_motion">Interface motion</string>
+    <string name="settings_motion_sub">Reduce movement and bounce when off</string>
+    <string name="settings_haptics">Haptic feedback</string>
+    <string name="settings_haptics_sub">Vibrate on week changes and long presses</string>
     <string name="appearance_section_widget">Widget</string>
     <string name="about_update_latest">You\'re on the latest version v%1$s</string>
     <string name="update_found_title">New version v%1$s available</string>

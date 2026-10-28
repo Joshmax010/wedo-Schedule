@@ -8,7 +8,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
-import com.wedo.schedule.ui.screen.widget.WidgetEditScreen
+import com.wedo.schedule.ui.screens.widget.WidgetEditScreen
 import com.wedo.schedule.ui.theme.WedoThemeProvider
 import com.wedo.schedule.util.AppPrefs
 
@@ -66,11 +66,10 @@ class WidgetConfigureActivity : ComponentActivity() {
             }
         })
 
-        val themeKey = AppPrefs.getThemeKey(this)
         setContent {
             val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
             val dark = AppPrefs.isDarkMode(this@WidgetConfigureActivity, systemDark)
-            WedoThemeProvider(darkTheme = dark, themeKey = themeKey) {
+            WedoThemeProvider(darkTheme = dark) {
                 WidgetEditScreen(
                     widgetId = appWidgetId,
                     onBack = { finishWithResult(Activity.RESULT_OK) }

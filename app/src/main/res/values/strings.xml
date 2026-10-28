@@ -319,6 +319,14 @@
     <!-- More Settings -->
         <string name="settings_high_refresh">高刷新率</string>
     <string name="settings_section_display">画面</string>
+    <string name="settings_section_date_layout">日期与布局</string>
+    <string name="settings_section_system">系统</string>
+    <string name="settings_schedule_layout">课表布局</string>
+    <string name="settings_visible_days_all">每天</string>
+    <string name="settings_visible_days_weekdays">周一至周五</string>
+    <string name="settings_visible_days_count">%1$d 天</string>
+    <string name="settings_view_scale">网格视图</string>
+    <string name="settings_week_layout">周视图</string>
     <string name="settings_language">语言 / Language</string>
     <string name="settings_display_mode">课程时间显示</string>
     <string name="settings_display_node">节次</string>
@@ -645,6 +653,15 @@
     <string name="appearance_accent_desc">选中态、链接与主按钮使用的颜色</string>
     <string name="appearance_accent_preview">预览</string>
     <string name="appearance_section_display">课程显示</string>
+    <string name="appearance_section_material">材质</string>
+    <string name="settings_glass_quality">玻璃画质</string>
+    <string name="settings_glass_quality_smooth">流畅</string>
+    <string name="settings_glass_quality_balanced">平衡</string>
+    <string name="settings_glass_quality_fine">精致</string>
+    <string name="settings_motion">界面动效</string>
+    <string name="settings_motion_sub">关闭后减少位移与回弹</string>
+    <string name="settings_haptics">触觉反馈</string>
+    <string name="settings_haptics_sub">换周与长按时提供震动反馈</string>
     <string name="appearance_section_widget">小组件</string>
     <!-- i18n: hardcoded string extraction -->
     <string name="edit_period_input">输入</string>

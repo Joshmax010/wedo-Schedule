@@ -32,27 +32,32 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wedo.schedule.data.entity.CourseEntity
-import com.wedo.schedule.ui.component.LocalNavExtraBottomPadding
-import com.wedo.schedule.ui.component.WedoBackground
-import com.wedo.schedule.ui.component.WedoTabBar
-import com.wedo.schedule.ui.component.WedoTabBarDefaults
-import com.wedo.schedule.ui.screen.edit.AddCourseScreen
-import com.wedo.schedule.ui.screen.imports.ImportWizard
-import com.wedo.schedule.ui.screen.imports.JwImportActivity
-import com.wedo.schedule.ui.screen.mine.AllTablesScreen
-import com.wedo.schedule.ui.screen.mine.AppearanceScreen
-import com.wedo.schedule.ui.screen.mine.EditTableScreen
-import com.wedo.schedule.ui.screen.mine.ExportScreen
-import com.wedo.schedule.ui.screen.mine.GeneralSettingsScreen
-import com.wedo.schedule.ui.screen.mine.HolidaySettingsScreen
-import com.wedo.schedule.ui.screen.mine.LicenseScreen
-import com.wedo.schedule.ui.screen.mine.ReminderScreen
-import com.wedo.schedule.ui.screen.mine.WedoSettingsScreen
-import com.wedo.schedule.ui.screen.schedule.ScheduleScreen
-import com.wedo.schedule.ui.screen.schedule.ScheduleViewModel
-import com.wedo.schedule.ui.screen.today.TodayScreen
+import com.wedo.schedule.ui.components.LocalNavExtraBottomPadding
+import com.wedo.schedule.ui.components.WedoBackground
+import com.wedo.schedule.ui.components.WedoTabBar
+import com.wedo.schedule.ui.components.WedoTabBarDefaults
+import com.wedo.schedule.ui.screens.edit.AddCourseScreen
+import com.wedo.schedule.ui.screens.imports.ImportWizard
+import com.wedo.schedule.ui.screens.imports.JwImportActivity
+import com.wedo.schedule.ui.screens.mine.AllTablesScreen
+import com.wedo.schedule.ui.screens.mine.AppearanceScreen
+import com.wedo.schedule.ui.screens.mine.ConflictStyleSettingsScreen
+import com.wedo.schedule.ui.screens.mine.EditTableScreen
+import com.wedo.schedule.ui.screens.mine.ExportScreen
+import com.wedo.schedule.ui.screens.mine.GeneralSettingsScreen
+import com.wedo.schedule.ui.screens.mine.HolidaySettingsScreen
+import com.wedo.schedule.ui.screens.mine.LanguageSettingsScreen
+import com.wedo.schedule.ui.screens.mine.LicenseScreen
+import com.wedo.schedule.ui.screens.mine.ReminderScreen
+import com.wedo.schedule.ui.screens.mine.ScheduleLayoutSettingsScreen
+import com.wedo.schedule.ui.screens.mine.VisibleDaysSettingsScreen
+import com.wedo.schedule.ui.screens.mine.WedoSettingsScreen
+import com.wedo.schedule.ui.screens.schedule.ScheduleScreen
+import com.wedo.schedule.ui.screens.schedule.ScheduleViewModel
+import com.wedo.schedule.ui.screens.today.TodayScreen
 import com.wedo.schedule.ui.theme.LocalWedoCollapsed
 import com.wedo.schedule.ui.theme.WedoThemeProvider
 import com.wedo.schedule.util.AppPrefs
@@ -149,6 +154,16 @@ class MainActivity : ComponentActivity() {
             val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
             var themeMode by remember { mutableStateOf(AppPrefs.getThemeMode(this@MainActivity)) }
             var dark by remember { mutableStateOf(AppPrefs.isDarkMode(this@MainActivity, systemDark)) }
+            // 窗口底色跟随应用主题：Theme.Wedo 默认继承 Material.Light 的纯白，
+            // 底栏滑走 / 内容留缝时会露出白块 —— 这里把它钉成页面底色。
+            androidx.compose.runtime.LaunchedEffect(dark) {
+                window.setBackgroundDrawable(
+                    android.graphics.drawable.ColorDrawable(
+                        if (dark) android.graphics.Color.BLACK
+                        else android.graphics.Color.rgb(0xF2, 0xF2, 0xF7)
+                    )
+                )
+            }
             val privacyPreferences = remember {
                 getSharedPreferences("wedo_privacy", Context.MODE_PRIVATE)
             }
@@ -158,8 +173,7 @@ class MainActivity : ComponentActivity() {
             androidx.compose.runtime.LaunchedEffect(systemDark) { dark = AppPrefs.isDarkMode(this@MainActivity, systemDark) }
             fun applyTheme() { dark = AppPrefs.isDarkMode(this@MainActivity, systemDark) }
             val deepLinkCourse by editingCourseFlow.collectAsState()
-            val themeKey by AppPrefs.themeKeyFlow(this@MainActivity).collectAsState(initial = AppPrefs.getThemeKey(this@MainActivity))
-            WedoThemeProvider(darkTheme = dark, themeKey = themeKey) {
+            WedoThemeProvider(darkTheme = dark) {
                 com.wedo.schedule.ui.theme.WedoDisplayProvider {
                 if (privacyAccepted) {
                     AppRoot(
@@ -208,12 +222,12 @@ class MainActivity : ComponentActivity() {
             intent.removeExtra(EXTRA_OPEN_ADD_COURSE)
         }
         val importText = intent?.getStringExtra(
-            com.wedo.schedule.ui.screen.imports.ImportReceiverActivity.EXTRA_IMPORT_TEXT
+            com.wedo.schedule.ui.screens.imports.ImportReceiverActivity.EXTRA_IMPORT_TEXT
         ) ?: com.wedo.schedule.MainActivity.incomingImportText
         if (!importText.isNullOrBlank()) {
             com.wedo.schedule.MainActivity.pendingImportText = importText
             com.wedo.schedule.MainActivity.incomingImportText = null
-            intent?.removeExtra(com.wedo.schedule.ui.screen.imports.ImportReceiverActivity.EXTRA_IMPORT_TEXT)
+            intent?.removeExtra(com.wedo.schedule.ui.screens.imports.ImportReceiverActivity.EXTRA_IMPORT_TEXT)
         }
         val courseId = intent?.getLongExtra(EXTRA_COURSE_ID, -1L) ?: -1L
         if (courseId <= 0) return
@@ -261,7 +275,8 @@ enum class Tab(val labelRes: Int, val icon: ImageVector) {
 private enum class OverlayScreen {
     // 2026-10-01 真机反馈：`About` 中间页已删——设置「关于」组四项各自直达
     // （更新原地弹结果 / 隐私应用内弹层 / 反馈开 GitHub Issues / 许可 License 页）。
-    AddCourse, AllTables, EditTable, Theme, General, Export, License, Import, Holiday, Reminder
+    AddCourse, AllTables, EditTable, Theme, General, VisibleDays, ScheduleLayout,
+    ConflictStyle, Language, Export, License, Import, Holiday, Reminder
 }
 
 @Composable
@@ -279,7 +294,7 @@ private fun AppRoot(
     // 返回键「非课表 → 回课表」「课表 → 双击退出」的既有逻辑因此天然成立。
     var currentTab by remember { mutableStateOf(Tab.Schedule) }
     // 2026-10-06 真机反馈：上滑隐藏底栏、下滑回来（X 式）。三页共用同一个状态。
-    val tabBarState = remember { com.wedo.schedule.ui.component.TabBarVisibilityState() }
+    val tabBarState = remember { com.wedo.schedule.ui.components.TabBarVisibilityState() }
 
     // 2026-10-06 真机反馈：二级页返回后要保持原滚动位置。
     // 根因：本函数里 `if (topOverlay() == X) { ...; return }` —— 推入覆盖页时
@@ -402,8 +417,28 @@ private fun AppRoot(
     if (topOverlay() == OverlayScreen.General) {
         GeneralSettingsScreen(
             listState = listStateFor("general"),
-            onBack = { popOverlay() }
+            onBack = { popOverlay() },
+            onOpenVisibleDays = { pushOverlay(OverlayScreen.VisibleDays) },
+            onOpenScheduleLayout = { pushOverlay(OverlayScreen.ScheduleLayout) },
+            onOpenConflictStyle = { pushOverlay(OverlayScreen.ConflictStyle) },
+            onOpenLanguage = { pushOverlay(OverlayScreen.Language) }
         )
+        return
+    }
+    if (topOverlay() == OverlayScreen.VisibleDays) {
+        VisibleDaysSettingsScreen(listState = listStateFor("visible_days"), onBack = { popOverlay() })
+        return
+    }
+    if (topOverlay() == OverlayScreen.ScheduleLayout) {
+        ScheduleLayoutSettingsScreen(listState = listStateFor("schedule_layout"), onBack = { popOverlay() })
+        return
+    }
+    if (topOverlay() == OverlayScreen.ConflictStyle) {
+        ConflictStyleSettingsScreen(listState = listStateFor("conflict_style"), onBack = { popOverlay() })
+        return
+    }
+    if (topOverlay() == OverlayScreen.Language) {
+        LanguageSettingsScreen(listState = listStateFor("language"), onBack = { popOverlay() })
         return
     }
     if (topOverlay() == OverlayScreen.Export) {
@@ -448,15 +483,41 @@ private fun AppRoot(
     // 故各页 contentPadding 需加上本值; 安全区高度与 tab bar 内部的 navigationBarsPadding
     // 同源, 保证「不遮挡内容末行」在带手势条/三键导航的设备上都成立。
     val navBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    // 底栏隐藏时把底部预留动画归零 —— 否则滑走后会留下一条空白（"留白块"）。
+    val navExtra by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (tabBarState.visible) {
+            WedoTabBarDefaults.contentHeight +
+                WedoTabBarDefaults.floatingBottomMargin +
+                navBarBottom
+        } else 0.dp,
+        animationSpec = com.wedo.schedule.ui.motion.WedoMotionPolicy.resolve(
+            enabled = com.wedo.schedule.ui.theme.LocalWedoDisplay.current.motion,
+            base = com.wedo.schedule.ui.motion.WedoSprings.settle(),
+        ),
+        label = "tabBarNavExtra"
+    )
     WedoBackground(Modifier.fillMaxSize()) {
         androidx.compose.runtime.CompositionLocalProvider(
-            LocalNavExtraBottomPadding provides (WedoTabBarDefaults.contentHeight + navBarBottom),
+            LocalNavExtraBottomPadding provides navExtra,
             // P0 决策(ADR-2): 移除「下滑收起」后 collapsed 恒为 false;
             // WedoWeekHeader 暂消费该值(零改动编译), P3 由顶栏大标题滚动收起接手。
             LocalWedoCollapsed provides false,
-            com.wedo.schedule.ui.component.LocalTabBarVisibilityState provides tabBarState
+            com.wedo.schedule.ui.components.LocalTabBarVisibilityState provides tabBarState
         ) {
-            Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars)) {
+            com.wedo.schedule.ui.glass.WedoGlassHost(
+                modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars),
+                contentKey = currentTab,
+                overlay = {
+                    // 常驻底部 tab bar；作为 Host overlay 消费采样层。
+                    WedoTabBar(
+                        current = currentTab,
+                        onSelect = { currentTab = it; tabBarState.reset() },
+                        visible = tabBarState.visible,
+                        scrolling = tabBarState.isScrolling,
+                        modifier = Modifier.align(Alignment.BottomCenter)
+                    )
+                }
+            ) {
                 MainTabs(
                     currentTab = currentTab,
                     pushOverlay = ::pushOverlay,
@@ -466,13 +527,6 @@ private fun AppRoot(
                 )
             }
         }
-        // 常驻底部 tab bar（不隐藏、不收起）—— 取代原浮动 Dock + 下滑收起联动。
-        WedoTabBar(
-            current = currentTab,
-            onSelect = { currentTab = it; tabBarState.reset() },
-            visible = tabBarState.visible,
-            modifier = Modifier.align(Alignment.BottomCenter)
-        )
     }
 }
 

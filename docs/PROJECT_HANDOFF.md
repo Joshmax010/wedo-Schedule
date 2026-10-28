@@ -34,7 +34,7 @@ wedo 是从 [Sleepy · 轻课表](https://github.com/lingion/sleepy) 派生的 A
 
 设计和业务约束如下：
 
-- Android 8.0/API 26 起；学校账号仅由官方网页承接，应用不创建密码表单、不采集明文密码，不绕验证码和 TLS。
+- Android 13/API 33 起；学校账号仅由官方网页承接，应用不创建密码表单、不采集明文密码，不绕验证码和 TLS。
 - 教务数据默认在本机处理和保存；无云同步、用户中心、广告、埋点服务或自建课表后端。
 - 先使 JLJU 适配可靠，再按真实证据逐校扩展。UI 用“教务直连/选择学校”，不要在通用入口写死 JLJU。
 - 课程显示字段是一套**所有课程共用**的模板，不做每门课独立字段勾选；但允许对课程组手动换色。
@@ -48,7 +48,7 @@ wedo 是从 [Sleepy · 轻课表](https://github.com/lingion/sleepy) 派生的 A
 
 - 上游仓库：`https://github.com/lingion/sleepy.git`；基准提交 `08a1f26a5d7b1a117e2216d92804b202ddde228d`。Git 历史与根目录 `LICENSE`/`NOTICE` 保留上游归属（GPL-3.0 要求）；`upstream` 远端已移除。
 - 项目远端：`https://github.com/Joshmax010/wedo-Schedule.git`，远端名 `origin`；默认分支 `main`。编辑代码时先核对 `git status` 和本地/远端差异，不覆盖他人未提交改动。
-- `app/build.gradle.kts`：`applicationId = com.wedo.schedule`、`minSdk = 26`、`compileSdk = targetSdk = 37`、`versionName = 0.1.0`、`versionCode = 1`。Debug 加 `.debug` 后缀；Release 当前配置为**未签名**。
+- `app/build.gradle.kts`：`applicationId = com.wedo.schedule`、`minSdk = 33`、`compileSdk = targetSdk = 37`、`versionName = 0.1.0`、`versionCode = 1`。Debug 加 `.debug` 后缀；Release 当前配置为**未签名**。
 - 打包只生成 `arm64-v8a`、`armeabi-v7a`、`x86_64` ABI 包，无 universal APK。
 
 ### 2.2 主要技术选择
@@ -76,7 +76,7 @@ wedo 是从 [Sleepy · 轻课表](https://github.com/lingion/sleepy) 派生的 A
 ./scripts/scan-secrets.ps1
 ```
 
-Debug APK 位于 `app/build/outputs/apk/debug/` 下的 ABI 分包；安装前按模拟器/手机 ABI 选包。若用 MuMu，先确认模拟器 API 与 ABI，不要假定它代表最低 API 26。调试安装包与正式包 ID 不同，二者数据不会自动互通。涉及 UI、安全或数据库的变更，单元测试之外还需在设备/模拟器上做流程验证。不要把真实账号、HAR、Cookie、课表或签名材料放进源码目录。
+Debug APK 位于 `app/build/outputs/apk/debug/` 下的 ABI 分包；安装前按模拟器/手机 ABI 选包。若用 MuMu，先确认模拟器 API 与 ABI，不要假定它代表最低 API 33。调试安装包与正式包 ID 不同，二者数据不会自动互通。涉及 UI、安全或数据库的变更，单元测试之外还需在设备/模拟器上做流程验证。不要把真实账号、HAR、Cookie、课表或签名材料放进源码目录。
 
 ## 3. 代码地图与架构数据流
 
@@ -151,7 +151,10 @@ test/fixtures/jlju/             只含脱敏结构证据
 
 `WedoBackground` 负责纵向冷色渐变和两处淡蓝径向环境光。**玻璃材质已按「全面取消玻璃质感」的指令移除**：`WedoShell.kt` 里原 `Modifier.wedoGlass` 及其调用点均已改为实色卡片，`WedoGlassTokens.kt` 仅保留 `wedoGlassSpec` 纯逻辑内核（无渲染入口）。评审时不要再假设界面上存在玻璃卡片。
 
-> 设计规范的唯一权威来源已是 `docs/DESIGN_SPEC_V2.md`（苹果 HIG 对齐版，含色彩/字阶/间距/圆角/组件/动效/无障碍全量定义）。本节与 v2 冲突时**以 v2 为准**。
+> 设计规范的唯一权威来源是 `docs/glass/00_MASTER.md`（液态玻璃主索引，含全部 M/V/O/Q 编号与推导过程）。
+> 面向实现的条款正文见 `docs/DESIGN_SPEC_V4_GLASS.md`（材质与运动，已取代 v2 的材质章节）；
+> `docs/DESIGN_SPEC_V2.md` 的色彩 / 字阶 / 间距 / 圆角 / 组件 / 无障碍章节仍然有效。
+> 本节与上述文件冲突时**以它们为准**。
 
 ### 4.2 首页空间分配
 
@@ -223,13 +226,13 @@ WakeUp 目前用户可见的“导出为日历文件”是本项目迁移入口�
 
 本地已有 JLJU 解析、WebView 安全契约、课程颜色、ICS 解析、外部打开 MIME、导入错误提示等测试。新增功能至少遵循“纯解析单测 + 数据边界测试 + Compose/UI/设备冒烟”三层验证。课程周次必须覆盖普通周、单双周、离散周、跨节次、同名不同地点、重叠课程、空学期与部分损坏输入。用户真机账号只由本人输入，不要求提供认证材料。
 
-发布仍未完成的门包括：完整 SSO 回跳、验证码条件、会话过期/维护响应、JLJU 重新导入且旧数据不丢、WakeUp 真实 ICS 脱敏样本、API 26 与字体放大/5-6 日布局、至少三名不同课程结构测试者、本地库升级和安全许可复核。`docs/RELEASING.md` 所说的 `v*` 标签签名发布目前只是计划；当前 `release` build type 未签名，仓库中没有自动签名/上传 Release 的工作流。不要声称已有 GitHub `1.0.0` Release。
+发布仍未完成的门包括：完整 SSO 回跳、验证码条件、会话过期/维护响应、JLJU 重新导入且旧数据不丢、WakeUp 真实 ICS 脱敏样本、API 33 与字体放大/5-6 日布局、至少三名不同课程结构测试者、本地库升级和安全许可复核。`docs/RELEASING.md` 所说的 `v*` 标签签名发布目前只是计划；当前 `release` build type 未签名，仓库中没有自动签名/上传 Release 的工作流。不要声称已有 GitHub `1.0.0` Release。
 
 ## 8. 常见修改任务从哪里开始
 
 | 需求 | 首先阅读/修改 | 必须补的验证 |
 | --- | --- | --- |
-| 调整首页布局/顶部/ Dock | `MainActivity.kt`、`ScheduleScreen.kt`、`WedoWeekHeader.kt`、`WedoGlass.kt`、`CourseTableView.kt` | 切周、纵向滚动收起/恢复、手势栏遮挡、浅/深色、API 26 |
+| 调整首页布局/顶部/ Dock | `MainActivity.kt`、`ScheduleScreen.kt`、`WedoWeekHeader.kt`、`WedoGlass.kt`、`CourseTableView.kt` | 切周、纵向滚动收起/恢复、手势栏遮挡、浅/深色、API 33 |
 | 调整课程卡信息或颜色 | `WedoCourseCard.kt`、`WedoDesign.kt`、`CourseColorUtil.kt`、`WedoSettingsScreen.kt` | 名称稳定色、手选色、对比度、字号放大、字段全局设置、冲突红色 |
 | 调整主题/玻璃性能 | `Theme.kt`、`ThemePresets.kt`、`WedoDesign.kt`、`WedoGlass.kt`、`AppearanceScreen.kt` | 主题预设与系统取色、低内存回退、动效关闭、明暗背景 |
 | 增加学校 | 先补真实脱敏证据和夹具，再改 `JwImportViewModel.defaultWedoSchools()`、必要时 `JwParserRegistry`/Parser、`JwWebViewLoginScreen` 白名单 | 官方入口与回跳、无课、单双周、会话失效、异常响应、域名安全测试 |
@@ -246,7 +249,7 @@ WakeUp 目前用户可见的“导出为日历文件”是本项目迁移入口�
 
 **接着 30 分钟**：从 `MainActivity → ScheduleScreen → CardsGridView → WedoCourseCard` 走一遍首页，从 `ImportSheet → JwImportActivity → JwImportViewModel → Room` 走一遍导入；用公开脱敏夹具看测试，不打开或提交私有 HAR。安装对应 ABI 的 Debug 包，以假课程体验滚动、切周、课程详情、导入预览、深浅色与设置。
 
-**最后 30 分钟**：选一个小改动，先找对应回归测试再改代码；跑相关单测、`lintDebug`、`assembleDebug`、敏感信息扫描；记录当前证据仍不足的内容。任何计划进入发布的变更都要额外检查真机、API 26、备份/TLS、许可和 `docs/RELEASING.md` 与真实 CI 的一致性。
+**最后 30 分钟**：选一个小改动，先找对应回归测试再改代码；跑相关单测、`lintDebug`、`assembleDebug`、敏感信息扫描；记录当前证据仍不足的内容。任何计划进入发布的变更都要额外检查真机、API 33、备份/TLS、许可和 `docs/RELEASING.md` 与真实 CI 的一致性。
 
 ## 10. 接手后需要优先偿还的风险
 

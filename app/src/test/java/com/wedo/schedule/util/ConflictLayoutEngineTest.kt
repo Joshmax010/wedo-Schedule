@@ -1,11 +1,11 @@
 package com.wedo.schedule.util
 
 import com.wedo.schedule.data.entity.CourseEntity
-import com.wedo.schedule.ui.component.CourseDrawItem
-import com.wedo.schedule.ui.component.layoutFor
-import com.wedo.schedule.ui.component.foldSwitchHitArea
-import com.wedo.schedule.ui.component.markHitArea
-import com.wedo.schedule.ui.component.overlayMarkOrder
+import com.wedo.schedule.ui.components.CourseDrawItem
+import com.wedo.schedule.ui.components.layoutFor
+import com.wedo.schedule.ui.components.foldSwitchHitArea
+import com.wedo.schedule.ui.components.markHitArea
+import com.wedo.schedule.ui.components.overlayMarkOrder
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

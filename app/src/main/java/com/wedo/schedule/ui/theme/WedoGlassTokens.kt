@@ -22,10 +22,10 @@ import com.wedo.schedule.util.CourseColorUtil
  */
 
 /**
- * 玻璃层级语义 — 决定取值档位与适用圆角。
+ * 组件层级语义 — 决定适用圆角与调用点，不决定采样方式。
  *
- * 对应规范「使用规则」：玻璃只用在「浮起于内容之上的表面」。
- * 课表格子、列表行等数据本体**不加玻璃**。
+ * 采样方式由 [WedoGlassSurfaceClass] 决定：BASE 不渲染材质；CONTENT 恒 G0；
+ * 只有 FLOAT 允许升到 G1/G2。课表格子、列表行可以是 CONTENT G0，但不得采样。
  */
 enum class WedoGlassLevel {
     /** 导航类：周顶栏、底部 Dock、Dock 中心按钮、图标按钮 */
@@ -39,6 +39,28 @@ enum class WedoGlassLevel {
 
     /** 对话框类 */
     Dialog,
+}
+
+/**
+ * 表面语义轴：决定「这块面是什么角色」，而不是决定画质。
+ *
+ * BASE 不渲染材质；CONTENT 恒 G0；只有 FLOAT 允许升到 G1/G2。
+ */
+enum class WedoGlassSurfaceClass {
+    Base,
+    Content,
+    Float,
+}
+
+/**
+ * 采样方式轴：G0 不采样、G1 静态 Bake、G2 实时采样。
+ *
+ * 与 SurfaceClass 正交；CONTENT 永远只能是 G0。
+ */
+enum class WedoGlassQuotaGrade {
+    G0,
+    G1,
+    G2,
 }
 
 /**
@@ -102,6 +124,34 @@ object WedoGlassTokens {
     /** 内高光覆盖的高度比例（仅顶部这一段渐隐到透明） */
     const val INNER_HIGHLIGHT_EXTENT = 0.34f
 
+    // ---- G0 卡片面层：A · Quiet / B · Lifted / Smooth ----
+    // 注意：FILL_TOP/FILL_BOTTOM 是旧渲染的渐变覆盖层，不直接等于卡片填充 alpha。
+    const val CARD_FILL_SMOOTH = 0.97f
+    const val CARD_FILL_BALANCED_LIGHT = 0.94f
+    const val CARD_FILL_BALANCED_DARK = 0.96f
+    const val CARD_FILL_FINE_LIGHT = 0.80f
+    const val CARD_FILL_FINE_DARK = 0.82f
+
+    // ---- G0 外圈 hairline：不是 rim；rim 仍是 EDGE_* ----
+    const val HAIRLINE_SMOOTH_LIGHT = 0.08f
+    const val HAIRLINE_SMOOTH_DARK = 0f
+    const val HAIRLINE_BALANCED_LIGHT = 0.065f
+    const val HAIRLINE_BALANCED_DARK = 0f
+    const val HAIRLINE_FINE_LIGHT = 0.12f
+    const val HAIRLINE_FINE_DARK = 0f
+
+    // ---- G0 顶部内高光强度（0 表示不画） ----
+    const val INNER_HIGHLIGHT_BALANCED = 0.72f
+    const val INNER_HIGHLIGHT_FINE = 0.92f
+
+    // ---- G0 rim：与旧 edgeAlpha 分开；深色下必须压住白边，否则一圈发亮 ----
+    const val RIM_SMOOTH_LIGHT = 0.18f
+    const val RIM_SMOOTH_DARK = 0.08f
+    const val RIM_BALANCED_LIGHT = 0.30f
+    const val RIM_BALANCED_DARK = 0.12f
+    const val RIM_FINE_LIGHT = 0.48f
+    const val RIM_FINE_DARK = 0.20f
+
     // ---- 圆角语义 ----
     val RADIUS_NAV = 30.dp
     val RADIUS_SHEET = 28.dp
@@ -110,6 +160,11 @@ object WedoGlassTokens {
     /** 描边宽度：规范写 1px；高密度屏上严格 1 physical px 会过细，统一取 1dp */
     val BORDER_WIDTH = 1.dp
     val BORDER_WIDTH_FINE = 1.2f.dp
+
+    /** G0 的 rim 与 hairline 分开绘制：rim 加色，hairline 压暗。 */
+    val RIM_WIDTH = 1.dp
+    val HAIRLINE_WIDTH = 0.67f.dp
+    val INNER_HIGHLIGHT_INSET = 10.dp
 }
 
 /**
@@ -119,10 +174,10 @@ object WedoGlassTokens {
  */
 data class WedoGlassSpec(
     val quality: WedoGlassQuality,
-    /** 填充渐变顶/底的白色不透明度 */
+    /** 旧渐变覆盖层顶/底的白色不透明度（兼容既有断言，不等于卡片 alpha） */
     val fillTop: Float,
     val fillBottom: Float,
-    /** 边缘描边不透明度 */
+    /** 边缘 rim 不透明度 */
     val edgeAlpha: Float,
     /** 投影高度；0 表示不投影 */
     val elevation: Dp,
@@ -130,6 +185,20 @@ data class WedoGlassSpec(
     val innerHighlight: Boolean,
     /** 渐变层数：1=单色半透明 2=双层渐变 3=双层+独立高光带 */
     val gradientLayers: Int,
+    /** 表面角色；BASE 不渲染材质 */
+    val surface: WedoGlassSurfaceClass = WedoGlassSurfaceClass.Content,
+    /** 采样档；P1 只实现 G0 */
+    val quota: WedoGlassQuotaGrade = WedoGlassQuotaGrade.G0,
+    /** false = 该表面不进入材质渲染（BASE） */
+    val materialEnabled: Boolean = true,
+    /** G0 卡片面层不透明度；A/B/Smooth 的主差异之一 */
+    val cardFillAlpha: Float = fillTop,
+    /** 最外圈 hairline 不透明度；与 rim 分开绘制 */
+    val hairlineAlpha: Float = 0f,
+    /** G0 rim 不透明度；不再复用旧 edgeAlpha */
+    val rimAlpha: Float = edgeAlpha,
+    /** 顶部内高光强度；0 表示不绘制 */
+    val innerHighlightAlpha: Float = if (innerHighlight) WedoGlassTokens.INNER_HIGHLIGHT else 0f,
 )
 
 /**
@@ -144,7 +213,11 @@ data class WedoGlassSpec(
  * 不能用 `WakeUpColorScheme.primary`（亮色下 0xFF6750A4 加权亮度 0.38 会被误判为暗色）。
  */
 @Composable
-fun wedoGlassSpec(level: WedoGlassLevel): WedoGlassSpec {
+fun wedoGlassSpec(
+    level: WedoGlassLevel,
+    surface: WedoGlassSurfaceClass = WedoGlassSurfaceClass.Content,
+    quota: WedoGlassQuotaGrade = WedoGlassQuotaGrade.G0,
+): WedoGlassSpec {
     val context = LocalContext.current
     val dark = CourseColorUtil.isPaletteDark(WedoTheme.palette)
     val rawQuality = LocalWedoDisplay.current.quality
@@ -154,7 +227,13 @@ fun wedoGlassSpec(level: WedoGlassLevel): WedoGlassSpec {
     }
     var quality = WedoGlassQuality.of(rawQuality)
     if (lowRam) quality = WedoGlassQuality.Smooth
-    return buildGlassSpec(quality = quality, dark = dark, level = level)
+    return buildGlassSpec(
+        quality = quality,
+        dark = dark,
+        level = level,
+        surface = surface,
+        quota = quota,
+    )
 }
 
 /**
@@ -166,6 +245,8 @@ fun buildGlassSpec(
     quality: WedoGlassQuality,
     dark: Boolean,
     level: WedoGlassLevel,
+    surface: WedoGlassSurfaceClass = WedoGlassSurfaceClass.Content,
+    quota: WedoGlassQuotaGrade = WedoGlassQuotaGrade.G0,
 ): WedoGlassSpec = when (quality) {
     // 流畅：单层半透明，无投影、无内高光 —— 性能优先，观感接近改造前实现
     WedoGlassQuality.Smooth -> WedoGlassSpec(
@@ -176,6 +257,17 @@ fun buildGlassSpec(
         elevation = 0.dp,
         innerHighlight = false,
         gradientLayers = 1,
+        surface = surface,
+        quota = quota,
+        materialEnabled = surface != WedoGlassSurfaceClass.Base,
+        cardFillAlpha = WedoGlassTokens.CARD_FILL_SMOOTH,
+        hairlineAlpha = if (dark) {
+            WedoGlassTokens.HAIRLINE_SMOOTH_DARK
+        } else {
+            WedoGlassTokens.HAIRLINE_SMOOTH_LIGHT
+        },
+        rimAlpha = if (dark) WedoGlassTokens.RIM_SMOOTH_DARK else WedoGlassTokens.RIM_SMOOTH_LIGHT,
+        innerHighlightAlpha = 0f,
     )
 
     // 平衡：规范标准配方
@@ -187,6 +279,22 @@ fun buildGlassSpec(
         elevation = if (dark) 6.dp else 9.dp,
         innerHighlight = true,
         gradientLayers = 2,
+        surface = surface,
+        quota = quota,
+        materialEnabled = surface != WedoGlassSurfaceClass.Base,
+        cardFillAlpha = if (dark) {
+            WedoGlassTokens.CARD_FILL_BALANCED_DARK
+        } else {
+            WedoGlassTokens.CARD_FILL_BALANCED_LIGHT
+        },
+        hairlineAlpha = if (dark) {
+            WedoGlassTokens.HAIRLINE_BALANCED_DARK
+        } else {
+            WedoGlassTokens.HAIRLINE_BALANCED_LIGHT
+        },
+        rimAlpha = if (dark) WedoGlassTokens.RIM_BALANCED_DARK else WedoGlassTokens.RIM_BALANCED_LIGHT,
+        // 深色下 72% 白内高光会变成一条亮条；只保留 rim，不画顶部线。
+        innerHighlightAlpha = if (dark) 0f else WedoGlassTokens.INNER_HIGHLIGHT_BALANCED,
     )
 
     // 精致：加强描边与投影，并启用独立高光带
@@ -198,5 +306,20 @@ fun buildGlassSpec(
         elevation = if (dark) 8.dp else 12.dp,
         innerHighlight = true,
         gradientLayers = 3,
+        surface = surface,
+        quota = quota,
+        materialEnabled = surface != WedoGlassSurfaceClass.Base,
+        cardFillAlpha = if (dark) {
+            WedoGlassTokens.CARD_FILL_FINE_DARK
+        } else {
+            WedoGlassTokens.CARD_FILL_FINE_LIGHT
+        },
+        hairlineAlpha = if (dark) {
+            WedoGlassTokens.HAIRLINE_FINE_DARK
+        } else {
+            WedoGlassTokens.HAIRLINE_FINE_LIGHT
+        },
+        rimAlpha = if (dark) WedoGlassTokens.RIM_FINE_DARK else WedoGlassTokens.RIM_FINE_LIGHT,
+        innerHighlightAlpha = if (dark) 0f else WedoGlassTokens.INNER_HIGHLIGHT_FINE,
     )
 }

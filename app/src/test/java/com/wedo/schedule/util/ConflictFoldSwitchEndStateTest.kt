@@ -1,7 +1,7 @@
 package com.wedo.schedule.util
 
-import com.wedo.schedule.ui.component.CourseDrawItem
-import com.wedo.schedule.ui.component.overlayMarkOrder
+import com.wedo.schedule.ui.components.CourseDrawItem
+import com.wedo.schedule.ui.components.overlayMarkOrder
 
 import com.wedo.schedule.data.entity.CourseEntity
 import com.wedo.schedule.util.ConflictCluster

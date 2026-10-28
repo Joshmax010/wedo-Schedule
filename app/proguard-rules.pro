@@ -10,19 +10,19 @@
 # ── Kotlinx Serialization ──
 # @Serializable companion 的 serializer() 不能被裁; serializer 本身要保留
 -keepattributes RuntimeVisibleAnnotations,AnnotationDefault
--keep,includedescriptorclasses class com.lingion.sleepy.**$$serializer { *; }
--keepclassmembers class com.lingion.sleepy.** {
+-keep,includedescriptorclasses class com.wedo.schedule.**$$serializer { *; }
+-keepclassmembers class com.wedo.schedule.** {
     *** Companion;
 }
--keepclasseswithmembers class com.lingion.sleepy.** {
+-keepclasseswithmembers class com.wedo.schedule.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
 -keep class kotlinx.serialization.** { *; }
 -dontwarn kotlinx.serialization.**
 
 # ── Room (KSP 生成类, DAO 方法名被反射调用) ──
--keep class com.lingion.sleepy.data.entity.** { *; }
--keep class com.lingion.sleepy.data.dao.** { *; }
+-keep class com.wedo.schedule.data.entity.** { *; }
+-keep class com.wedo.schedule.data.dao.** { *; }
 -keep class * extends androidx.room.RoomDatabase { <init>(); }
 -dontwarn androidx.room.paging.**
 

@@ -103,8 +103,8 @@ class ReminderWiringContractTest {
             "app/src/main/java/com/wedo/schedule/widget/notification/CourseNotificationScheduler.kt"
         const val PREFS = "app/src/main/java/com/wedo/schedule/util/AppPrefs.kt"
         const val REMINDER_SCREEN =
-            "app/src/main/java/com/wedo/schedule/ui/screen/mine/ReminderScreen.kt"
+            "app/src/main/java/com/wedo/schedule/ui/screens/mine/ReminderScreen.kt"
         const val SETTINGS_SCREEN =
-            "app/src/main/java/com/wedo/schedule/ui/screen/mine/WedoSettingsScreen.kt"
+            "app/src/main/java/com/wedo/schedule/ui/screens/mine/WedoSettingsScreen.kt"
     }
 }
