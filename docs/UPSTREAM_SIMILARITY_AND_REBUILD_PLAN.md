@@ -4,7 +4,7 @@
 > 上游：`https://github.com/lingion/sleepy`（Sleepy · 轻课表，GPL-3.0）
 > 上游当前 HEAD：`3dafa110f74ac4f32464ce1efddb24197a4091d9`（2026-10-22）
 > wedo fork 基准提交：`08a1f26a5d7b1a117e2216d92804b202ddde228d`
-> 只读副本：`D:/AAAAA/ai/upstream/sleepy`（工作区之外，不参与 wedo 构建）
+> 只读副本：上游仓库的本地检出（工作区之外，不参与 wedo 构建）
 
 ## 0. TL;DR
 

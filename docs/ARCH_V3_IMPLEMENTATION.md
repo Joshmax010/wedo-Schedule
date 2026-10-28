@@ -2,7 +2,7 @@
 
 > 状态：**待实施** · 撰写：架构师 高见远
 > 依据：`docs/PRD_V3_IMPLEMENTATION.md`（35 条需求）、`docs/DESIGN_V3_INTERACTION.md`、`docs/DESIGN_SPEC_V2.md`、`docs/PROJECT_HANDOFF.md`
-> 工程：既有 Android 工程增量改造（根 `D:/AAAAA/ai/wedo`，Kotlin + Jetpack Compose，包名 `com.wedo.schedule`）
+> 工程：既有 Android 工程增量改造（仓库根目录，Kotlin + Jetpack Compose，包名 `com.wedo.schedule`）
 > 口径：**无真机 / 无模拟器 / 无 AVD**；验证 = 单测 + 源码契约测试。设计不得破坏既有 733 tests / 0 failures。
 
 ---
@@ -222,7 +222,7 @@
 
 ## 3. 文件清单
 
-> 相对路径均以 `D:/AAAAA/ai/wedo/` 为根。
+> 相对路径均以仓库根目录为根。
 
 ### 3.1 新增
 

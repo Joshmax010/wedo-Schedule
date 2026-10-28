@@ -17,7 +17,7 @@
 |---|---|
 | Language | 中文 |
 | 工程性质 | **既有 Android 工程增量改造**（非新建项目） |
-| 工程根目录 | `D:/AAAAA/ai/wedo` |
+| 工程根目录 | 仓库根目录 |
 | 技术栈 | Android + Kotlin + Jetpack Compose（`app/src/main/java/com/wedo/schedule/`） |
 | 包名 | `com.wedo.schedule`（Debug：`com.wedo.schedule.debug`） |
 | 服务对象 | 单一学校：吉林建筑大学（JLJU，新版正方 `jwglxt`） |
